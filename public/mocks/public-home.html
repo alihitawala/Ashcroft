@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐢</text></svg>">
+    <title>ashcroft.cloud</title>
+    <style>
+        /* ═══════════════ THEME SYSTEM ═══════════════ */
+        [data-theme="dark"] {
+            --bg: #0b0e11;
+            --surface: #13171c;
+            --surface2: #1a1f26;
+            --surface3: #222830;
+            --border: #2a313a;
+            --border-hover: #3a4250;
+            --text: #f0f2f5;
+            --text-secondary: #8a94a0;
+            --text-tertiary: #5a6370;
+            --accent: #635bff;
+            --accent-light: #7a73ff;
+            --accent-bg: rgba(99, 91, 255, 0.1);
+            --accent-border: rgba(99, 91, 255, 0.25);
+            --green: #3ecf8e;
+            --green-bg: rgba(62, 207, 142, 0.1);
+            --red: #f45b69;
+            --red-bg: rgba(244, 91, 105, 0.1);
+            --amber: #f5a623;
+            --amber-bg: rgba(245, 166, 35, 0.1);
+            --blue: #5b9cf6;
+            --blue-bg: rgba(91, 156, 246, 0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        [data-theme="light"] {
+            --bg: #f6f8fa;
+            --surface: #ffffff;
+            --surface2: #f0f2f5;
+            --surface3: #e8ecf0;
+            --border: #e0e4e8;
+            --border-hover: #c8cdd3;
+            --text: #1a1f36;
+            --text-secondary: #596577;
+            --text-tertiary: #8792a2;
+            --accent: #635bff;
+            --accent-light: #7a73ff;
+            --accent-bg: rgba(99, 91, 255, 0.06);
+            --accent-border: rgba(99, 91, 255, 0.2);
+            --green: #0e9f6e;
+            --green-bg: rgba(14, 159, 110, 0.08);
+            --red: #e03e4e;
+            --red-bg: rgba(224, 62, 78, 0.08);
+            --amber: #d97706;
+            --amber-bg: rgba(217, 119, 6, 0.08);
+            --blue: #3b82f6;
+            --blue-bg: rgba(59, 130, 246, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
+
+        .topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+        .logo .dot { color: var(--accent); }
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
+        .theme-toggle { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .theme-toggle:hover { border-color: var(--accent); background: var(--accent-bg); }
+        .signin-btn { padding: 7px 18px; border-radius: 8px; background: var(--accent); color: white; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
+        .signin-btn:hover { background: var(--accent-light); box-shadow: 0 4px 12px rgba(99, 91, 255, 0.25); }
+
+        .widget-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px; max-width: 1320px; margin: 0 auto; }
+        .widget { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.2s ease; box-shadow: var(--shadow-sm); }
+        .widget:hover { box-shadow: var(--shadow-md); border-color: var(--border-hover); }
+        .widget-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px 12px; }
+        .widget-header h3 { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+        .widget-header .badge { font-size: 11px; color: var(--text-tertiary); }
+        .widget-body { padding: 0 18px 16px; }
+
+        /* Weather */
+        .weather-main { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+        .weather-icon { font-size: 44px; }
+        .weather-temp { font-size: 44px; font-weight: 300; letter-spacing: -0.03em; line-height: 1; }
+        .weather-unit { font-size: 18px; color: var(--text-secondary); font-weight: 400; }
+        .weather-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 2px; }
+        .weather-meta { font-size: 12px; color: var(--text-tertiary); }
+        .weather-forecast { display: flex; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .forecast-day { flex: 1; text-align: center; padding: 6px 0; }
+        .forecast-day .label { font-size: 11px; color: var(--text-tertiary); font-weight: 500; }
+        .forecast-day .emoji { font-size: 18px; margin: 6px 0 4px; display: block; }
+        .forecast-day .temp { font-size: 13px; font-weight: 600; }
+
+        /* Weather multi-location */
+        .weather-locations { display: flex; flex-direction: column; gap: 0; }
+        .weather-loc { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+        .weather-loc:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .weather-loc-name { font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+        .temp-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); cursor: pointer; user-select: none; }
+        .temp-toggle .toggle-track { width: 32px; height: 18px; border-radius: 9px; background: var(--surface3); border: 1px solid var(--border); position: relative; transition: background 0.2s; }
+        .temp-toggle .toggle-track.active { background: var(--accent); border-color: var(--accent); }
+        .temp-toggle .toggle-thumb { width: 14px; height: 14px; border-radius: 50%; background: white; position: absolute; top: 1px; left: 1px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .temp-toggle .toggle-track.active .toggle-thumb { transform: translateX(14px); }
+        .temp-toggle .unit-label { font-weight: 600; font-size: 11px; }
+        .temp-toggle .unit-label.active { color: var(--accent); }
+
+        /* Scrollable widget body */
+        .widget-scroll { max-height: 480px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; position: relative; }
+        .widget-scroll::-webkit-scrollbar { width: 5px; }
+        .widget-scroll::-webkit-scrollbar-track { background: transparent; }
+        .widget-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+        .widget-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+        /* Fade hint at bottom to signal more content */
+        .widget-scroll-wrap { position: relative; }
+        .widget-scroll-wrap::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 48px;
+            background: linear-gradient(transparent, var(--surface));
+            pointer-events: none;
+            border-radius: 0 0 12px 12px;
+            transition: opacity 0.3s;
+        }
+        .widget-scroll-wrap.scrolled-bottom::after { opacity: 0; }
+        .scroll-hint { text-align: center; font-size: 11px; color: var(--text-tertiary); padding: 6px 0 2px; letter-spacing: 0.03em; position: absolute; bottom: 4px; left: 0; right: 0; z-index: 1; pointer-events: none; }
+        .widget-scroll-wrap.scrolled-bottom .scroll-hint { opacity: 0; }
+
+        /* Stocks */
+        .stock-list { display: flex; flex-direction: column; gap: 2px; }
+        .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+        .stock-row:last-child { border: none; }
+        .stock-left { display: flex; align-items: center; gap: 10px; }
+        .stock-ticker { font-weight: 700; font-size: 13px; width: 52px; letter-spacing: 0.02em; }
+        .stock-name { font-size: 12px; color: var(--text-tertiary); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stock-right { display: flex; align-items: center; gap: 14px; }
+        .stock-price { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .stock-change { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; min-width: 60px; text-align: center; font-variant-numeric: tabular-nums; }
+        .stock-up { color: var(--green); background: var(--green-bg); }
+        .stock-down { color: var(--red); background: var(--red-bg); }
+
+        /* News */
+        .news-item { padding: 11px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; }
+        .news-item:last-child { border: none; }
+        .news-thumb { width: 72px; height: 54px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--surface2); }
+        .news-content { flex: 1; min-width: 0; }
+        .news-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .news-source { font-size: 11px; font-weight: 600; color: var(--accent); }
+        .news-time { font-size: 11px; color: var(--text-tertiary); }
+        .news-headline { font-size: 14px; line-height: 1.45; color: var(--text); font-weight: 400; }
+        .news-headline a { color: inherit; text-decoration: none; }
+        .news-headline a:hover { color: var(--accent); }
+
+        /* Sports */
+        .match-card { padding: 14px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 10px; transition: all 0.2s; background: var(--surface2); }
+        .match-card:last-child { margin-bottom: 0; }
+        .match-card:hover { border-color: var(--border-hover); }
+        .match-card.live { border-color: var(--accent-border); background: var(--accent-bg); }
+        .match-card.highlight { border-color: var(--amber); border-width: 1.5px; }
+        .match-card.highlight .match-league::after { content: ' ⭐'; }
+        .match-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .match-league { font-size: 11px; color: var(--text-tertiary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+        .match-status { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+        .status-live { color: var(--red); background: var(--red-bg); }
+        .status-upcoming { color: var(--text-tertiary); background: var(--surface3); }
+        .status-final { color: var(--text-tertiary); background: var(--surface3); }
+        .match-teams { display: flex; justify-content: space-between; align-items: center; }
+        .team { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        .team-logo { width: 22px; height: 22px; object-fit: contain; border-radius: 2px; }
+        .team-score { font-size: 13px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
+        .match-vs { color: var(--text-tertiary); font-size: 12px; font-weight: 500; }
+        .match-time { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; }
+
+        /* YouTube */
+        .yt-section-label { font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; margin: 12px 0 8px; }
+        .yt-section-label:first-child { margin-top: 0; }
+        .yt-card { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.2s; }
+        .yt-card:last-child { border-bottom: none; }
+        .yt-card:hover { opacity: 0.85; }
+        .yt-thumb-wrap { position: relative; flex-shrink: 0; width: 140px; height: 79px; border-radius: 8px; overflow: hidden; background: var(--surface2); }
+        .yt-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .yt-duration { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8); color: #fff; font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; }
+        .yt-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .yt-title { font-size: 13px; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .yt-channel { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+        .yt-views { font-size: 11px; color: var(--text-tertiary); }
+        .yt-empty { color: var(--text-tertiary); font-size: 13px; padding: 20px 0; text-align: center; }
+        @media (max-width: 700px) {
+            .yt-thumb-wrap { width: 120px; height: 68px; }
+        }
+
+        .footer { text-align: center; padding: 40px 24px; color: var(--text-tertiary); font-size: 12px; }
+        .footer .turtle { font-size: 20px; display: block; margin-bottom: 6px; }
+        .footer .updated { font-size: 11px; margin-top: 4px; opacity: 0.7; }
+
+        .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 2px; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .skeleton { background: var(--surface2); border-radius: 4px; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 0.8; } 100% { opacity: 0.5; } }
+
+        @media (max-width: 1100px) { .widget-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 700px) {
+            .widget-grid { grid-template-columns: 1fr; padding: 14px; gap: 12px; }
+            .topbar { padding: 12px 16px; }
+            #youtube-widget { grid-column: span 1 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo">ashcroft<span class="dot">.</span>cloud</div>
+        <div class="topbar-right">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            <a href="/app/login.html" style="text-decoration:none;font-size:18px;opacity:0.35;transition:opacity 0.2s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=0.35" title="Sign In">🔒</a>
+        </div>
+    </div>
+
+    <div class="widget-grid">
+        <!-- Weather -->
+        <div class="widget" id="weather-widget">
+            <div class="widget-header">
+                <h3>Weather</h3>
+                <div class="temp-toggle" onclick="toggleTempUnit()">
+                    <span class="unit-label" id="unit-f">°F</span>
+                    <div class="toggle-track" id="temp-toggle-track"><div class="toggle-thumb"></div></div>
+                    <span class="unit-label" id="unit-c">°C</span>
+                </div>
+            </div>
+            <div class="widget-body widget-scroll" id="weather-body" style="max-height:400px;"><div class="skeleton" style="height:120px"></div></div>
+        </div>
+
+        <!-- Sports -->
+        <div class="widget" id="sports-widget">
+            <div class="widget-header"><h3>⚽ Soccer</h3><span class="badge">Live & Upcoming</span></div>
+            <div class="widget-scroll-wrap">
+                <div class="widget-body widget-scroll" id="sports-body" onscroll="checkScroll(this)"><div class="skeleton" style="height:200px"></div></div>
+                <div class="scroll-hint">↓ scroll for more</div>
+            </div>
+        </div>
+
+        <!-- Markets -->
+        <div class="widget" id="stocks-widget">
+            <div class="widget-header"><h3>Markets</h3><span class="badge" id="stocks-badge">Loading...</span></div>
+            <div class="widget-scroll-wrap">
+                <div class="widget-body widget-scroll" id="stocks-body" onscroll="checkScroll(this)"><div class="skeleton" style="height:200px"></div></div>
+                <div class="scroll-hint">↓ scroll for more</div>
+            </div>
+        </div>
+
+        <!-- YouTube Trending (compact, spans 2 cols on desktop) -->
+        <div class="widget" id="youtube-widget" style="grid-column: span 2;">
+            <div class="widget-header"><h3>📺 Trending Videos</h3><span class="badge" id="yt-badge">Updated every 12h</span></div>
+            <div class="widget-scroll-wrap">
+                <div class="widget-body widget-scroll" id="youtube-body" onscroll="checkScroll(this)">
+                    <div class="yt-empty">Set up YouTube API key to see trending videos</div>
+                </div>
+                <div class="scroll-hint">↓ scroll for more</div>
+            </div>
+        </div>
+
+        <!-- Cricket & Tennis -->
+        <div class="widget" id="ct-widget">
+            <div class="widget-header"><h3>🏏 Cricket & 🎾 Tennis</h3><span class="badge" id="ct-badge">Upcoming</span></div>
+            <div class="widget-scroll-wrap">
+                <div class="widget-body widget-scroll" id="ct-body" onscroll="checkScroll(this)"><div class="skeleton" style="height:150px"></div></div>
+                <div class="scroll-hint">↓ scroll for more</div>
+            </div>
+        </div>
+
+        <!-- India News -->
+        <div class="widget" id="india-news-widget">
+            <div class="widget-header"><h3>India News</h3><span class="badge">Top Stories</span></div>
+            <div class="widget-body" id="india-news-body"><div class="skeleton" style="height:200px"></div></div>
+        </div>
+
+        <!-- US News -->
+        <div class="widget" id="us-news-widget">
+            <div class="widget-header"><h3>US News</h3><span class="badge">Top Stories</span></div>
+            <div class="widget-body" id="us-news-body"><div class="skeleton" style="height:200px"></div></div>
+        </div>
+
+        <!-- Events -->
+        <div class="widget" id="events-widget">
+            <div class="widget-header"><h3>Upcoming</h3><span class="badge">Public Events</span></div>
+            <div class="widget-body" id="events-body"><div class="skeleton" style="height:120px"></div></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span class="turtle">🐢</span>
+        ashcroft.cloud · All data from public sources
+        <div class="updated" id="last-updated"></div>
+    </div>
+
+    <script>
+        // ═══════════════ THEME ═══════════════
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            btn.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+        // Restore saved theme
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+            document.getElementById('themeBtn').textContent = saved === 'dark' ? '🌙' : '☀️';
+        }
+
+        // ═══════════════ TEMPERATURE UNIT ═══════════════
+        let useCelsius = localStorage.getItem('tempUnit') === 'C';
+        function fToC(f) { return Math.round((f - 32) * 5 / 9); }
+        function tempVal(f) { return useCelsius ? fToC(f) : f; }
+        function tempUnit() { return useCelsius ? '°C' : '°F'; }
+        function updateToggleUI() {
+            const track = document.getElementById('temp-toggle-track');
+            const uf = document.getElementById('unit-f');
+            const uc = document.getElementById('unit-c');
+            track.classList.toggle('active', useCelsius);
+            uf.classList.toggle('active', !useCelsius);
+            uc.classList.toggle('active', useCelsius);
+        }
+        function toggleTempUnit() {
+            useCelsius = !useCelsius;
+            localStorage.setItem('tempUnit', useCelsius ? 'C' : 'F');
+            updateToggleUI();
+            renderWeather();
+        }
+        updateToggleUI();
+
+        // ═══════════════ SCROLL HINT ═══════════════
+        function checkScroll(el) {
+            const wrap = el.closest('.widget-scroll-wrap');
+            if (!wrap) return;
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+            const noOverflow = el.scrollHeight <= el.clientHeight + 5;
+            wrap.classList.toggle('scrolled-bottom', atBottom || noOverflow);
+        }
+        function initScrollHints() {
+            document.querySelectorAll('.widget-scroll').forEach(el => checkScroll(el));
+        }
+
+        // ═══════════════ HELPERS ═══════════════
+        function timeAgo(dateStr) {
+            if (!dateStr) return '';
+            const diff = Date.now() - new Date(dateStr).getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return mins + 'm ago';
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return hrs + 'h ago';
+            const days = Math.floor(hrs / 24);
+            return days + 'd ago';
+        }
+
+        function escHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function formatMatchDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const now = new Date();
+            const diffMs = d - now;
+            const diffDays = Math.floor(diffMs / 86400000);
+            const opts = { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' };
+            const time = d.toLocaleTimeString('en-US', opts);
+            if (diffDays === 0) return 'Today · ' + time + ' PT';
+            if (diffDays === 1) return 'Tomorrow · ' + time + ' PT';
+            const dateOpts = { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' };
+            return d.toLocaleDateString('en-US', dateOpts) + ' · ' + time + ' PT';
+        }
+
+        async function loadJSON(name) {
+            try {
+                const res = await window.fetch(`/data/${name}.json?_=${Math.floor(Date.now()/60000)}`);
+                if (!res.ok) return null;
+                return await res.json();
+            } catch { return null; }
+        }
+
+        // ═══════════════ WEATHER ═══════════════
+        let _weatherCache = null;
+        async function renderWeather() {
+            const d = _weatherCache || await loadJSON('weather');
+            if (!d || !d.locations) return;
+            _weatherCache = d;
+            // Location names shown inside each section
+            const u = tempUnit();
+            const html = '<div class="weather-locations">' + d.locations.map(loc => `
+                <div class="weather-loc">
+                    <div class="weather-loc-name">${escHtml(loc.location)}</div>
+                    <div class="weather-main">
+                        <div class="weather-icon">${loc.emoji}</div>
+                        <div>
+                            <div style="display:flex;align-items:flex-start;">
+                                <div class="weather-temp">${tempVal(loc.temp)}</div>
+                                <span class="weather-unit">${u}</span>
+                            </div>
+                            <div class="weather-desc">${escHtml(loc.description)}</div>
+                            <div class="weather-meta">H:${tempVal(loc.high)}° L:${tempVal(loc.low)}° · Wind ${loc.wind}mph · ${loc.humidity}% humidity</div>
+                        </div>
+                    </div>
+                    <div class="weather-forecast">
+                        ${loc.forecast.map(f => `
+                            <div class="forecast-day">
+                                <div class="label">${f.label}</div>
+                                <span class="emoji">${f.emoji}</span>
+                                <div class="temp">${tempVal(f.high)}°</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('') + '</div>';
+            document.getElementById('weather-body').innerHTML = html;
+        }
+
+        // ═══════════════ STOCKS ═══════════════
+        async function renderStocks() {
+            const d = await loadJSON('stocks');
+            if (!d || !d.stocks.length) return;
+            const updatedAt = new Date(d._updated);
+            const timeStr = updatedAt.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+            document.getElementById('stocks-badge').textContent = 'Updated ' + timeStr;
+            // Sort: gainers first (desc), then losers (desc by loss)
+            const sorted = [...d.stocks].sort((a, b) => parseFloat(b.change) - parseFloat(a.change));
+            const html = '<div class="stock-list">' + sorted.map(s => {
+                const pct = parseFloat(s.change);
+                const cls = pct >= 0 ? 'stock-up' : 'stock-down';
+                const sign = pct >= 0 ? '+' : '';
+                return `<div class="stock-row">
+                    <div class="stock-left">
+                        <span class="stock-ticker">${s.ticker}</span>
+                        <span class="stock-name">${escHtml(s.name)}</span>
+                    </div>
+                    <div class="stock-right">
+                        <span class="stock-price">${s.price}</span>
+                        <span class="stock-change ${cls}">${sign}${s.change}%</span>
+                    </div>
+                </div>`;
+            }).join('') + '</div>';
+            document.getElementById('stocks-body').innerHTML = html;
+        }
+
+        // ═══════════════ SPORTS ═══════════════
+        async function renderSports() {
+            const d = await loadJSON('sports');
+            if (!d || !d.matches.length) {
+                document.getElementById('sports-body').innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;">No matches right now</div>';
+                return;
+            }
+            const updated = new Date(d._updated);
+            const timeStr = updated.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+            document.querySelector('#sports-widget .badge').textContent = 'Updated ' + timeStr;
+
+            const html = d.matches.slice(0, 10).map(m => {
+                const isLive = m.state === 'in';
+                const isFinal = m.state === 'post';
+                let statusHtml, statusCls;
+                if (isLive) {
+                    statusHtml = '<span class="live-dot"></span> LIVE';
+                    statusCls = 'status-live';
+                } else if (isFinal) {
+                    statusHtml = m.statusDetail || 'FT';
+                    statusCls = 'status-final';
+                } else {
+                    statusHtml = formatMatchDate(m.date);
+                    statusCls = 'status-upcoming';
+                }
+                const t = m.teams || [];
+                const t1 = t[0] || { name: 'TBD' };
+                const t2 = t[1] || { name: 'TBD' };
+                const showScore = isLive || isFinal;
+                const logo1 = t1.logo ? `<img class="team-logo" src="${escHtml(t1.logo)}" alt="" onerror="this.style.display='none'">` : '';
+                const logo2 = t2.logo ? `<img class="team-logo" src="${escHtml(t2.logo)}" alt="" onerror="this.style.display='none'">` : '';
+                const isHighlight = m.highlight;
+                return `<div class="match-card${isLive ? ' live' : ''}${isHighlight && !isLive ? ' highlight' : ''}">
+                    <div class="match-top">
+                        <span class="match-league">${escHtml(m.league)}</span>
+                        <span class="match-status ${statusCls}">${statusHtml}</span>
+                    </div>
+                    <div class="match-teams">
+                        <span class="team">${logo1}${escHtml(t1.name)}${showScore && t1.score ? `<span class="team-score">${escHtml(t1.score)}</span>` : ''}</span>
+                        <span class="match-vs">vs</span>
+                        <span class="team">${logo2}${escHtml(t2.name)}${showScore && t2.score ? `<span class="team-score">${escHtml(t2.score)}</span>` : ''}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('sports-body').innerHTML = html;
+        }
+
+        // ═══════════════ NEWS ═══════════════
+        function renderNewsList(items, targetId) {
+            if (!items || !items.length) return;
+            const html = items.map(n => `
+                <div class="news-item">
+                    ${n.img ? `<img class="news-thumb" src="${escHtml(n.img)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">${escHtml(n.source)}</span>
+                            <span class="news-time">${timeAgo(n.time)}</span>
+                        </div>
+                        <div class="news-headline">${n.link ? `<a href="${escHtml(n.link)}" target="_blank" rel="noopener">${escHtml(n.headline)}</a>` : escHtml(n.headline)}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById(targetId).innerHTML = html;
+        }
+
+        async function renderNews() {
+            const d = await loadJSON('news');
+            if (!d) return;
+            renderNewsList(d.us, 'us-news-body');
+            renderNewsList(d.india, 'india-news-body');
+        }
+
+        // ═══════════════ CRICKET & TENNIS ═══════════════
+        async function renderCricketTennis() {
+            const d = await loadJSON('sports-other');
+            if (!d || !d.matches || !d.matches.length) {
+                document.getElementById('ct-body').innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:10px 0;">No upcoming matches right now</div>';
+                return;
+            }
+            const updated = new Date(d._updated);
+            const timeStr = updated.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+            document.getElementById('ct-badge').textContent = 'Updated ' + timeStr;
+
+            const html = d.matches.slice(0, 8).map(m => {
+                const isLive = m.state === 'in';
+                const isFinal = m.state === 'post';
+                let statusHtml, statusCls;
+                if (isLive) {
+                    statusHtml = '<span class="live-dot"></span> LIVE';
+                    statusCls = 'status-live';
+                } else if (isFinal) {
+                    statusHtml = m.statusDetail || 'FT';
+                    statusCls = 'status-final';
+                } else {
+                    statusHtml = formatMatchDate(m.date);
+                    statusCls = 'status-upcoming';
+                }
+                const t = m.teams || [];
+                const t1 = t[0] || { name: 'TBD' };
+                const t2 = t[1] || { name: 'TBD' };
+                const showScore = isLive || isFinal;
+                return `<div class="match-card${isLive ? ' live' : ''}">
+                    <div class="match-top">
+                        <span class="match-league">${escHtml(m.league)}</span>
+                        <span class="match-status ${statusCls}">${statusHtml}</span>
+                    </div>
+                    <div class="match-teams">
+                        <span class="team">${escHtml(t1.name)}${showScore && t1.score ? `<span class="team-score">${escHtml(t1.score)}</span>` : ''}</span>
+                        <span class="match-vs">vs</span>
+                        <span class="team">${escHtml(t2.name)}${showScore && t2.score ? `<span class="team-score">${escHtml(t2.score)}</span>` : ''}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('ct-body').innerHTML = html;
+        }
+
+        // ═══════════════ YOUTUBE ═══════════════
+        function formatViews(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M views';
+            if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K views';
+            return n + ' views';
+        }
+
+        async function renderYouTube() {
+            const d = await loadJSON('youtube');
+            if (!d || !d.categories || !d.categories.length) return;
+            const updated = new Date(d._updated);
+            document.getElementById('yt-badge').textContent = 'Updated ' + updated.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+
+            // Reorder: Sports → AI → Subscriptions
+            const order = ['sports', 'ai', 'subscription'];
+            d.categories.sort((a, b) => {
+                const aKey = order.findIndex(k => a.label.toLowerCase().includes(k));
+                const bKey = order.findIndex(k => b.label.toLowerCase().includes(k));
+                return (aKey === -1 ? 99 : aKey) - (bKey === -1 ? 99 : bKey);
+            });
+
+            // Render as compact list with thumbnails
+            const html = d.categories.map(cat => `
+                <div class="yt-section-label">${escHtml(cat.label)}</div>
+                ${cat.videos.slice(0, 4).map(v => `
+                    <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener" class="yt-card">
+                        <div class="yt-thumb-wrap">
+                            <img src="${escHtml(v.thumbnail)}" loading="lazy" onerror="this.style.display='none'">
+                            ${v.duration ? `<span class="yt-duration">${v.duration}</span>` : ''}
+                        </div>
+                        <div class="yt-info">
+                            <div class="yt-title">${escHtml(v.title)}</div>
+                            <div class="yt-channel">${escHtml(v.channel)} · ${formatViews(v.views)}</div>
+                        </div>
+                    </a>
+                `).join('')}
+            `).join('');
+            document.getElementById('youtube-body').innerHTML = html;
+        }
+
+        // ═══════════════ EVENTS (static for now) ═══════════════
+        function renderEvents() {
+            // TODO: fetch from calendar API later
+            const now = new Date();
+            // Key dates — update periodically or move to a data file
+            const allEvents = [
+                { date: '2026-02-17', title: "Presidents' Day 🇺🇸", meta: 'US Holiday — Markets Closed' },
+                { date: '2026-02-18', title: 'Ramadan Begins 🌙', meta: 'Holy Month' },
+                { date: '2026-03-01', title: 'Holi 🎨', meta: 'Festival of Colors' },
+                { date: '2026-03-17', title: "St. Patrick's Day ☘️", meta: 'Observance' },
+                { date: '2026-03-20', title: 'Eid al-Fitr 🌙', meta: 'Eid Mubarak!' },
+                { date: '2026-04-03', title: 'Good Friday', meta: 'US Markets Closed' },
+                { date: '2026-04-05', title: 'Easter 🐣', meta: 'Observance' },
+                { date: '2026-04-13', title: 'Baisakhi 🌾', meta: 'Punjabi New Year' },
+                { date: '2026-05-25', title: 'Memorial Day 🇺🇸', meta: 'US Holiday — Markets Closed' },
+                { date: '2026-05-27', title: 'Eid al-Adha 🐑', meta: 'Festival of Sacrifice' },
+                { date: '2026-07-04', title: 'Independence Day 🇺🇸', meta: 'US Holiday' },
+                { date: '2026-08-15', title: 'Indian Independence Day 🇮🇳', meta: 'National Holiday' },
+                { date: '2026-09-07', title: 'Labor Day 🇺🇸', meta: 'US Holiday — Markets Closed' },
+                { date: '2026-10-02', title: 'Dussehra 🏹', meta: 'Victory of Good over Evil' },
+                { date: '2026-10-21', title: 'Diwali 🪔', meta: 'Festival of Lights' },
+                { date: '2026-11-26', title: 'Thanksgiving 🦃', meta: 'US Holiday' },
+                { date: '2026-12-25', title: 'Christmas 🎄', meta: 'Holiday' },
+            ];
+            // Show next 5 upcoming events
+            const today = new Date().toISOString().slice(0, 10);
+            const events = allEvents.filter(e => e.date >= today).slice(0, 8).map(e => {
+                const d = new Date(e.date + 'T00:00:00');
+                return { ...e, month: d.toLocaleString('en-US', { month: 'short' }), day: d.getDate() };
+            });
+            const html = events.map(e => `
+                <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border);align-items:center;">
+                    <div style="min-width:46px;text-align:center;">
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);font-weight:700;">${e.month}</div>
+                        <div style="font-size:22px;font-weight:700;line-height:1.1;">${e.day}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:14px;font-weight:500;">${e.title}</div>
+                        <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">${e.meta}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('events-body').innerHTML = html;
+        }
+
+        // ═══════════════ INIT ═══════════════
+        async function init() {
+            await Promise.allSettled([
+                renderWeather(),
+                renderStocks(),
+                renderSports(),
+                renderCricketTennis(),
+                renderNews(),
+                renderYouTube(),
+            ]);
+            renderEvents();
+            setTimeout(initScrollHints, 100);
+
+            // Show last updated time
+            try {
+                const w = await loadJSON('weather');
+                if (w?._updated) {
+                    const d = new Date(w._updated);
+                    document.getElementById('last-updated').textContent = 'Data updated: ' + d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric' });
+                }
+            } catch {}
+        }
+
+        init();
+        // Auto-refresh every 5 minutes (data itself is cached 15m server-side)
+        setInterval(init, 300000);
+    </script>
+</body>
+</html>

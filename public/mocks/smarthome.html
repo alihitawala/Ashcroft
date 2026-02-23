@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home — Mock</title>
+    <style>
+        [data-theme="dark"] {
+            --bg: #0b0e11; --surface: #13171c; --surface2: #1a1f26; --surface3: #222830;
+            --border: #2a313a; --border-hover: #3a4250; --text: #f0f2f5; --text-secondary: #8a94a0; --text-tertiary: #5a6370;
+            --accent: #635bff; --accent-bg: rgba(99,91,255,0.1); --green: #3ecf8e; --green-bg: rgba(62,207,142,0.1);
+            --red: #f45b69; --red-bg: rgba(244,91,105,0.1); --amber: #f5a623; --amber-bg: rgba(245,166,35,0.1);
+            --blue: #5b9cf6; --blue-bg: rgba(91,156,246,0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        [data-theme="light"] {
+            --bg: #f6f8fa; --surface: #ffffff; --surface2: #f0f2f5; --surface3: #e8ecf0;
+            --border: #e0e4e8; --border-hover: #c8cdd3; --text: #1a1f36; --text-secondary: #596577; --text-tertiary: #8792a2;
+            --accent: #635bff; --accent-bg: rgba(99,91,255,0.06); --green: #0e9f6e; --green-bg: rgba(14,159,110,0.08);
+            --red: #e03e4e; --red-bg: rgba(224,62,78,0.08); --amber: #d97706; --amber-bg: rgba(217,119,6,0.08);
+            --blue: #3b82f6; --blue-bg: rgba(59,130,246,0.08);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06); --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; padding: 28px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header-right { display: flex; gap: 8px; }
+        .theme-toggle, .back-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; color: var(--text-secondary); }
+        .theme-toggle:hover, .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Room sections */
+        .room-section { margin-bottom: 28px; }
+        .room-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+        .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        .device-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow-sm); transition: all 0.2s; cursor: pointer; position: relative; }
+        .device-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-hover); }
+        .device-card.active { border-color: var(--accent); background: var(--accent-bg); }
+        .device-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .device-icon { font-size: 28px; }
+        .device-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .status-on { background: var(--green-bg); color: var(--green); }
+        .status-off { background: var(--surface2); color: var(--text-tertiary); }
+        .status-locked { background: var(--green-bg); color: var(--green); }
+        .status-closed { background: var(--green-bg); color: var(--green); }
+        .status-open { background: var(--red-bg); color: var(--red); }
+        .status-idle { background: var(--blue-bg); color: var(--blue); }
+        .status-running { background: var(--amber-bg); color: var(--amber); }
+        .status-heating { background: var(--red-bg); color: var(--red); }
+        .status-connected { background: var(--green-bg); color: var(--green); }
+        .device-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .device-detail { font-size: 12px; color: var(--text-tertiary); }
+
+        /* Toggle switch */
+        .toggle { width: 40px; height: 22px; border-radius: 11px; background: var(--surface3); position: relative; cursor: pointer; transition: background 0.2s; border: 1px solid var(--border); }
+        .toggle.on { background: var(--accent); border-color: var(--accent); }
+        .toggle::after { content: ''; width: 16px; height: 16px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+        .toggle.on::after { transform: translateX(18px); }
+
+        /* Slider */
+        .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+        .slider { flex: 1; height: 4px; border-radius: 2px; background: var(--surface3); appearance: none; -webkit-appearance: none; }
+        .slider::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+        .slider-label { font-size: 11px; color: var(--text-secondary); font-weight: 600; min-width: 30px; }
+
+        /* Camera */
+        .camera-preview { width: 100%; height: 120px; border-radius: 8px; background: var(--surface3); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 12px; margin-top: 10px; border: 1px solid var(--border); }
+
+        @media (max-width: 700px) {
+            body { padding: 16px; }
+            .device-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏠 Smart Home</h1>
+        <div class="header-right">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            <a class="back-btn" href="dashboard.html">←</a>
+            <a class="back-btn" href="index.html" style="font-size:11px;">All</a>
+        </div>
+    </div>
+
+    <!-- Security -->
+    <div class="room-section">
+        <div class="room-title">🔐 Security</div>
+        <div class="device-grid">
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🔒</div>
+                    <span class="device-status status-locked">Locked</span>
+                </div>
+                <div class="device-name">Front Door Lock</div>
+                <div class="device-detail">Yale × Nest · Locked 2h ago</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🚗</div>
+                    <span class="device-status status-closed">Closed</span>
+                </div>
+                <div class="device-name">Garage Door</div>
+                <div class="device-detail">myQ · Last opened 6h ago</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">📹</div>
+                    <span class="device-status status-connected">Online</span>
+                </div>
+                <div class="device-name">Front Door Camera</div>
+                <div class="device-detail">eufy · No motion</div>
+                <div class="camera-preview">📷 Live Preview</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">📹</div>
+                    <span class="device-status status-connected">Online</span>
+                </div>
+                <div class="device-name">Backyard Camera</div>
+                <div class="device-detail">eufy · No motion</div>
+                <div class="camera-preview">📷 Live Preview</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lights -->
+    <div class="room-section">
+        <div class="room-title">💡 Lights</div>
+        <div class="device-grid">
+            <div class="device-card active">
+                <div class="device-top">
+                    <div class="device-icon">💡</div>
+                    <div class="toggle on"></div>
+                </div>
+                <div class="device-name">Family Room</div>
+                <div class="device-detail">Philips Hue · Warm White</div>
+                <div class="slider-row">
+                    <input type="range" class="slider" value="80" min="0" max="100">
+                    <span class="slider-label">80%</span>
+                </div>
+            </div>
+            <div class="device-card active">
+                <div class="device-top">
+                    <div class="device-icon">💡</div>
+                    <div class="toggle on"></div>
+                </div>
+                <div class="device-name">Kitchen</div>
+                <div class="device-detail">Philips Hue · Bright White</div>
+                <div class="slider-row">
+                    <input type="range" class="slider" value="100" min="0" max="100">
+                    <span class="slider-label">100%</span>
+                </div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">💡</div>
+                    <div class="toggle"></div>
+                </div>
+                <div class="device-name">Garage</div>
+                <div class="device-detail">Philips Hue · Off</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🌙</div>
+                    <div class="toggle"></div>
+                </div>
+                <div class="device-name">Backyard Garden</div>
+                <div class="device-detail">Dewenwils · Off · Auto 7PM</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Climate & Water -->
+    <div class="room-section">
+        <div class="room-title">🌡️ Climate & Water</div>
+        <div class="device-grid">
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🌡️</div>
+                    <span class="device-status status-heating">Heating</span>
+                </div>
+                <div class="device-name">Bathroom Floor</div>
+                <div class="device-detail">Schluter · Target 75°F · Current 72°F</div>
+                <div class="slider-row">
+                    <input type="range" class="slider" value="75" min="60" max="90">
+                    <span class="slider-label">75°F</span>
+                </div>
+            </div>
+            <div class="device-card active">
+                <div class="device-top">
+                    <div class="device-icon">🚿</div>
+                    <span class="device-status status-idle">Standby</span>
+                </div>
+                <div class="device-name">Front Yard Irrigation</div>
+                <div class="device-detail">Rachio · Next run: Tue 6AM</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appliances -->
+    <div class="room-section">
+        <div class="room-title">🏗️ Appliances</div>
+        <div class="device-grid">
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🤖</div>
+                    <span class="device-status status-idle">Docked</span>
+                </div>
+                <div class="device-name">Roborock Vacuum</div>
+                <div class="device-detail">Battery 100% · Last clean: Today 2PM</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🧊</div>
+                    <span class="device-status status-connected">OK</span>
+                </div>
+                <div class="device-name">Refrigerator</div>
+                <div class="device-detail">HomeConnect · Fridge 37°F · Freezer 0°F</div>
+            </div>
+            <div class="device-card">
+                <div class="device-top">
+                    <div class="device-icon">🍽️</div>
+                    <span class="device-status status-running">Running</span>
+                </div>
+                <div class="device-name">Dishwasher</div>
+                <div class="device-detail">HomeConnect · 45 min remaining</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            if (html.getAttribute('data-theme') === 'dark') { html.setAttribute('data-theme', 'light'); btn.textContent = '☀️'; }
+            else { html.setAttribute('data-theme', 'dark'); btn.textContent = '🌙'; }
+        }
+    </script>
+</body>
+</html>

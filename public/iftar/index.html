@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iftar Invitation — Ramadan Mubarak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0e1a;--gold:#d4a547;--gold-light:#f5d799;--gold-hover:#e8bf6a;
+--card-bg:rgba(255,255,255,0.05);--text:#fff;--text-muted:#ccc;--success:#4ade80;
+}
+html{scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{display:flex;align-items:flex-start;justify-content:center;min-height:100vh;padding:40px 16px 24px}
+
+/* ── Background ── */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg::before{content:'';position:absolute;top:6%;right:8%;width:100px;height:100px;border-radius:50%;box-shadow:inset -25px -4px 0 var(--gold),0 0 50px rgba(212,165,71,.3),0 0 100px rgba(212,165,71,.1);opacity:.5;animation:moonGlow 6s ease-in-out infinite alternate}
+@keyframes moonGlow{0%{opacity:.4;filter:blur(0)}100%{opacity:.6;filter:blur(1px)}}
+
+/* Mosque silhouette */
+.mosque{position:fixed;bottom:0;left:0;right:0;z-index:0;opacity:.08;pointer-events:none}
+.mosque svg{width:100%;height:auto;display:block}
+
+/* Iftar spread watermark */
+.iftar-spread{position:fixed;bottom:8%;left:50%;transform:translateX(-50%);z-index:0;opacity:0;animation:spreadFadeIn 2s 3s ease forwards;pointer-events:none}
+@keyframes spreadFadeIn{to{opacity:.06}}
+.iftar-spread svg{width:320px;height:auto}
+@media(max-width:600px){.iftar-spread svg{width:260px}}
+
+/* Hanging lights */
+.light-string{position:fixed;top:0;left:0;right:0;z-index:0;pointer-events:none;opacity:0;animation:fadeIn 1.5s 0.5s ease forwards}
+.light-bulb{position:absolute;top:0;width:8px;height:22px;animation:lightSwing 3s ease-in-out infinite alternate}
+.light-bulb::before{content:'';position:absolute;top:0;left:3px;width:2px;height:10px;background:rgba(212,165,71,.3)}
+.light-bulb::after{content:'';position:absolute;top:10px;left:0;width:8px;height:12px;border-radius:0 0 50% 50%;background:radial-gradient(ellipse,rgba(212,165,71,.6),rgba(212,165,71,.15));box-shadow:0 4px 12px rgba(212,165,71,.3)}
+@keyframes lightSwing{0%{transform:rotate(-4deg)}100%{transform:rotate(4deg)}}
+
+/* Stars / particles */
+.star{position:absolute;width:3px;height:3px;background:var(--gold-light);border-radius:50%;opacity:0;will-change:transform,opacity;animation:starDrift linear infinite}
+@keyframes starDrift{0%{transform:translate3d(0,0,0) scale(1);opacity:0}10%{opacity:.7}90%{opacity:.7}100%{transform:translate3d(0,-110vh,0) scale(.3);opacity:0}}
+
+/* Lanterns */
+.lantern{position:absolute;bottom:-60px;opacity:.25;will-change:transform;animation:lanternFloat linear infinite;filter:drop-shadow(0 0 8px rgba(212,165,71,.4))}
+@keyframes lanternFloat{0%{transform:translate3d(0,0,0) rotate(-3deg)}25%{transform:translate3d(8px,-30vh,0) rotate(3deg)}50%{transform:translate3d(-8px,-60vh,0) rotate(-3deg)}75%{transform:translate3d(8px,-90vh,0) rotate(3deg)}100%{transform:translate3d(0,-120vh,0) rotate(-3deg)}}
+.lantern svg{width:40px;height:66px}
+
+/* ── Card ── */
+.card-wrap{position:relative;z-index:1;width:100%;max-width:480px;opacity:0;transform:translateY(40px);animation:cardIn .9s .4s ease-out forwards}
+@keyframes cardIn{to{opacity:1;transform:translateY(0)}}
+
+.card{background:rgba(10,14,26,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(212,165,71,.25);border-radius:20px;overflow:hidden;box-shadow:0 0 60px rgba(212,165,71,.08),0 30px 60px rgba(0,0,0,.4);position:relative;will-change:auto}
+.card::before{content:'';position:absolute;inset:-1px;border-radius:20px;padding:1px;background:linear-gradient(160deg,rgba(212,165,71,.4),transparent 40%,transparent 60%,rgba(212,165,71,.15));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;animation:borderBreath 4s ease-in-out infinite alternate}
+@keyframes borderBreath{0%{opacity:.6}100%{opacity:1}}
+
+/* Geometric header */
+.geo-header{height:48px;background:repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(212,165,71,.12) 20px,rgba(212,165,71,.12) 21px),repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(212,165,71,.12) 20px,rgba(212,165,71,.12) 21px);position:relative;overflow:hidden}
+.geo-header::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 14px,rgba(212,165,71,.08) 14px,rgba(212,165,71,.08) 15px),repeating-linear-gradient(-45deg,transparent,transparent 14px,rgba(212,165,71,.08) 14px,rgba(212,165,71,.08) 15px)}
+
+.card-body{padding:32px 28px 28px}
+
+/* Bismillah */
+.bismillah{font-family:'Amiri',serif;font-size:1.35rem;color:var(--gold);text-align:center;opacity:0;animation:fadeIn .6s .9s ease forwards;line-height:1.8}
+
+/* Ramadan Mubarak */
+.title{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;text-align:center;margin:18px 0 8px;background:linear-gradient(135deg,var(--gold),var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transform:scale(.95);animation:titleIn .7s 1.2s ease forwards}
+@keyframes titleIn{to{opacity:1;transform:scale(1)}}
+
+/* Divider crescent */
+.divider{text-align:center;margin:14px 0;opacity:0;animation:fadeIn .5s 1.5s ease forwards}
+.divider svg{width:80px;height:24px}
+
+/* Subtitle */
+.subtitle{font-family:'Playfair Display',serif;font-size:1.15rem;text-align:center;color:var(--gold-light);opacity:0;animation:fadeIn .5s 1.6s ease forwards;font-style:italic;letter-spacing:.5px}
+
+/* Guest name */
+.guest-name{font-family:'Playfair Display',serif;font-size:1.4rem;text-align:center;margin:22px 0 6px;color:#fff;opacity:0;animation:fadeIn .5s 1.8s ease forwards;font-style:italic}
+
+/* Details */
+.details{margin:22px 0;display:flex;flex-direction:column;gap:14px}
+.detail-row{display:flex;align-items:flex-start;gap:12px;opacity:0;animation:fadeIn .45s ease forwards}
+.detail-row:nth-child(1){animation-delay:2s}
+.detail-row:nth-child(2){animation-delay:2.1s}
+.detail-row:nth-child(3){animation-delay:2.2s}
+.detail-row:nth-child(4){animation-delay:2.3s}
+.detail-row:nth-child(5){animation-delay:2.4s}
+.detail-icon{flex-shrink:0;width:22px;height:22px;color:var(--gold)}
+.detail-icon svg{width:100%;height:100%}
+.detail-text{font-size:.95rem;color:var(--text-muted);line-height:1.5}
+.detail-text a{color:var(--gold-light);text-decoration:none;border-bottom:1px solid rgba(212,165,71,.3);transition:border-color .2s}
+.detail-text a:hover{border-color:var(--gold)}
+.host-message{font-style:italic;color:var(--text-muted);font-size:.92rem;margin-top:4px;padding:12px 16px;background:rgba(212,165,71,.06);border-radius:10px;border-left:2px solid rgba(212,165,71,.3)}
+
+/* RSVP */
+.rsvp-section{margin-top:26px;opacity:0;animation:fadeIn .5s 2.5s ease forwards}
+.rsvp-title{font-family:'Playfair Display',serif;font-size:1.05rem;text-align:center;color:var(--gold-light);margin-bottom:16px}
+.rsvp-buttons{display:flex;flex-direction:column;gap:10px}
+.rsvp-btn{font-family:'Inter',sans-serif;font-size:.95rem;font-weight:500;padding:14px 20px;border-radius:12px;cursor:pointer;transition:all .3s ease;border:1.5px solid var(--gold);background:transparent;color:var(--gold);position:relative;overflow:hidden;letter-spacing:.3px}
+.rsvp-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold-hover));opacity:0;transition:opacity .3s}
+.rsvp-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(212,165,71,.25)}
+.rsvp-btn:hover::before{opacity:.12}
+.rsvp-btn.primary{background:linear-gradient(135deg,var(--gold),var(--gold-hover));color:var(--bg);border-color:transparent;font-weight:600}
+.rsvp-btn.primary:hover{box-shadow:0 6px 24px rgba(212,165,71,.4)}
+.rsvp-btn.selected{background:linear-gradient(135deg,var(--gold),var(--gold-hover));color:var(--bg);border-color:transparent}
+.rsvp-btn.selected::after{content:'✓';margin-left:8px;font-weight:700}
+
+/* RSVP Form */
+.rsvp-form{max-height:0;overflow:hidden;transition:max-height .5s ease,opacity .4s ease;opacity:0}
+.rsvp-form.open{max-height:500px;opacity:1;margin-top:18px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:.85rem;color:var(--gold-light);margin-bottom:6px;display:block;font-weight:500}
+.guest-counter{display:flex;align-items:center;gap:16px;justify-content:center}
+.counter-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.counter-btn:hover{background:rgba(212,165,71,.15)}
+.counter-val{font-size:1.5rem;font-weight:600;color:#fff;min-width:30px;text-align:center;font-family:'Playfair Display',serif}
+textarea{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(212,165,71,.25);background:rgba(255,255,255,.04);color:#fff;font-family:'Inter',sans-serif;font-size:.9rem;resize:vertical;min-height:60px;transition:border-color .2s;outline:none}
+textarea:focus{border-color:var(--gold)}
+textarea::placeholder{color:rgba(255,255,255,.3)}
+.submit-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold),var(--gold-hover));color:var(--bg);font-family:'Inter',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s;letter-spacing:.3px;margin-top:4px}
+.submit-btn:hover{box-shadow:0 6px 24px rgba(212,165,71,.4);transform:translateY(-1px)}
+.submit-btn:active{transform:scale(.98)}
+.submit-btn.submitting{pointer-events:none;opacity:.7}
+
+/* Thank you */
+.thank-you{display:none;text-align:center;padding:20px 0}
+.thank-you.show{display:block;animation:fadeIn .6s ease}
+.thank-you .jazak{font-family:'Amiri',serif;font-size:1.8rem;color:var(--gold);margin-bottom:8px}
+.thank-you .msg{color:var(--text-muted);font-size:1rem;line-height:1.6;margin-bottom:20px}
+.change-link{color:var(--gold);font-size:.85rem;cursor:pointer;border:none;background:none;border-bottom:1px solid rgba(212,165,71,.3);font-family:'Inter',sans-serif;transition:border-color .2s}
+.change-link:hover{border-color:var(--gold)}
+
+/* Email reminder */
+.email-reminder{margin:20px 0 16px;padding:18px;background:rgba(212,165,71,.06);border-radius:12px;border:1px solid rgba(212,165,71,.15);animation:fadeIn .5s ease}
+.email-reminder p{font-size:.88rem;color:var(--text-muted);margin:0 0 12px;line-height:1.5}
+.email-reminder .email-row{display:flex;gap:8px}
+.email-reminder input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(212,165,71,.25);background:rgba(255,255,255,.04);color:#fff;font-family:'Inter',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+.email-reminder input:focus{border-color:var(--gold)}
+.email-reminder input::placeholder{color:rgba(255,255,255,.3)}
+.email-reminder button{padding:10px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold-hover));color:var(--bg);font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s}
+.email-reminder button:hover{box-shadow:0 4px 16px rgba(212,165,71,.3)}
+.email-reminder button:disabled{opacity:.6;pointer-events:none}
+.email-saved{color:var(--success);font-size:.85rem;margin:8px 0 0;display:none}
+.email-saved.show{display:block;animation:fadeIn .3s ease}
+
+/* Calendar removed */
+
+/* Footer */
+.card-footer{text-align:center;padding:18px 28px;border-top:1px solid rgba(212,165,71,.1);font-size:.85rem;color:rgba(212,165,71,.5);font-family:'Playfair Display',serif;font-style:italic;display:flex;align-items:center;justify-content:center;gap:8px}
+.card-footer svg{width:14px;height:14px;opacity:.5}
+
+/* Loading & Error */
+.state-screen{position:relative;z-index:1;text-align:center;color:var(--text-muted)}
+.state-screen .moon-pulse{width:60px;height:60px;margin:0 auto 20px;border-radius:50%;box-shadow:inset -18px -2px 0 var(--gold);animation:pulse 1.5s ease-in-out infinite alternate;opacity:.6}
+@keyframes pulse{0%{opacity:.4;transform:scale(.95)}100%{opacity:.8;transform:scale(1.05)}}
+.state-screen h2{font-family:'Playfair Display',serif;color:var(--gold);font-size:1.3rem;margin-bottom:8px}
+.state-screen p{font-size:.95rem}
+
+/* Utilities */
+@keyframes fadeIn{to{opacity:1}}
+.hidden{display:none!important}
+
+/* Desktop */
+@media(min-width:540px){
+  .rsvp-buttons{flex-direction:row;gap:10px}
+  .rsvp-btn{flex:1;padding:12px 10px;font-size:.88rem}
+  .card-body{padding:36px 36px 30px}
+  .title{font-size:2.5rem}
+}
+@media(max-width:380px){
+  .title{font-size:1.8rem}
+  .card-body{padding:24px 20px 22px}
+}
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg" id="bg"></div>
+
+<!-- Hanging lights -->
+<div class="light-string" id="lightString"></div>
+
+<!-- Mosque silhouette -->
+<div class="mosque">
+<svg viewBox="0 0 1200 200" preserveAspectRatio="xMidYMax meet" fill="currentColor" color="#d4a547">
+  <path d="M0 200V160h40v40H0zm40-20V120l20-10 20 10v60H40zm80 20V130h20v70h-20zm20-30V100l30-40 30 40v70h-60zm60 30V140h30v60h-30z
+  M280 200V90l10-20h10l10 20v110h-30zm30 0V120l15-10 15 10v80h-30zm80 0V80l5-30h10l5 30v120h-20zm20 0V110h20v90h-20z
+  M460 200V70c0-20 10-40 30-50 20 10 30 30 30 50v130h-10V100a20 20 0 00-40 0v100h-10zm60-40V120h20v40h-20zm20 40V150h30v50h-30z
+  M620 200V60l40-50 40 50v140h-10V80l-30-35-30 35v120h-10zm80-20V130l20-15 20 15v50h-40zm40 20V160h20v40h-20z
+  M820 200V100l25-30 25 30v100h-50zm50 0V140h20v60h-20zm20 0V80l15-25h10l15 25v120h-40zm40 0V150h30v50h-30z
+  M1000 200V110c0-25 15-45 35-55 20 10 35 30 35 55v90h-10V120a25 25 0 00-50 0v80h-10zm70-30V130h20v40h-20zm20 30V160h40v40h-40z
+  M1160 200V140l20-15 20 15v60h-40z" opacity=".6"/>
+  <!-- Minarets -->
+  <rect x="285" y="40" width="8" height="160" rx="2" opacity=".5"/>
+  <circle cx="289" cy="36" r="5" opacity=".5"/>
+  <rect x="468" y="15" width="6" height="185" rx="2" opacity=".5"/>
+  <circle cx="471" cy="11" r="4" opacity=".5"/>
+  <rect x="545" y="25" width="6" height="175" rx="2" opacity=".5"/>
+  <circle cx="548" cy="21" r="4" opacity=".5"/>
+  <rect x="828" y="45" width="7" height="155" rx="2" opacity=".5"/>
+  <circle cx="831.5" cy="41" r="4.5" opacity=".5"/>
+  <rect x="1008" y="20" width="7" height="180" rx="2" opacity=".5"/>
+  <circle cx="1011.5" cy="16" r="4.5" opacity=".5"/>
+</svg>
+</div>
+
+<!-- Iftar spread watermark -->
+<div class="iftar-spread">
+<svg viewBox="0 0 400 120" fill="none">
+  <!-- Plate/dastarkhwan -->
+  <ellipse cx="200" cy="90" rx="180" ry="25" stroke="#d4a547" stroke-width="1" opacity=".5"/>
+  <!-- Dates bowl -->
+  <ellipse cx="120" cy="75" rx="28" ry="12" stroke="#d4a547" stroke-width=".8" opacity=".6"/>
+  <ellipse cx="112" cy="70" rx="4" ry="5" fill="#d4a547" opacity=".3"/>
+  <ellipse cx="120" cy="68" rx="4" ry="5" fill="#d4a547" opacity=".3"/>
+  <ellipse cx="128" cy="70" rx="4" ry="5" fill="#d4a547" opacity=".3"/>
+  <!-- Fruit bowl -->
+  <path d="M250 65 Q265 45 280 65" stroke="#d4a547" stroke-width=".8" opacity=".5"/>
+  <circle cx="258" cy="60" r="6" stroke="#d4a547" stroke-width=".7" opacity=".4"/>
+  <circle cx="270" cy="58" r="7" stroke="#d4a547" stroke-width=".7" opacity=".4"/>
+  <circle cx="265" cy="52" r="5" stroke="#d4a547" stroke-width=".7" opacity=".4"/>
+  <!-- Water jug -->
+  <path d="M190 50 Q185 60 185 75 L195 75 Q195 60 190 50z" stroke="#d4a547" stroke-width=".8" fill="none" opacity=".5"/>
+  <path d="M186 50 Q190 46 194 50" stroke="#d4a547" stroke-width=".7" opacity=".5"/>
+  <!-- Small cups -->
+  <path d="M155 78 L152 88 L162 88 L159 78z" stroke="#d4a547" stroke-width=".6" opacity=".4"/>
+  <path d="M225 76 L222 86 L232 86 L229 76z" stroke="#d4a547" stroke-width=".6" opacity=".4"/>
+  <!-- Samosa plate -->
+  <path d="M320 72 L330 58 L340 72z" stroke="#d4a547" stroke-width=".7" fill="none" opacity=".4"/>
+  <path d="M330 72 L340 58 L350 72z" stroke="#d4a547" stroke-width=".7" fill="none" opacity=".4"/>
+  <!-- Bread/naan -->
+  <ellipse cx="80" cy="82" rx="18" ry="8" stroke="#d4a547" stroke-width=".7" opacity=".4" transform="rotate(-15 80 82)"/>
+</svg>
+</div>
+
+<!-- Loading -->
+<div class="state-screen" id="loading">
+  <div class="moon-pulse"></div>
+  <p style="color:var(--gold-light)">Loading your invitation...</p>
+</div>
+
+<!-- Error -->
+<div class="state-screen hidden" id="error">
+  <div class="moon-pulse"></div>
+  <h2>Invitation Not Found</h2>
+  <p>This invitation could not be found or may have expired.</p>
+</div>
+
+<!-- Main Card -->
+<div class="card-wrap hidden" id="main">
+<div class="card">
+  <div class="geo-header"></div>
+  <div class="card-body" id="cardBody">
+
+    <!-- Invite content -->
+    <div id="inviteContent">
+      <div class="bismillah">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
+      <h1 class="title">Ramadan Mubarak</h1>
+      <div class="divider"><svg viewBox="0 0 80 24" fill="none"><path d="M0 12h28" stroke="rgba(212,165,71,.4)" stroke-width="1"/><circle cx="40" cy="10" r="7" stroke="#d4a547" stroke-width="1.2" fill="none"/><circle cx="42" cy="10" r="5" fill="var(--bg)"/><circle cx="48" cy="6" r="1.5" fill="#d4a547"/><path d="M52 12h28" stroke="rgba(212,165,71,.4)" stroke-width="1"/></svg></div>
+      <p class="subtitle">You're Invited to Iftar</p>
+      <p class="guest-name" id="guestName"></p>
+
+      <div class="details" id="details"></div>
+
+      <div class="rsvp-section" id="rsvpSection">
+        <p class="rsvp-title">Will you be joining us?</p>
+        <div class="rsvp-buttons" id="rsvpButtons">
+          <button class="rsvp-btn primary" data-status="attending" onclick="selectRsvp(this)">Joyfully Attending</button>
+          <button class="rsvp-btn" data-status="maybe" onclick="selectRsvp(this)">Possibly Attending</button>
+          <button class="rsvp-btn" data-status="declined" onclick="selectRsvp(this)">Regretfully Declining</button>
+        </div>
+        <div class="rsvp-form" id="rsvpForm">
+          <div id="guestCountGroup" class="form-group">
+            <label class="form-label">Number of guests</label>
+            <div class="guest-counter">
+              <button class="counter-btn" onclick="adjustCount(-1)">−</button>
+              <span class="counter-val" id="guestCount">1</span>
+              <button class="counter-btn" onclick="adjustCount(1)">+</button>
+            </div>
+          </div>
+          <div id="dietaryGroup" class="form-group">
+            <label class="form-label">Any dietary requirements? <span style="opacity:.5">(optional)</span></label>
+            <textarea id="dietaryNotes" placeholder="e.g. vegetarian, nut allergy..." rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message for the host <span style="opacity:.5">(optional)</span></label>
+            <textarea id="hostMessage" placeholder="Looking forward to it!" rows="2"></textarea>
+          </div>
+          <button class="submit-btn" id="submitBtn" onclick="submitRsvp()">Confirm RSVP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thank you -->
+    <div class="thank-you" id="thankYou">
+      <div class="jazak">جَزَاكَ ٱللَّٰهُ خَيْرًا</div>
+      <p class="msg" id="thankMsg"></p>
+      <!-- calendar removed -->
+      <div class="email-reminder" id="emailReminder" style="display:none">
+        <p>🔔 Want a reminder the day before? Drop your email and we'll send you one!</p>
+        <div class="email-row">
+          <input type="email" id="reminderEmail" placeholder="your@email.com">
+          <button id="emailBtn" onclick="saveEmail()">Remind Me</button>
+        </div>
+        <p class="email-saved" id="emailSaved">✅ You're all set! We'll send you a reminder.</p>
+      </div>
+      <button class="change-link" onclick="changeRsvp()">Change RSVP</button>
+    </div>
+
+  </div>
+  <div class="card-footer" id="footer"></div>
+</div>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get('t');
+let inviteData = null;
+let selectedStatus = null;
+let guestCount = 1;
+
+// Stars
+(function initBg(){
+  const bg = document.getElementById('bg');
+  const isMobile = window.innerWidth < 600;
+  const count = isMobile ? 15 : 40;
+  for(let i=0;i<count;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${80+Math.random()*40}%;width:${1.5+Math.random()*2.5}px;height:${1.5+Math.random()*2.5}px;animation-duration:${8+Math.random()*14}s;animation-delay:${Math.random()*10}s;`;
+    bg.appendChild(s);
+  }
+  // Lanterns — glowing Ramadan lanterns
+  const lanternSvg=`<svg viewBox="0 0 40 66" fill="none">
+    <line x1="20" y1="0" x2="20" y2="14" stroke="#d4a547" stroke-width="1.2"/>
+    <path d="M14 14h12l2 4v20c0 6-4 10-8 12-4-2-8-6-8-12V18l2-4z" stroke="#d4a547" stroke-width="1" fill="rgba(212,165,71,.12)"/>
+    <ellipse cx="20" cy="30" rx="4" ry="6" fill="rgba(255,200,80,.15)"/>
+    <line x1="20" y1="50" x2="20" y2="56" stroke="#d4a547" stroke-width=".8"/>
+    <circle cx="20" cy="58" r="2" fill="rgba(212,165,71,.4)"/>
+  </svg>`;
+  const positions = isMobile?[{l:'8%',d:20},{l:'88%',d:24},{l:'50%',d:28}]:[{l:'5%',d:18},{l:'25%',d:24},{l:'50%',d:30},{l:'75%',d:22},{l:'92%',d:26}];
+  positions.forEach(p=>{
+    const l=document.createElement('div');
+    l.className='lantern';
+    l.innerHTML=lanternSvg;
+    l.style.cssText=`left:${p.l};animation-duration:${p.d}s;animation-delay:${Math.random()*10}s;`;
+    bg.appendChild(l);
+  });
+
+  // Hanging string lights across the top
+  const ls=document.getElementById('lightString');
+  const lightCount=isMobile?12:24;
+  for(let i=0;i<lightCount;i++){
+    const b=document.createElement('div');
+    b.className='light-bulb';
+    const x=(i/(lightCount-1))*100;
+    const delay=Math.random()*2;
+    b.style.cssText=`left:${x}%;animation-delay:${delay}s;animation-duration:${2.5+Math.random()*2}s;`;
+    ls.appendChild(b);
+  }
+})();
+
+// Fetch
+async function loadInvite(){
+  if(!token){showError();return}
+  try{
+    const r=await fetch(`/api/iftar/invite/${token}`);
+    if(!r.ok) throw new Error();
+    inviteData=await r.json();
+    renderInvite();
+  }catch(e){console.error('loadInvite error:',e);showError()}
+}
+
+function showError(){
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error').classList.remove('hidden');
+}
+
+function renderInvite(){
+  const d=inviteData, e=d.event;
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+  document.getElementById('guestName').textContent=`Dear ${d.guest_name}`;
+
+  // Details
+  const details=document.getElementById('details');
+  const calIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  const sunIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
+  const pinIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1118 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  const msgIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`;
+
+  const dateStr=formatDate(e.event_date);
+  const timeStr=e.event_time?`${fmtTime(e.event_time)} onwards`:'';
+  const addr=[e.address_line1,e.address_line2,[e.city,e.state,e.zip].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+  const mapsUrl=`https://maps.google.com/?q=${encodeURIComponent(addr)}`;
+
+  const moonIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`;
+  let html=`<div class="detail-row"><span class="detail-icon">${calIcon}</span><span class="detail-text">${dateStr}</span></div>`;
+  if(timeStr) html+=`<div class="detail-row"><span class="detail-icon">${sunIcon}</span><span class="detail-text">${timeStr}</span></div>`;
+  if(e.sunset_time) html+=`<div class="detail-row"><span class="detail-icon">${moonIcon}</span><span class="detail-text">Sunset at ${fmtTime(e.sunset_time)}</span></div>`;
+  if(addr) html+=`<div class="detail-row"><span class="detail-icon">${pinIcon}</span><span class="detail-text"><a href="${mapsUrl}" target="_blank" rel="noopener">${addr}</a></span></div>`;
+  if(e.message) html+=`<div class="detail-row"><span class="detail-icon">${msgIcon}</span><div class="detail-text"><div class="host-message">${esc(e.message)}</div></div></div>`;
+  details.innerHTML=html;
+
+  // Footer
+  document.getElementById('footer').innerHTML=`With love from the ${esc(e.host_name)} family <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#d4a547" stroke-width="1.2"/><circle cx="14" cy="12" r="6" fill="var(--bg)"/></svg>`;
+
+  // If already responded
+  if(d.rsvp_status && d.rsvp_status!=='pending'){
+    showThankYou(d.rsvp_status, d.guest_name);
+  }
+}
+
+function formatDate(s){
+  if(!s) return '';
+  try{
+    const d=new Date(s);
+    return d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
+  }catch(e){return s}
+}
+function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''}
+function fmtTime(t){if(!t)return '';const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const h12=h%12||12;return m?`${h12}:${String(m).padStart(2,'0')} ${ap}`:`${h12} ${ap}`;}
+
+function selectRsvp(btn){
+  selectedStatus=btn.dataset.status;
+  document.querySelectorAll('.rsvp-btn').forEach(b=>{b.classList.remove('selected')});
+  btn.classList.add('selected');
+  const form=document.getElementById('rsvpForm');
+  const isDecline=selectedStatus==='declined';
+  document.getElementById('guestCountGroup').style.display=isDecline?'none':'';
+  document.getElementById('dietaryGroup').style.display=isDecline?'none':'';
+  document.getElementById('submitBtn').textContent=isDecline?'Send':'Confirm RSVP';
+  form.classList.add('open');
+}
+
+function adjustCount(d){
+  guestCount=Math.max(1,Math.min(20,guestCount+d));
+  document.getElementById('guestCount').textContent=guestCount;
+}
+
+async function submitRsvp(){
+  const btn=document.getElementById('submitBtn');
+  if(btn.classList.contains('submitting'))return;
+  btn.classList.add('submitting');btn.textContent='Sending...';
+  const body={
+    rsvp_status:selectedStatus,
+    guest_count:selectedStatus==='declined'?0:guestCount,
+    dietary_notes:document.getElementById('dietaryNotes').value.trim(),
+    message_to_host:document.getElementById('hostMessage').value.trim()
+  };
+  try{
+    const r=await fetch(`/api/iftar/invite/${token}/rsvp`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok) throw new Error();
+    showThankYou(selectedStatus,inviteData.guest_name);
+  }catch(e){
+    btn.classList.remove('submitting');btn.textContent='Try Again';
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+function showThankYou(status,name){
+  document.getElementById('inviteContent').style.display='none';
+  const ty=document.getElementById('thankYou');
+  ty.classList.add('show');
+  const msg=status==='declined'
+    ?`Thank you for letting us know, ${esc(name)}. We'll miss you! 💛`
+    :`Thank you, ${esc(name)}! We look forward to sharing this blessed meal with you. 🌙`;
+  document.getElementById('thankMsg').innerHTML=msg;
+  // Show email reminder only for attending/maybe
+  const emailDiv=document.getElementById('emailReminder');
+  if(status==='attending'||status==='maybe'){
+    emailDiv.style.display='';
+    // If already has email saved, show confirmation
+    if(inviteData.guest_email){
+      document.getElementById('reminderEmail').value=inviteData.guest_email;
+      document.getElementById('emailSaved').classList.add('show');
+      document.getElementById('emailBtn').disabled=true;
+    }
+  } else {
+    emailDiv.style.display='none';
+  }
+}
+
+async function saveEmail(){
+  const input=document.getElementById('reminderEmail');
+  const btn=document.getElementById('emailBtn');
+  const email=input.value.trim();
+  if(!email||!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)){input.style.borderColor='#ef4444';return}
+  btn.disabled=true;btn.textContent='Saving...';
+  try{
+    const r=await fetch(`/api/iftar/invite/${token}/email`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    if(!r.ok) throw new Error();
+    document.getElementById('emailSaved').classList.add('show');
+    btn.textContent='✓ Saved';
+    inviteData.guest_email=email;
+  }catch(e){
+    btn.disabled=false;btn.textContent='Try Again';
+  }
+}
+
+function changeRsvp(){
+  document.getElementById('thankYou').classList.remove('show');
+  document.getElementById('inviteContent').style.display='';
+  document.getElementById('rsvpForm').classList.remove('open');
+  document.querySelectorAll('.rsvp-btn').forEach(b=>b.classList.remove('selected'));
+  selectedStatus=null;
+  // Reset submit button
+  const btn=document.getElementById('submitBtn');
+  btn.classList.remove('submitting');btn.textContent='Confirm RSVP';
+  // Reset form fields
+  guestCount=1;document.getElementById('guestCount').textContent='1';
+  document.getElementById('dietaryNotes').value='';
+  document.getElementById('hostMessage').value='';
+  // Reset animations on rsvp section
+  const rs=document.getElementById('rsvpSection');
+  rs.style.animation='none';rs.offsetHeight;rs.style.animation='';rs.style.opacity='1';
+}
+
+loadInvite();
+</script>
+</body>
+</html>

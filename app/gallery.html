@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <title>Gallery — ashcroft.cloud</title>
+    <link rel="stylesheet" href="/app/shared.css?v=1771810988">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+/* ═══════════════════════════════════════════════════════
+   PHOTO-FIRST GALLERY — Google Photos / Glass.photo inspired
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Full-bleed layout ─── */
+.gallery-page .main-body { padding: 0 !important; max-width: 100% !important; }
+.content-area { padding: 0 !important; padding-bottom: 56px !important; max-width: 100% !important; }
+
+/* ─── Toolbar — minimal, auto-hiding ─── */
+.gallery-toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1), background 0.2s;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.gallery-toolbar.hidden { transform: translateY(-100%); }
+
+.search-wrapper {
+    position: relative; display: flex; align-items: center;
+    flex: 1; min-width: 0;
+    transition: width 0.3s ease;
+}
+.search-wrapper .search-icon {
+    position: absolute; left: 10px; color: var(--text-tertiary);
+    font-size: 14px; pointer-events: none; z-index: 1;
+}
+.gallery-search {
+    width: 44px; padding: 8px 12px 8px 34px; border-radius: 22px;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    font-size: 14px; outline: none; transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    cursor: pointer;
+}
+.gallery-search:focus, .gallery-search.expanded {
+    width: 100%; flex: 1; cursor: text; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.gallery-search::placeholder { color: var(--text-tertiary); opacity: 0; transition: opacity 0.2s; }
+.gallery-search:focus::placeholder, .gallery-search.expanded::placeholder { opacity: 1; }
+
+/* 3-dot more menu */
+.menu-wrapper { position: relative; }
+.more-menu {
+    display: none; position: absolute; top: 44px; right: 0; z-index: 200;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18); min-width: 180px; padding: 6px 0;
+    animation: menuFadeIn 0.15s ease;
+}
+@keyframes menuFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.more-menu.open { display: block; }
+.more-menu-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px;
+    border: none; background: none; color: var(--text); font-size: 14px; cursor: pointer;
+    transition: background 0.15s; text-align: left;
+}
+.more-menu-item:hover { background: var(--surface2); }
+.more-menu-item.active-view { color: var(--accent); font-weight: 600; }
+.more-menu-item span { font-size: 16px; width: 22px; text-align: center; }
+.more-menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+.toolbar-right { display: flex; gap: 6px; align-items: center; }
+.toolbar-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-secondary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    transition: all 0.2s; position: relative;
+}
+.toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.upload-btn {
+    background: var(--accent); color: #fff !important; border-color: var(--accent);
+    width: auto; padding: 0 14px; gap: 6px; font-size: 13px; font-weight: 600;
+}
+.upload-btn:hover { background: var(--accent-hover); }
+
+/* ─── Filter chips ─── */
+.filter-bar {
+    display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+    animation: slideDown 0.2s ease;
+}
+.filter-bar:empty { display: none; padding: 0; border: none; }
+.filter-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
+    border-radius: 16px; background: var(--accent-bg); color: var(--accent);
+    font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer;
+    border: 1px solid var(--accent-border); transition: all 0.2s;
+    animation: chipIn 0.2s ease;
+}
+.filter-chip:hover { background: var(--accent); color: #fff; }
+.filter-chip .remove { font-size: 14px; margin-left: 2px; opacity: 0.7; }
+@keyframes chipIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── Smart Collections ─── */
+.collections-bar {
+    display: flex; gap: 10px; padding: 14px 16px; overflow-x: auto;
+    scrollbar-width: none; -ms-overflow-style: none;
+}
+.collections-bar::-webkit-scrollbar { display: none; }
+.collection-card {
+    flex-shrink: 0; width: 140px; height: 80px; border-radius: 12px;
+    position: relative; overflow: hidden; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border);
+    transition: all 0.3s cubic-bezier(.4,0,.2,1);
+}
+.collection-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--accent-border); }
+.collection-card img {
+    width: 100%; height: 100%; object-fit: cover; opacity: 0.6;
+    transition: opacity 0.3s;
+}
+.collection-card:hover img { opacity: 0.8; }
+.collection-card .label {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    color: #fff; font-size: 12px; font-weight: 600;
+}
+.collection-card .label .count {
+    font-size: 10px; font-weight: 400; opacity: 0.8;
+}
+
+/* ─── Color palette bar ─── */
+.color-bar {
+    display: flex; gap: 4px; padding: 8px 16px; overflow-x: auto;
+    scrollbar-width: none;
+}
+.color-bar::-webkit-scrollbar { display: none; }
+.color-dot {
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.2s; flex-shrink: 0;
+}
+.color-dot:hover { transform: scale(1.3); border-color: var(--text); }
+.color-dot.active { border-color: var(--accent); transform: scale(1.2); box-shadow: 0 0 0 2px var(--accent-bg); }
+
+/* ═══════════════════════════════════════════════════════
+   JUSTIFIED GRID — Google Photos style
+   ═══════════════════════════════════════════════════════ */
+.photo-grid {
+    padding: 4px; line-height: 0; /* remove inline gaps */
+}
+.justified-row {
+    display: flex; gap: 4px; margin-bottom: 4px;
+}
+@media (max-width: 768px) {
+    .photo-grid { padding: 2px; }
+    .justified-row { gap: 2px; margin-bottom: 2px; }
+}
+
+.photo-card {
+    position: relative; overflow: hidden; cursor: pointer;
+    border-radius: 4px; flex-shrink: 0;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s;
+}
+.photo-card:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 2; }
+@media (max-width: 768px) { .photo-card:hover { transform: none; box-shadow: none; } .photo-card { border-radius: 2px; } }
+
+/* Blurhash canvas */
+.photo-card canvas.blurhash-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0;
+}
+.photo-card img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    position: relative; z-index: 1;
+    opacity: 0; transition: opacity 0.5s ease;
+}
+.photo-card img.loaded { opacity: 1; }
+
+/* Hover overlay */
+.photo-card .overlay {
+    position: absolute; inset: 0; z-index: 2;
+    background: none;
+    opacity: 0; transition: opacity 0.25s; pointer-events: none;
+}
+.photo-card:hover .overlay { opacity: 1; }
+@media (max-width: 768px) { .photo-card .overlay { display: none; } }
+/* Text info moved to lightbox only */
+.overlay .actions-row {
+    position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; pointer-events: all;
+}
+.overlay-btn {
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.4); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    backdrop-filter: blur(8px); transition: all 0.2s;
+}
+.overlay-btn:hover { background: rgba(0,0,0,0.7); transform: scale(1.1); }
+.overlay-btn.favorited { color: #ff4757; }
+
+/* Select mode */
+.select-check {
+    position: absolute; top: 6px; left: 6px; width: 24px; height: 24px;
+    border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); background: rgba(0,0,0,0.3);
+    cursor: pointer; display: none; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; z-index: 5; transition: all 0.15s;
+    backdrop-filter: blur(4px);
+}
+.select-mode .select-check { display: flex; }
+.select-check.checked { background: var(--accent); border-color: var(--accent); }
+.select-mode .photo-card.selected::after {
+    content: ''; position: absolute; inset: 0; z-index: 3;
+    background: rgba(99,91,255,0.15); border: 2px solid var(--accent);
+    border-radius: inherit; pointer-events: none;
+}
+
+/* Viewport fade-in */
+.photo-card.viewport-hidden { opacity: 0; transform: translateY(10px); }
+.photo-card.viewport-visible {
+    animation: fadeInUp 0.4s ease forwards;
+}
+@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+/* ═══════════════════════════════════════════════════════
+   TIMELINE VIEW
+   ═══════════════════════════════════════════════════════ */
+.timeline-view { padding: 0; }
+.timeline-group { margin-bottom: 4px; }
+.timeline-date-header {
+    position: sticky; top: 52px; z-index: 10;
+    padding: 12px 16px 8px; font-size: 15px; font-weight: 600; color: var(--text);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.timeline-date-header .day-name {
+    font-weight: 400; color: var(--text-secondary); margin-left: 6px; font-size: 13px;
+}
+.timeline-date-header .count {
+    float: right; font-size: 12px; color: var(--text-tertiary); font-weight: 400;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAGS VIEW
+   ═══════════════════════════════════════════════════════ */
+.tags-view { padding: 24px 16px; }
+.tags-heading { text-align: center; margin-bottom: 20px; font-size: 18px; font-weight: 600; color: var(--text); }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 24px; }
+.tag-pill {
+    padding: 8px 16px; border-radius: 24px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    transition: all 0.2s cubic-bezier(.4,0,.2,1); white-space: nowrap;
+    font-weight: 500;
+}
+.tag-pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); transform: translateY(-2px); }
+.tag-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tag-pill .count { color: var(--text-tertiary); margin-left: 4px; font-size: 11px; font-weight: 400; }
+.tag-pill.active .count { color: rgba(255,255,255,0.7); }
+.tag-results { min-height: 200px; }
+
+/* ═══════════════════════════════════════════════════════
+   MAP VIEW
+   ═══════════════════════════════════════════════════════ */
+.map-view { height: calc(100vh - 120px); min-height: 400px; position: relative; }
+#photoMap { height: 100%; width: 100%; }
+.map-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; color: var(--text-secondary); gap: 12px; font-size: 15px;
+}
+.map-empty .icon { font-size: 56px; }
+
+/* Photo markers on map */
+.photo-marker {
+    width: 48px; height: 48px; border-radius: 8px; overflow: hidden;
+    border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+}
+.photo-marker:hover { transform: scale(1.2); z-index: 1000 !important; }
+.photo-marker img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ═══════════════════════════════════════════════════════
+   STATS VIEW
+   ═══════════════════════════════════════════════════════ */
+.stats-view { padding: 24px; max-width: 900px; margin: 0 auto; }
+.stats-hero {
+    text-align: center; margin-bottom: 32px; padding: 32px 20px;
+    background: linear-gradient(135deg, var(--accent-bg), var(--surface));
+    border-radius: 16px; border: 1px solid var(--accent-border);
+}
+.stats-hero h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.stats-hero p { color: var(--text-secondary); font-size: 14px; }
+.stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px;
+}
+.stat-card {
+    padding: 20px; border-radius: 12px; background: var(--surface);
+    border: 1px solid var(--border); transition: all 0.2s;
+}
+.stat-card:hover { border-color: var(--accent-border); }
+.stat-card .label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.stat-card .value { font-size: 32px; font-weight: 700; color: var(--text); margin-top: 4px; letter-spacing: -0.02em; }
+.stat-card .sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.stat-section { margin-bottom: 28px; }
+.stat-section h3 {
+    font-size: 14px; color: var(--text-secondary); margin-bottom: 14px;
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+}
+.stat-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.stat-bar-label { width: 130px; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-bar-track { flex: 1; height: 10px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+.stat-bar-count { width: 40px; text-align: right; font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.color-palette { display: flex; flex-wrap: wrap; gap: 8px; }
+.color-swatch {
+    width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.2s; position: relative;
+}
+.color-swatch:hover { transform: scale(1.15); border-color: var(--text); }
+.color-swatch .swatch-count {
+    position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--text-tertiary);
+}
+
+/* Heatmap */
+.heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; max-width: 300px; }
+.heatmap-cell {
+    aspect-ratio: 1; border-radius: 4px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--text-tertiary);
+}
+.heatmap-label { font-size: 11px; color: var(--text-secondary); text-align: center; font-weight: 500; }
+
+/* ═══════════════════════════════════════════════════════
+   LIGHTBOX — Premium, Apple-like
+   ═══════════════════════════════════════════════════════ */
+.lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.96);
+    display: none; flex-direction: column;
+    opacity: 0; transition: opacity 0.3s cubic-bezier(.4,0,.2,1);
+}
+.lightbox.active { display: flex; opacity: 1; }
+.lightbox.opening { display: flex; }
+
+.lightbox-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; color: #fff; flex-shrink: 0;
+    background: linear-gradient(rgba(0,0,0,0.5), transparent);
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    opacity: 1; transition: opacity 0.3s;
+}
+.lightbox.controls-hidden .lightbox-header { opacity: 0; pointer-events: none; }
+.lightbox-header .filename { font-size: 14px; opacity: 0.7; font-weight: 500; }
+.lightbox-actions { display: flex; gap: 6px; }
+.lightbox-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.1); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    transition: all 0.2s; backdrop-filter: blur(8px);
+}
+.lightbox-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+.lightbox-btn.favorited { color: #ff4757; }
+
+.lightbox-body {
+    flex: 1; display: flex; align-items: center;
+    position: relative; overflow: hidden; touch-action: none;
+}
+.lb-layer {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    will-change: transform;
+}
+.lb-layer img {
+    max-width: 92vw; max-height: 88vh; object-fit: contain;
+    user-select: none; -webkit-user-drag: none;
+    border-radius: 2px;
+}
+
+.lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 48px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+    cursor: pointer; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; z-index: 10; backdrop-filter: blur(8px);
+}
+.lightbox-nav:hover { background: rgba(255,255,255,0.2); color: #fff; transform: translateY(-50%) scale(1.05); }
+.lightbox.controls-hidden .lightbox-nav { opacity: 0; pointer-events: none; }
+.lightbox-prev { left: 16px; }
+.lightbox-next { right: 16px; }
+@media (max-width: 768px) {
+    .lightbox-nav { display: none; }
+    .lb-layer img { max-width: 100vw; max-height: 92vh; border-radius: 0; }
+}
+
+/* Info panel */
+.lightbox-info-panel {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85) 30%);
+    padding: 60px 24px 24px; color: #fff;
+    transform: translateY(0); transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    max-height: 55vh; overflow-y: auto; z-index: 5;
+}
+.lightbox-info-panel.collapsed { transform: translateY(calc(100% - 60px)); }
+.lightbox-info-panel .drag-handle {
+    width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.3);
+    margin: 0 auto 16px; cursor: pointer;
+}
+.lightbox-info-panel .ai-desc { font-size: 15px; line-height: 1.5; margin-bottom: 12px; opacity: 0.9; font-weight: 400; }
+.lightbox-info-panel .ai-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.lightbox-info-panel .ai-tag {
+    padding: 4px 12px; border-radius: 14px; background: rgba(99,91,255,0.25);
+    color: #c4c0ff; font-size: 12px; cursor: pointer; font-weight: 500;
+    transition: all 0.2s; border: 1px solid rgba(99,91,255,0.3);
+}
+.lightbox-info-panel .ai-tag:hover { background: rgba(99,91,255,0.5); }
+.exif-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px; margin-top: 12px;
+}
+.exif-item .label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; }
+.exif-item .val { font-size: 14px; color: #fff; font-weight: 500; margin-top: 2px; }
+
+/* Similar photos */
+.similar-row {
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);
+}
+.similar-row h4 { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.similar-photos {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+    scrollbar-width: none;
+}
+.similar-photos::-webkit-scrollbar { display: none; }
+.similar-thumb {
+    width: 64px; height: 64px; border-radius: 6px; overflow: hidden; flex-shrink: 0;
+    cursor: pointer; transition: transform 0.2s;
+}
+.similar-thumb:hover { transform: scale(1.1); }
+.similar-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ═══════════════════════════════════════════════════════
+   UPLOAD OVERLAY
+   ═══════════════════════════════════════════════════════ */
+.upload-overlay {
+    position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+.upload-overlay.active { display: flex; }
+.upload-zone {
+    width: 90%; max-width: 480px; padding: 48px 32px; border-radius: 20px;
+    background: var(--surface); border: 2px dashed var(--accent-border);
+    text-align: center; color: var(--text); transition: all 0.3s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.upload-zone.dragover { background: var(--accent-bg); border-color: var(--accent); border-style: solid; transform: scale(1.02); }
+.upload-zone .icon { font-size: 56px; margin-bottom: 16px; }
+.upload-zone h3 { font-size: 18px; margin-bottom: 8px; font-weight: 600; }
+.upload-zone p { color: var(--text-secondary); font-size: 13px; }
+.upload-progress { margin-top: 20px; text-align: left; }
+.upload-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.upload-item .thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; }
+.upload-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-item .prog-bar { width: 80px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.upload-item .prog-fill { height: 100%; background: var(--accent); transition: width 0.3s; border-radius: 2px; }
+.upload-item .status { width: 24px; text-align: center; font-size: 15px; }
+.upload-stages { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* ─── Context menu ─── */
+.context-menu {
+    position: fixed; z-index: 800; min-width: 180px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2); padding: 6px; display: none;
+    animation: slideUp 0.15s ease;
+}
+.context-menu.visible { display: block; }
+.context-menu-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    font-size: 13px; color: var(--text); cursor: pointer; border-radius: 8px;
+    transition: all 0.1s;
+}
+.context-menu-item:hover { background: var(--accent-bg); color: var(--accent); }
+.context-menu-item .cm-icon { font-size: 16px; width: 20px; text-align: center; }
+.context-menu-item.danger { color: var(--red); }
+.context-menu-item.danger:hover { background: var(--red-bg); }
+.context-menu-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+
+/* ─── Albums Panel ─── */
+.albums-panel {
+    position: fixed; top: 0; right: -380px; width: 360px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 100; transition: right 0.3s cubic-bezier(.4,0,.2,1);
+    overflow-y: auto; padding: 20px; box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+}
+.albums-panel.open { right: 0; }
+.albums-panel h2 { font-size: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.album-card {
+    padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+    margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+}
+.album-card:hover { border-color: var(--accent); background: var(--accent-bg); }
+.album-card .name { font-weight: 600; font-size: 14px; }
+.album-card .count { font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 768px) { .albums-panel { width: 100%; right: -100%; } }
+
+/* ─── Batch bar ─── */
+.batch-bar {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 10px 18px; display: none; align-items: center; gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 80;
+    animation: slideUp 0.2s ease;
+}
+.batch-bar.visible { display: flex; }
+.batch-bar .count { font-weight: 700; font-size: 14px; }
+.batch-btn {
+    padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.2s;
+}
+.batch-btn.fav { background: var(--red-bg); color: var(--red); }
+.batch-btn.del { background: var(--red-bg); color: var(--red); }
+.batch-btn.album { background: var(--accent-bg); color: var(--accent); }
+.batch-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+
+/* ─── Empty state ─── */
+.gallery-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 80px 20px; color: var(--text-secondary); text-align: center;
+    width: 100%; min-height: 300px; gap: 0;
+}
+.gallery-empty .icon { font-size: 56px; margin-bottom: 16px; display: block; line-height: 1.2 !important; }
+.gallery-empty h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; margin-top: 0; line-height: 1.4 !important; }
+.gallery-empty p { max-width: 300px; font-size: 14px; line-height: 1.5 !important; margin-top: 0; }
+
+/* ─── Loading skeleton ─── */
+.grid-skeleton { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; }
+.skel-item {
+    height: 200px; flex: 1; min-width: 150px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+    background-size: 200% 100%; animation: shimmer 1.5s infinite;
+}
+@media (max-width: 768px) { .skel-item { height: 140px; min-width: 100px; } }
+
+/* Mobile bottom nav removed — views in 3-dot menu */
+
+/* Favorite heart animation */
+@keyframes heartBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.3); }
+    60% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+.heart-bounce { animation: heartBounce 0.4s ease; }
+    </style>
+</head>
+<body>
+    <div class="app-layout gallery-page">
+        <div id="shell-sidebar"></div>
+        <main class="main-content">
+            <div id="shell-topbar"></div>
+            <div class="content-area">
+                <!-- Toolbar -->
+                <div class="gallery-toolbar" id="toolbar">
+                    <div class="search-wrapper">
+                        <span class="search-icon"><i data-lucide="search" style="width:14px;height:14px"></i></span>
+                        <input type="text" class="gallery-search" id="searchInput" placeholder="Search photos...">
+                    </div>
+                    <div class="toolbar-right">
+                        <!-- fav filter available via search/collections -->
+                        <button class="toolbar-btn" id="selectBtn" title="Select" style="display:none"><i data-lucide="check-square"></i></button>
+                        <button class="toolbar-btn upload-btn" id="uploadBtn"><i data-lucide="upload"></i></button>
+                        <div class="menu-wrapper">
+                            <button class="toolbar-btn" id="moreBtn" title="More"><i data-lucide="more-horizontal"></i></button>
+                            <div class="more-menu" id="moreMenu">
+                                <button class="more-menu-item" data-view="timeline"><span><i data-lucide="calendar"></i></span> Timeline</button>
+                                <button class="more-menu-item" data-view="grid"><span><i data-lucide="grid"></i></span> Grid</button>
+                                <button class="more-menu-item" data-view="tags"><span><i data-lucide="tag"></i></span> Tags</button>
+                                <button class="more-menu-item" data-view="map"><span><i data-lucide="map"></i></span> Map</button>
+                                <button class="more-menu-item" data-view="stats"><span><i data-lucide="bar-chart-3"></i></span> Stats</button>
+                                <div class="more-menu-divider"></div>
+                                <button class="more-menu-item" id="albumsMenuBtn"><span><i data-lucide="folder"></i></span> Albums</button>
+                                <button class="more-menu-item" id="colorMenuBtn"><span><i data-lucide="palette"></i></span> Color Filter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter chips -->
+                <div class="filter-bar" id="filterBar"></div>
+
+                <!-- Color palette (hidden by default) -->
+                <div class="color-bar" id="colorBar" style="display:none"></div>
+
+                <!-- Collections -->
+                <div class="collections-bar" id="collectionsBar" style="display:none"></div>
+
+                <!-- Views -->
+                <div id="gridView" class="photo-grid"></div>
+                <div id="timelineView" class="timeline-view" style="display:none"></div>
+                <div id="tagsView" class="tags-view" style="display:none"></div>
+                <div id="mapView" class="map-view" style="display:none"><div id="photoMap"></div></div>
+                <div id="statsView" class="stats-view" style="display:none"></div>
+            </div>
+            <div id="shell-bottom-nav"></div>
+        </main>
+    </div>
+
+    <!-- Mobile view nav removed — views in 3-dot menu -->
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-header">
+            <span class="filename" id="lbFilename"></span>
+            <div class="lightbox-actions">
+                <button class="lightbox-btn" id="lbFav" title="Favorite (F)"><i data-lucide="heart"></i></button>
+                <button class="lightbox-btn" id="lbSimilar" title="Find Similar"><i data-lucide="search"></i></button>
+                <button class="lightbox-btn" id="lbDownload" title="Download"><i data-lucide="download"></i></button>
+                <button class="lightbox-btn" id="lbInfo" title="Toggle info (I)"><i data-lucide="info"></i></button>
+                <button class="lightbox-btn" id="lbClose" title="Close (Esc)"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div class="lightbox-body" id="lbBody">
+            <button class="lightbox-nav lightbox-prev" id="lbPrev">‹</button>
+            <div class="lb-layer" id="lbLayerA"><img id="lbImgA" src="" alt=""></div>
+            <div class="lb-layer" id="lbLayerB" style="visibility:hidden"><img id="lbImgB" src="" alt=""></div>
+            <button class="lightbox-nav lightbox-next" id="lbNext">›</button>
+        </div>
+        <div class="lightbox-info-panel collapsed" id="lbInfoPanel">
+            <div class="drag-handle" id="lbDragHandle"></div>
+            <div class="ai-desc" id="lbDesc"></div>
+            <div class="ai-tags" id="lbTags"></div>
+            <div class="exif-grid" id="lbExif"></div>
+            <div class="similar-row" id="lbSimilarRow" style="display:none">
+                <h4>Similar Photos</h4>
+                <div class="similar-photos" id="lbSimilarPhotos"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Overlay -->
+    <div class="upload-overlay" id="uploadOverlay">
+        <div class="upload-zone" id="uploadZone">
+            <div class="icon"><i data-lucide="camera" style="width:48px;height:48px;stroke-width:1.5"></i></div>
+            <h3>Drop photos here</h3>
+            <p>or click to browse · JPEG, PNG, WebP</p>
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+            <div class="upload-progress" id="uploadProgress"></div>
+        </div>
+    </div>
+
+    <!-- Context menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" data-action="favorite"><span class="cm-icon"><i data-lucide="heart"></i></span> Toggle Favorite</div>
+        <div class="context-menu-item" data-action="similar"><span class="cm-icon"><i data-lucide="search"></i></span> Find Similar</div>
+        <div class="context-menu-item" data-action="download"><span class="cm-icon"><i data-lucide="download"></i></span> Download</div>
+        <div class="context-menu-item" data-action="share"><span class="cm-icon"><i data-lucide="share-2"></i></span> Share</div>
+        <div class="context-menu-sep"></div>
+        <div class="context-menu-item danger" data-action="delete"><span class="cm-icon"><i data-lucide="trash-2"></i></span> Delete</div>
+    </div>
+
+    <!-- Albums Panel -->
+    <div class="albums-panel" id="albumsPanel">
+        <h2>Albums <button class="toolbar-btn" id="createAlbumBtn" style="font-size:12px;width:auto;padding:0 12px;">+ New</button></h2>
+        <div id="albumsList"></div>
+    </div>
+
+    <!-- Batch bar -->
+    <div class="batch-bar" id="batchBar">
+        <span class="count"><span id="selectedCount">0</span> selected</span>
+        <button class="batch-btn fav" id="batchFav"><i data-lucide="heart" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px"></i> Favorite</button>
+        <button class="batch-btn album" id="batchAlbum"><i data-lucide="folder" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px"></i> Album</button>
+        <button class="batch-btn del" id="batchDel"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px"></i> Delete</button>
+        <button class="batch-btn" id="batchCancel" style="background:var(--surface2);color:var(--text)">Cancel</button>
+    </div>
+
+    <script src="/app/shared.js?v=1771810988"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    // ═══════════════════════════════════════════════════════
+    // BLURHASH DECODER — ported from woltapp/blurhash
+    // ═══════════════════════════════════════════════════════
+    const BlurHash = (() => {
+        const digitChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-./:;=?@[]^_{|}~';
+        const decode83 = (str) => {
+            let v = 0;
+            for (let i = 0; i < str.length; i++) {
+                v = v * 83 + digitChars.indexOf(str[i]);
+            }
+            return v;
+        };
+        const sRGBToLinear = (v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        const linearToSRGB = (v) => {
+            const c = Math.max(0, Math.min(1, v));
+            return c <= 0.0031308 ? Math.round(c * 12.92 * 255 + 0.5) : Math.round((1.055 * Math.pow(c, 1 / 2.4) - 0.055) * 255 + 0.5);
+        };
+        const sign = (n) => (n < 0 ? -1 : 1);
+        const signPow = (v, exp) => sign(v) * Math.pow(Math.abs(v), exp);
+
+        const decodeDC = (v) => [sRGBToLinear(v >> 16), sRGBToLinear((v >> 8) & 255), sRGBToLinear(v & 255)];
+        const decodeAC = (v, maxAC) => {
+            const qR = Math.floor(v / (19 * 19));
+            const qG = Math.floor(v / 19) % 19;
+            const qB = v % 19;
+            return [signPow((qR - 9) / 9, 2) * maxAC, signPow((qG - 9) / 9, 2) * maxAC, signPow((qB - 9) / 9, 2) * maxAC];
+        };
+
+        return {
+            decode(hash, width, height, punch = 1) {
+                if (!hash || hash.length < 6) return null;
+                const sizeFlag = decode83(hash[0]);
+                const numY = Math.floor(sizeFlag / 9) + 1;
+                const numX = (sizeFlag % 9) + 1;
+                const quantMaxVal = decode83(hash[1]);
+                const maxAC = (quantMaxVal + 1) / 166 * punch;
+                const colors = new Array(numX * numY);
+                colors[0] = decodeDC(decode83(hash.substring(2, 6)));
+                for (let i = 1; i < numX * numY; i++) {
+                    colors[i] = decodeAC(decode83(hash.substring(4 + i * 2, 6 + i * 2)), maxAC);
+                }
+                const pixels = new Uint8ClampedArray(width * height * 4);
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let r = 0, g = 0, b = 0;
+                        for (let j = 0; j < numY; j++) {
+                            for (let i = 0; i < numX; i++) {
+                                const basis = Math.cos((Math.PI * x * i) / width) * Math.cos((Math.PI * y * j) / height);
+                                const c = colors[j * numX + i];
+                                r += c[0] * basis;
+                                g += c[1] * basis;
+                                b += c[2] * basis;
+                            }
+                        }
+                        const idx = 4 * (y * width + x);
+                        pixels[idx] = linearToSRGB(r);
+                        pixels[idx + 1] = linearToSRGB(g);
+                        pixels[idx + 2] = linearToSRGB(b);
+                        pixels[idx + 3] = 255;
+                    }
+                }
+                return pixels;
+            }
+        };
+    })();
+
+    // ═══════════════════════════════════════════════════════
+    // MAIN APP
+    // ═══════════════════════════════════════════════════════
+    (async () => {
+        const user = await requireAuth();
+        const shell = renderAppShell('Gallery', 'gallery');
+        document.getElementById('shell-sidebar').innerHTML = shell.sidebar;
+        document.getElementById('shell-topbar').innerHTML = shell.topbar;
+        document.getElementById('shell-bottom-nav').innerHTML = shell.bottomNav;
+        initAppShell('gallery');
+
+        // ─── State ───
+        let allPhotos = [];
+        let filteredPhotos = [];
+        let currentView = 'timeline';
+        let currentLightboxIdx = -1;
+        let selectMode = false;
+        let selectedIds = new Set();
+        let favOnly = false;
+        let activeTag = null;
+        let activeAlbum = null;
+        let activeColor = null;
+        let searchQuery = '';
+        let map = null;
+        let lastScrollY = 0;
+        let colorsData = [];
+        let collectionsData = [];
+        let contextPhotoId = null;
+        let longPressTimer = null;
+
+        // ─── Target row heights ───
+        const TARGET_ROW_HEIGHT = window.innerWidth <= 768 ? 140 : 220;
+        const GAP = window.innerWidth <= 768 ? 2 : 4;
+
+        // ─── Data fetching ───
+        async function loadPhotos() {
+            const params = new URLSearchParams();
+            if (favOnly) params.set('favorite', 'true');
+            if (activeTag) params.set('tag', activeTag);
+            if (activeAlbum) params.set('album_id', activeAlbum);
+            if (activeColor) params.set('color', activeColor);
+            if (searchQuery) params.set('search', searchQuery);
+            params.set('limit', '200');
+            try {
+                allPhotos = await API.get(`/gallery/photos?${params}`);
+                filteredPhotos = allPhotos;
+            } catch (e) {
+                allPhotos = []; filteredPhotos = [];
+            }
+            render();
+        }
+
+        async function loadColors() {
+            try {
+                colorsData = await API.get('/gallery/colors');
+            } catch { colorsData = []; }
+        }
+
+        async function loadCollections() {
+            try {
+                collectionsData = await API.get('/gallery/collections');
+            } catch { collectionsData = []; }
+        }
+
+        // ─── Render dispatcher ───
+        function render() {
+            const views = ['grid', 'timeline', 'tags', 'map', 'stats'];
+            views.forEach(v => {
+                const el = document.getElementById(v + 'View');
+                if (el) el.style.display = v === currentView ? '' : 'none';
+            });
+
+            // Show collections only in grid view with no active filters
+            const showCollections = currentView === 'grid' && !favOnly && !activeTag && !activeAlbum && !activeColor && !searchQuery;
+            document.getElementById('collectionsBar').style.display = showCollections && collectionsData.length ? '' : 'none';
+
+            if (currentView === 'grid') renderGrid();
+            else if (currentView === 'timeline') renderTimeline();
+            else if (currentView === 'tags') renderTags();
+            else if (currentView === 'map') renderMap();
+            else if (currentView === 'stats') renderStats();
+
+            renderFilters();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // JUSTIFIED GRID — Google Photos algorithm
+        // ═══════════════════════════════════════════════════════
+        function renderGrid() {
+            const grid = document.getElementById('gridView');
+            if (selectMode) grid.classList.add('select-mode');
+            else grid.classList.remove('select-mode');
+
+            if (filteredPhotos.length === 0) {
+                grid.innerHTML = `<div class="gallery-empty"><div class="icon"><i data-lucide="camera" style="width:48px;height:48px;stroke-width:1.5"></i></div><h3>No photos</h3><p>Upload some memories to get started</p></div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const containerWidth = grid.clientWidth - (GAP * 2); // subtract padding
+            const rows = buildJustifiedRows(filteredPhotos, containerWidth, TARGET_ROW_HEIGHT, GAP);
+
+            grid.innerHTML = rows.map(row => {
+                const rowHTML = row.items.map(item => {
+                    const p = item.photo;
+                    const w = Math.floor(item.width);
+                    const h = Math.floor(row.height);
+                    return `
+                    <div class="photo-card${selectedIds.has(p.id) ? ' selected' : ''}" data-idx="${item.idx}" data-id="${p.id}" 
+                         style="width:${w}px;height:${h}px;">
+                        <div class="select-check${selectedIds.has(p.id) ? ' checked' : ''}" data-id="${p.id}"><i data-lucide="check" style="width:14px;height:14px"></i></div>
+                        ${p.blurhash ? `<canvas class="blurhash-canvas" data-hash="${p.blurhash}" width="32" height="32"></canvas>` : ''}
+                        <img data-src="${p.thumbnail_path}" alt="${p.filename}" style="width:${w}px;height:${h}px;">
+                        <div class="overlay">
+                            <div class="actions-row">
+                                <button class="overlay-btn ${p.is_favorite ? 'favorited' : ''}" data-fav="${p.id}"><i data-lucide="heart"></i></button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+                return `<div class="justified-row">${rowHTML}</div>`;
+            }).join('');
+
+            // Decode blurhashes
+            requestAnimationFrame(decodeBlurhashes);
+            // Lazy load images
+            requestAnimationFrame(setupLazyLoad);
+            // Initialize Lucide icons in new content
+            if (window.lucide) lucide.createIcons();
+            // Click handlers — setup once
+            if (!grid._eventsAttached) {
+                setupGridEvents(grid);
+                grid._eventsAttached = true;
+            }
+        }
+
+        function buildJustifiedRows(photos, containerWidth, targetHeight, gap) {
+            const rows = [];
+            let currentRow = [];
+            let currentRowWidth = 0;
+
+            photos.forEach((p, idx) => {
+                const aspect = (p.width && p.height) ? p.width / p.height : 1.5;
+                const scaledWidth = aspect * targetHeight;
+                currentRow.push({ photo: p, idx, aspect, scaledWidth });
+                currentRowWidth += scaledWidth + (currentRow.length > 1 ? gap : 0);
+
+                if (currentRowWidth >= containerWidth) {
+                    // Scale row to fit exactly
+                    const totalGap = (currentRow.length - 1) * gap;
+                    const availWidth = containerWidth - totalGap;
+                    const totalAspect = currentRow.reduce((s, i) => s + i.aspect, 0);
+                    const rowHeight = availWidth / totalAspect;
+                    rows.push({
+                        height: rowHeight,
+                        items: currentRow.map(item => ({ ...item, width: item.aspect * rowHeight }))
+                    });
+                    currentRow = [];
+                    currentRowWidth = 0;
+                }
+            });
+
+            // Last partial row — use target height (don't stretch)
+            if (currentRow.length > 0) {
+                const rowHeight = Math.min(targetHeight, TARGET_ROW_HEIGHT);
+                rows.push({
+                    height: rowHeight,
+                    items: currentRow.map(item => ({ ...item, width: item.aspect * rowHeight }))
+                });
+            }
+            return rows;
+        }
+
+        function decodeBlurhashes() {
+            document.querySelectorAll('canvas.blurhash-canvas[data-hash]').forEach(canvas => {
+                const hash = canvas.dataset.hash;
+                if (!hash || hash.length < 6 || canvas.dataset.decoded) return;
+                canvas.dataset.decoded = '1';
+                try {
+                    const w = 32, h = 32;
+                    const pixels = BlurHash.decode(hash, w, h);
+                    if (!pixels) return;
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.createImageData(w, h);
+                    imageData.data.set(pixels);
+                    ctx.putImageData(imageData, 0, 0);
+                } catch (e) {}
+            });
+        }
+
+        // ─── Lazy loading with IntersectionObserver ───
+        let lazyObserver;
+        function setupLazyLoad() {
+            if (lazyObserver) lazyObserver.disconnect();
+            lazyObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src && !img.src) {
+                            img.src = img.dataset.src;
+                            img.onload = () => img.classList.add('loaded');
+                        }
+                        // Also add viewport animation
+                        const card = img.closest('.photo-card');
+                        if (card) card.classList.add('viewport-visible');
+                        lazyObserver.unobserve(img);
+                    }
+                });
+            }, { rootMargin: '200px' });
+
+            document.querySelectorAll('.photo-card img[data-src]').forEach(img => {
+                lazyObserver.observe(img);
+            });
+        }
+
+        function setupGridEvents(grid) {
+            grid.addEventListener('click', (e) => {
+                const favBtn = e.target.closest('[data-fav]');
+                if (favBtn) { e.stopPropagation(); toggleFav(parseInt(favBtn.dataset.fav)); return; }
+
+                const selectCheck = e.target.closest('.select-check');
+                const card = e.target.closest('.photo-card');
+                if (!card) return;
+                const id = parseInt(card.dataset.id);
+                const idx = parseInt(card.dataset.idx);
+
+                if (selectCheck || selectMode) {
+                    if (selectedIds.has(id)) selectedIds.delete(id);
+                    else selectedIds.add(id);
+                    updateBatchBar();
+                    card.classList.toggle('selected', selectedIds.has(id));
+                    const check = card.querySelector('.select-check');
+                    if (check) check.classList.toggle('checked', selectedIds.has(id));
+                    // Auto-exit selection when nothing selected
+                    if (selectedIds.size === 0) clearSelection();
+                    return;
+                }
+                openLightbox(idx);
+            });
+
+            // Right-click context menu (desktop)
+            grid.addEventListener('contextmenu', (e) => {
+                const card = e.target.closest('.photo-card');
+                if (!card) return;
+                e.preventDefault();
+                contextPhotoId = parseInt(card.dataset.id);
+                showContextMenu(e.clientX, e.clientY);
+            });
+
+            // Long press (mobile)
+            grid.addEventListener('touchstart', (e) => {
+                const card = e.target.closest('.photo-card');
+                if (!card) return;
+                longPressTimer = setTimeout(() => {
+                    // Long-press starts selection mode and selects this photo
+                    const id = parseInt(card.dataset.id);
+                    if (!selectMode) {
+                        selectMode = true;
+                        ['gridView', 'timelineView', 'tagsView'].forEach(vid => {
+                            const el = document.getElementById(vid);
+                            if (el) el.classList.add('select-mode');
+                        });
+                    }
+                    selectedIds.add(id);
+                    updateBatchBar();
+                    card.classList.add('selected');
+                    const check = card.querySelector('.select-check');
+                    if (check) check.classList.add('checked');
+                    // Haptic feedback if available
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    e.preventDefault();
+                }, 400);
+            }, { passive: false });
+            grid.addEventListener('touchend', () => clearTimeout(longPressTimer));
+            grid.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // TIMELINE VIEW
+        // ═══════════════════════════════════════════════════════
+        async function renderTimeline() {
+            const container = document.getElementById('timelineView');
+            try {
+                const groups = await API.get('/gallery/timeline');
+                if (!groups.length) {
+                    container.innerHTML = '<div class="gallery-empty"><div class="icon"><i data-lucide="calendar" style="width:48px;height:48px;stroke-width:1.5"></i></div><h3>No timeline yet</h3><p>Upload photos with dates</p></div>';
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                container.innerHTML = groups.map(g => {
+                    const d = new Date(g.date + 'T12:00:00');
+                    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+                    const dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+                    // Build justified grid for this group
+                    const groupWidth = container.clientWidth - 8;
+                    const rows = buildJustifiedRows(g.photos, groupWidth, 140, GAP);
+
+                    const photosHTML = rows.map(row => {
+                        return `<div class="justified-row">${row.items.map(item => {
+                            const p = item.photo;
+                            const globalIdx = allPhotos.findIndex(ap => ap.id === p.id);
+                            return `<div class="photo-card${selectedIds.has(p.id) ? ' selected' : ''}" data-idx="${globalIdx >= 0 ? globalIdx : 0}" data-id="${p.id}" 
+                                         style="width:${Math.floor(item.width)}px;height:${Math.floor(row.height)}px;">
+                                <div class="select-check${selectedIds.has(p.id) ? ' checked' : ''}" data-id="${p.id}"><i data-lucide="check" style="width:14px;height:14px"></i></div>
+                                ${p.blurhash ? `<canvas class="blurhash-canvas" data-hash="${p.blurhash}" width="32" height="32"></canvas>` : ''}
+                                <img data-src="${p.thumbnail_path}" alt="${p.filename}" style="width:${Math.floor(item.width)}px;height:${Math.floor(row.height)}px;">
+                                <div class="overlay">
+                                    <div class="actions-row">
+                                        <button class="overlay-btn ${p.is_favorite ? 'favorited' : ''}" data-fav="${p.id}"><i data-lucide="heart"></i></button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('')}</div>`;
+                    }).join('');
+
+                    return `
+                    <div class="timeline-group">
+                        <div class="timeline-date-header">
+                            ${dateStr}<span class="day-name">• ${weekday}</span>
+                            <span class="count">${g.photos.length} photo${g.photos.length > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="photo-grid" style="padding:2px 4px;">${photosHTML}</div>
+                    </div>`;
+                }).join('');
+
+                requestAnimationFrame(decodeBlurhashes);
+                requestAnimationFrame(setupLazyLoad);
+                if (window.lucide) lucide.createIcons();
+
+                // Click handling — selection + lightbox
+                if (selectMode) container.classList.add('select-mode');
+                else container.classList.remove('select-mode');
+                container.querySelectorAll('.photo-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const favBtn = e.target.closest('[data-fav]');
+                        if (favBtn) { e.stopPropagation(); toggleFav(parseInt(favBtn.dataset.fav)); return; }
+
+                        const id = parseInt(card.dataset.id);
+                        if (e.target.closest('.select-check') || selectMode) {
+                            if (selectedIds.has(id)) selectedIds.delete(id);
+                            else selectedIds.add(id);
+                            updateBatchBar();
+                            card.classList.toggle('selected', selectedIds.has(id));
+                            const check = card.querySelector('.select-check');
+                            if (check) check.classList.toggle('checked', selectedIds.has(id));
+                            // Auto-exit selection when nothing selected
+                            if (selectedIds.size === 0) clearSelection();
+                            return;
+                        }
+                        openLightbox(parseInt(card.dataset.idx));
+                    });
+
+                    // Long-press to start selection
+                    let lpt;
+                    card.addEventListener('touchstart', (e) => {
+                        lpt = setTimeout(() => {
+                            const id = parseInt(card.dataset.id);
+                            if (!selectMode) {
+                                selectMode = true;
+                                ['gridView', 'timelineView', 'tagsView'].forEach(vid => {
+                                    const el = document.getElementById(vid);
+                                    if (el) el.classList.add('select-mode');
+                                });
+                            }
+                            selectedIds.add(id);
+                            updateBatchBar();
+                            card.classList.add('selected');
+                            const check = card.querySelector('.select-check');
+                            if (check) check.classList.add('checked');
+                            if (navigator.vibrate) navigator.vibrate(30);
+                            e.preventDefault();
+                        }, 400);
+                    }, { passive: false });
+                    card.addEventListener('touchend', () => clearTimeout(lpt));
+                    card.addEventListener('touchmove', () => clearTimeout(lpt));
+                });
+            } catch (e) {
+                container.innerHTML = '<div class="gallery-empty"><div class="icon"><i data-lucide="alert-triangle"></i></div><h3>Failed to load</h3></div>';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // TAGS VIEW
+        // ═══════════════════════════════════════════════════════
+        let tagsViewSelectedTag = null;
+
+        async function renderTags() {
+            const container = document.getElementById('tagsView');
+            try {
+                const stats = await API.get('/gallery/stats');
+                if (!stats.tags.length) {
+                    container.innerHTML = '<div class="gallery-empty"><div class="icon"><i data-lucide="tag" style="width:48px;height:48px;stroke-width:1.5"></i></div><h3>No tags</h3></div>'; if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                const maxCount = Math.max(...stats.tags.map(t => parseInt(t.count)));
+                const tagCloud = stats.tags.map(t => {
+                    const size = 13 + (parseInt(t.count) / maxCount) * 16;
+                    const isActive = tagsViewSelectedTag === t.tag;
+                    return `<span class="tag-pill${isActive ? ' active' : ''}" style="font-size:${size}px" data-tag="${t.tag}">${t.tag} <span class="count">${t.count}</span></span>`;
+                }).join('');
+
+                container.innerHTML = `
+                    <h2 class="tags-heading">Browse by Tag</h2>
+                    <div class="tag-cloud">${tagCloud}</div>
+                    <div class="tag-results" id="tagResults"></div>
+                `;
+
+                container.querySelectorAll('.tag-pill').forEach(pill => {
+                    pill.addEventListener('click', async () => {
+                        const tag = pill.dataset.tag;
+                        tagsViewSelectedTag = tagsViewSelectedTag === tag ? null : tag;
+                        container.querySelectorAll('.tag-pill').forEach(p => p.classList.toggle('active', p.dataset.tag === tagsViewSelectedTag));
+                        if (tagsViewSelectedTag) {
+                            const photos = await API.get(`/gallery/photos?tag=${encodeURIComponent(tag)}&limit=50`);
+                            renderTagResults(photos);
+                        } else {
+                            document.getElementById('tagResults').innerHTML = '';
+                        }
+                    });
+                });
+
+                if (tagsViewSelectedTag) {
+                    const photos = await API.get(`/gallery/photos?tag=${encodeURIComponent(tagsViewSelectedTag)}&limit=50`);
+                    renderTagResults(photos);
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="gallery-empty"><div class="icon"><i data-lucide="alert-triangle"></i></div><h3>Failed to load</h3></div>';
+            }
+        }
+
+        function renderTagResults(photos) {
+            const resultsEl = document.getElementById('tagResults');
+            if (!photos.length) { resultsEl.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:20px;">No photos with this tag</p>'; return; }
+            const width = resultsEl.clientWidth - 8;
+            const rows = buildJustifiedRows(photos, width, 180, GAP);
+            resultsEl.innerHTML = rows.map(row => {
+                return `<div class="justified-row">${row.items.map(item => {
+                    const p = item.photo;
+                    const globalIdx = allPhotos.findIndex(ap => ap.id === p.id);
+                    return `<div class="photo-card" data-idx="${globalIdx >= 0 ? globalIdx : 0}" data-id="${p.id}"
+                                 style="width:${Math.floor(item.width)}px;height:${Math.floor(row.height)}px;">
+                        <img src="${p.thumbnail_path}" alt="${p.filename}" class="loaded" style="width:${Math.floor(item.width)}px;height:${Math.floor(row.height)}px;">
+                    </div>`;
+                }).join('')}</div>`;
+            }).join('');
+            resultsEl.querySelectorAll('.photo-card').forEach(card => {
+                card.addEventListener('click', () => openLightbox(parseInt(card.dataset.idx)));
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // MAP VIEW
+        // ═══════════════════════════════════════════════════════
+        async function renderMap() {
+            const container = document.getElementById('mapView');
+            try {
+                const mapPhotos = await API.get('/gallery/map');
+                if (!mapPhotos.length) {
+                    container.innerHTML = '<div class="map-empty"><div class="icon"><i data-lucide="map" style="width:48px;height:48px;stroke-width:1.5"></i></div><p>No photos with GPS data</p></div>'; if (window.lucide) lucide.createIcons();
+                    return;
+                }
+                container.innerHTML = '<div id="photoMap"></div>';
+                if (map) map.remove();
+                map = L.map('photoMap').setView([mapPhotos[0].gps_lat, mapPhotos[0].gps_lon], 10);
+
+                // Theme-aware tiles
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                L.tileLayer(isDark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                    { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }
+                ).addTo(map);
+
+                mapPhotos.forEach(p => {
+                    const icon = L.divIcon({
+                        className: 'photo-marker',
+                        html: `<img src="${p.thumbnail_path}" alt="">`,
+                        iconSize: [48, 48],
+                        iconAnchor: [24, 24],
+                    });
+                    const marker = L.marker([p.gps_lat, p.gps_lon], { icon }).addTo(map);
+                    marker.on('click', () => {
+                        const idx = allPhotos.findIndex(ap => ap.id === p.id);
+                        if (idx >= 0) openLightbox(idx);
+                    });
+                });
+                setTimeout(() => map.invalidateSize(), 100);
+            } catch (e) {
+                container.innerHTML = '<div class="map-empty"><div class="icon"><i data-lucide="alert-triangle"></i></div><p>Failed to load map</p></div>';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // STATS VIEW
+        // ═══════════════════════════════════════════════════════
+        async function renderStats() {
+            const container = document.getElementById('statsView');
+            try {
+                const stats = await API.get('/gallery/stats');
+                const sizeMB = (stats.total_size / 1024 / 1024).toFixed(1);
+                const sizeStr = stats.total_size > 1024*1024*1024 ? `${(stats.total_size/1024/1024/1024).toFixed(1)} GB` : `${sizeMB} MB`;
+                const earliest = stats.date_range?.earliest ? new Date(stats.date_range.earliest).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+                const latest = stats.date_range?.latest ? new Date(stats.date_range.latest).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+
+                const barColors = ['#635BFF', '#3ecf8e', '#f5a623', '#5b9cf6', '#f45b69', '#a855f7', '#06b6d4', '#ec4899'];
+
+                container.innerHTML = `
+                <div class="stats-hero">
+                    <h2><i data-lucide="camera"></i> Your Photography</h2>
+                    <p>${stats.total} photos · ${sizeStr} · ${earliest} – ${latest}</p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="label">Photos</div><div class="value val-accent">${stats.total}</div></div>
+                    <div class="stat-card"><div class="label">Storage</div><div class="value">${sizeStr}</div></div>
+                    <div class="stat-card"><div class="label">Tags</div><div class="value val-blue">${stats.tags.length}</div></div>
+                    <div class="stat-card"><div class="label">Cameras</div><div class="value val-green">${stats.cameras.length}</div></div>
+                </div>
+
+                ${stats.cameras.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="camera"></i> Cameras</h3>
+                    ${stats.cameras.map((c, i) => `
+                    <div class="stat-bar">
+                        <span class="stat-bar-label">${c.camera_model}</span>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(parseInt(c.count)/stats.total*100)}%;background:${barColors[i % barColors.length]}"></div></div>
+                        <span class="stat-bar-count">${c.count}</span>
+                    </div>`).join('')}
+                </div>` : ''}
+
+                ${stats.lenses.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="aperture"></i> Lenses</h3>
+                    ${stats.lenses.map((l, i) => `
+                    <div class="stat-bar">
+                        <span class="stat-bar-label">${l.lens}</span>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(parseInt(l.count)/stats.total*100)}%;background:${barColors[(i+2) % barColors.length]}"></div></div>
+                        <span class="stat-bar-count">${l.count}</span>
+                    </div>`).join('')}
+                </div>` : ''}
+
+                ${stats.tags.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="tag"></i> Top Tags</h3>
+                    ${stats.tags.slice(0, 15).map((t, i) => `
+                    <div class="stat-bar">
+                        <span class="stat-bar-label">${t.tag}</span>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(parseInt(t.count)/stats.total*100)}%;background:${barColors[(i+4) % barColors.length]}"></div></div>
+                        <span class="stat-bar-count">${t.count}</span>
+                    </div>`).join('')}
+                </div>` : ''}
+
+                ${stats.day_of_week?.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="calendar"></i> Shooting Days</h3>
+                    <div class="heatmap">
+                        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day, i) => {
+                            const d = stats.day_of_week.find(x => parseInt(x.dow) === i);
+                            const count = d ? parseInt(d.count) : 0;
+                            const maxDow = Math.max(...stats.day_of_week.map(x => parseInt(x.count)));
+                            const intensity = maxDow > 0 ? count / maxDow : 0;
+                            const bg = `rgba(99,91,255,${0.1 + intensity * 0.8})`;
+                            return `<div class="heatmap-cell" style="background:${bg};border-radius:6px;" title="${day}: ${count}">
+                                <span class="heatmap-label">${day}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>` : ''}
+
+                ${stats.colors?.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="palette"></i> Color Palette</h3>
+                    <div class="color-palette">
+                        ${stats.colors.map(c => `<div class="color-swatch" style="background:${c.color}" title="${c.color} (${c.count})"><span class="swatch-count">${c.count}</span></div>`).join('')}
+                    </div>
+                </div>` : ''}
+
+                ${stats.aperture_stats?.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="aperture"></i> Aperture</h3>
+                    ${stats.aperture_stats.slice(0, 8).map((a, i) => `
+                    <div class="stat-bar">
+                        <span class="stat-bar-label">${a.aperture}</span>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(parseInt(a.count)/stats.total*100)}%;background:${barColors[(i+1) % barColors.length]}"></div></div>
+                        <span class="stat-bar-count">${a.count}</span>
+                    </div>`).join('')}
+                </div>` : ''}
+
+                ${stats.iso_stats?.length ? `
+                <div class="stat-section">
+                    <h3><i data-lucide="sun"></i> ISO</h3>
+                    ${stats.iso_stats.slice(0, 8).map((s, i) => `
+                    <div class="stat-bar">
+                        <span class="stat-bar-label">ISO ${s.iso}</span>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(parseInt(s.count)/stats.total*100)}%;background:${barColors[(i+3) % barColors.length]}"></div></div>
+                        <span class="stat-bar-count">${s.count}</span>
+                    </div>`).join('')}
+                </div>` : ''}
+                `;
+
+                if (window.lucide) lucide.createIcons();
+                // Animate bars on scroll
+                setTimeout(() => {
+                    container.querySelectorAll('.stat-bar-fill').forEach(bar => {
+                        const w = bar.style.width;
+                        bar.style.width = '0';
+                        requestAnimationFrame(() => { bar.style.width = w; });
+                    });
+                }, 100);
+
+            } catch (e) {
+                container.innerHTML = '<div class="gallery-empty"><div class="icon"><i data-lucide="alert-triangle"></i></div><h3>Failed to load stats</h3></div>';
+            }
+        }
+
+        // ─── Filter chips ───
+        function renderFilters() {
+            const bar = document.getElementById('filterBar');
+            let chips = '';
+            if (favOnly) chips += '<span class="filter-chip" data-clear="fav"><i data-lucide="heart" style="width:12px;height:12px;vertical-align:-2px"></i> Favorites <span class="remove"><i data-lucide="x" style="width:10px;height:10px"></i></span></span>';
+            if (activeTag) chips += `<span class="filter-chip" data-clear="tag"><i data-lucide="tag" style="width:12px;height:12px;vertical-align:-2px"></i> ${activeTag} <span class="remove"><i data-lucide="x" style="width:10px;height:10px"></i></span></span>`;
+            if (activeAlbum) chips += '<span class="filter-chip" data-clear="album"><i data-lucide="folder" style="width:12px;height:12px;vertical-align:-2px"></i> Album <span class="remove"><i data-lucide="x" style="width:10px;height:10px"></i></span></span>';
+            if (activeColor) chips += `<span class="filter-chip" data-clear="color"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${activeColor};margin-right:4px;"></span> ${activeColor} <span class="remove"><i data-lucide="x" style="width:10px;height:10px"></i></span></span>`;
+            if (searchQuery) chips += `<span class="filter-chip" data-clear="search"><i data-lucide="search" style="width:12px;height:12px;vertical-align:-2px"></i> ${searchQuery} <span class="remove"><i data-lucide="x" style="width:10px;height:10px"></i></span></span>`;
+            bar.innerHTML = chips;
+            bar.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const t = chip.dataset.clear;
+                    if (t === 'fav') { favOnly = false; document.getElementById('favFilter')?.classList.remove('active'); }
+                    if (t === 'tag') activeTag = null;
+                    if (t === 'album') activeAlbum = null;
+                    if (t === 'color') { activeColor = null; document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active')); }
+                    if (t === 'search') { searchQuery = ''; document.getElementById('searchInput').value = ''; }
+                    loadPhotos();
+                });
+            });
+        }
+
+        // ─── Collections ───
+        function renderCollections() {
+            const bar = document.getElementById('collectionsBar');
+            if (!collectionsData.length) { bar.style.display = 'none'; return; }
+            bar.innerHTML = collectionsData.map(c => `
+                <div class="collection-card" data-collection='${JSON.stringify(c.filter)}'>
+                    ${c.cover ? `<img src="${c.cover}" alt="">` : ''}
+                    <div class="label">${c.emoji} ${c.name}<br><span class="count">${c.count} photos</span></div>
+                </div>
+            `).join('');
+            bar.querySelectorAll('.collection-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const filter = JSON.parse(card.dataset.collection);
+                    if (filter.favorite) { favOnly = true; document.getElementById('favFilter')?.classList.add('active'); }
+                    if (filter.tag) activeTag = filter.tag;
+                    if (filter.date_from) { /* could add date filter */ }
+                    loadPhotos();
+                });
+            });
+        }
+
+        // ─── Color bar ───
+        function renderColorBar() {
+            const bar = document.getElementById('colorBar');
+            if (!colorsData.length) return;
+            bar.innerHTML = colorsData.map(c => 
+                `<div class="color-dot${activeColor === c.color ? ' active' : ''}" style="background:${c.color}" data-color="${c.color}" title="${c.color} (${c.count})"></div>`
+            ).join('');
+            bar.querySelectorAll('.color-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const color = dot.dataset.color;
+                    activeColor = activeColor === color ? null : color;
+                    bar.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('active', d.dataset.color === activeColor));
+                    loadPhotos();
+                });
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // LIGHTBOX
+        // ═══════════════════════════════════════════════════════
+        function updateInfoPanel(p) {
+            document.getElementById('lbDesc').textContent = p.ai_description || '';
+            document.getElementById('lbTags').innerHTML = (p.ai_tags || []).map(t =>
+                `<span class="ai-tag" data-tag="${t}">${t}</span>`
+            ).join('');
+            document.getElementById('lbExif').innerHTML = [
+                p.camera_model && { label: 'Camera', val: p.camera_model },
+                p.lens && { label: 'Lens', val: p.lens },
+                p.focal_length && { label: 'Focal', val: p.focal_length },
+                p.aperture && { label: 'Aperture', val: p.aperture },
+                p.shutter_speed && { label: 'Shutter', val: p.shutter_speed },
+                p.iso && { label: 'ISO', val: p.iso },
+                p.taken_at && { label: 'Date', val: new Date(p.taken_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) },
+                p.width && { label: 'Resolution', val: `${p.width} × ${p.height}` },
+            ].filter(Boolean).map(e => `<div class="exif-item"><div class="label">${e.label}</div><div class="val">${e.val}</div></div>`).join('');
+            document.querySelectorAll('#lbTags .ai-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    closeLightbox();
+                    activeTag = tag.dataset.tag;
+                    loadPhotos();
+                });
+            });
+            document.getElementById('lbSimilarRow').style.display = 'none';
+        }
+
+        function photoSrc(idx) {
+            if (idx < 0 || idx >= filteredPhotos.length) return '';
+            const p = filteredPhotos[idx];
+            return p.medium_path || p.original_path;
+        }
+
+        // Two layers: activeLayer shows current photo, backLayer is used for transitions
+        let activeLayerId = 'A';
+        function getActiveLayer() { return document.getElementById('lbLayer' + activeLayerId); }
+        function getBackLayer() { return document.getElementById('lbLayer' + (activeLayerId === 'A' ? 'B' : 'A')); }
+        function getActiveImg() { return document.getElementById('lbImg' + activeLayerId); }
+        function getBackImg() { return document.getElementById('lbImg' + (activeLayerId === 'A' ? 'B' : 'A')); }
+        function getWrapper() { return getActiveLayer(); }
+
+        function resetLayers() {
+            const active = getActiveLayer();
+            const back = getBackLayer();
+            active.style.transition = 'none';
+            active.style.transform = '';
+            active.style.visibility = 'visible';
+            active.style.zIndex = '2';
+            back.style.transition = 'none';
+            back.style.transform = '';
+            back.style.visibility = 'hidden';
+            back.style.zIndex = '1';
+        }
+
+        function openLightbox(idx) {
+            if (idx < 0 || idx >= filteredPhotos.length) return;
+            currentLightboxIdx = idx;
+            zoomScale = 1; zoomX = 0; zoomY = 0;
+            resetLayers();
+            const p = filteredPhotos[idx];
+            getActiveImg().src = p.medium_path || p.original_path;
+            // Preload neighbors
+            if (idx > 0) { const i = new Image(); i.src = photoSrc(idx - 1); }
+            if (idx < filteredPhotos.length - 1) { const i = new Image(); i.src = photoSrc(idx + 1); }
+            document.getElementById('lightbox').classList.add('active');
+            document.getElementById('lbFilename').textContent = p.filename;
+            document.getElementById('lbFav').innerHTML = '<i data-lucide="heart"></i>';
+            if (window.lucide) lucide.createIcons();
+            document.getElementById('lbFav').classList.toggle('favorited', p.is_favorite);
+            updateInfoPanel(p);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+            currentLightboxIdx = -1;
+        }
+
+        // Lightbox controls
+        document.getElementById('lbClose').onclick = closeLightbox;
+        document.getElementById('lbPrev').onclick = () => openLightbox(currentLightboxIdx - 1);
+        document.getElementById('lbNext').onclick = () => openLightbox(currentLightboxIdx + 1);
+
+        document.getElementById('lbFav').onclick = async () => {
+            if (currentLightboxIdx < 0) return;
+            const p = filteredPhotos[currentLightboxIdx];
+            await toggleFav(p.id);
+            const btn = document.getElementById('lbFav');
+            btn.classList.add('heart-bounce');
+            setTimeout(() => btn.classList.remove('heart-bounce'), 400);
+            openLightbox(currentLightboxIdx);
+        };
+
+        document.getElementById('lbDownload').onclick = () => {
+            if (currentLightboxIdx < 0) return;
+            const p = filteredPhotos[currentLightboxIdx];
+            const a = document.createElement('a');
+            a.href = p.original_path; a.download = p.filename; a.click();
+        };
+
+        document.getElementById('lbInfo').onclick = () => {
+            document.getElementById('lbInfoPanel').classList.toggle('collapsed');
+        };
+        document.getElementById('lbDragHandle').onclick = () => {
+            document.getElementById('lbInfoPanel').classList.toggle('collapsed');
+        };
+
+        // Swipe to open/close info panel
+        const infoPanel = document.getElementById('lbInfoPanel');
+        let panelTouchStartY = 0, panelStartCollapsed = false, panelAtTop = false, panelDragging = false;
+        infoPanel.addEventListener('touchstart', e => {
+            panelTouchStartY = e.touches[0].clientY;
+            panelStartCollapsed = infoPanel.classList.contains('collapsed');
+            panelAtTop = infoPanel.scrollTop <= 0;
+            panelDragging = false;
+            e.stopPropagation();
+        }, { passive: true });
+        infoPanel.addEventListener('touchmove', e => {
+            e.stopPropagation();
+            const dy = e.touches[0].clientY - panelTouchStartY;
+            // If panel is open, scrolled to top, and swiping down — intercept to close
+            if (!panelStartCollapsed && panelAtTop && dy > 10) {
+                e.preventDefault();
+                panelDragging = true;
+                // Visual feedback: translate panel down as user drags
+                infoPanel.style.transition = 'none';
+                infoPanel.style.transform = `translateY(${dy}px)`;
+            }
+            // If collapsed and swiping up — drag to open
+            if (panelStartCollapsed && dy < -10) {
+                panelDragging = true;
+            }
+        }, { passive: false });
+        infoPanel.addEventListener('touchend', e => {
+            e.stopPropagation();
+            const dy = e.changedTouches[0].clientY - panelTouchStartY;
+            infoPanel.style.transition = '';
+            infoPanel.style.transform = '';
+
+            if (panelStartCollapsed && dy < -40) {
+                infoPanel.classList.remove('collapsed');
+            } else if (!panelStartCollapsed && panelDragging && dy > 50) {
+                infoPanel.classList.add('collapsed');
+            }
+            panelDragging = false;
+        }, { passive: true });
+
+        // Similar photos
+        document.getElementById('lbSimilar').onclick = async () => {
+            if (currentLightboxIdx < 0) return;
+            const p = filteredPhotos[currentLightboxIdx];
+            const row = document.getElementById('lbSimilarRow');
+            const photosEl = document.getElementById('lbSimilarPhotos');
+            try {
+                const similar = await API.get(`/gallery/photos/${p.id}/similar`);
+                if (similar.length) {
+                    photosEl.innerHTML = similar.map(s => {
+                        const idx = allPhotos.findIndex(ap => ap.id === s.id);
+                        return `<div class="similar-thumb" data-idx="${idx >= 0 ? idx : 0}"><img src="${s.thumbnail_path}" alt=""></div>`;
+                    }).join('');
+                    row.style.display = '';
+                    document.getElementById('lbInfoPanel').classList.remove('collapsed');
+                    photosEl.querySelectorAll('.similar-thumb').forEach(thumb => {
+                        thumb.addEventListener('click', () => openLightbox(parseInt(thumb.dataset.idx)));
+                    });
+                }
+            } catch (e) {}
+        };
+
+        // Touch gestures — two-layer swap, pinch-to-zoom, double-tap, swipe-to-dismiss
+        let touchStartX = 0, touchStartY = 0, isDraggingDown = false, swipeDX = 0, swipeLocked = '';
+        let zoomScale = 1, zoomX = 0, zoomY = 0;
+        let pinchStartDist = 0, pinchStartScale = 1;
+        let isPinching = false, lastTap = 0, isAnimating = false;
+        const lbBody = document.getElementById('lbBody');
+
+        function applyZoom(animate) {
+            const w = getActiveLayer();
+            if (!w) return;
+            w.style.transition = animate ? 'transform 0.25s ease' : 'none';
+            if (zoomScale <= 1) { zoomScale = 1; zoomX = 0; zoomY = 0; }
+            w.style.transform = `translate(${zoomX}px, ${zoomY}px) scale(${zoomScale})`;
+        }
+        function resetZoom() { zoomScale = 1; zoomX = 0; zoomY = 0; applyZoom(true); }
+        function isZoomed() { return zoomScale > 1.05; }
+        function pinchDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
+
+        lbBody.addEventListener('touchstart', e => {
+            if (isAnimating) return;
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                isPinching = true;
+                pinchStartDist = pinchDist(e.touches);
+                pinchStartScale = zoomScale;
+            } else if (e.touches.length === 1) {
+                isPinching = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDraggingDown = false;
+                swipeDX = 0;
+                swipeLocked = '';
+            }
+        }, { passive: false });
+
+        lbBody.addEventListener('touchmove', e => {
+            if (isAnimating) return;
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dist = pinchDist(e.touches);
+                zoomScale = Math.min(5, Math.max(1, pinchStartScale * (dist / pinchStartDist)));
+                applyZoom(false);
+                return;
+            }
+            if (isPinching || e.touches.length !== 1) return;
+
+            const dx = e.touches[0].clientX - touchStartX;
+            const dy = e.touches[0].clientY - touchStartY;
+
+            if (isZoomed()) {
+                e.preventDefault();
+                zoomX += dx; zoomY += dy;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                applyZoom(false);
+                return;
+            }
+
+            if (!swipeLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                swipeLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            }
+
+            if (swipeLocked === 'x') {
+                e.preventDefault();
+                swipeDX = dx;
+                const active = getActiveLayer();
+                const back = getBackLayer();
+                const atStart = currentLightboxIdx === 0 && dx > 0;
+                const atEnd = currentLightboxIdx === filteredPhotos.length - 1 && dx < 0;
+                const atEdge = atStart || atEnd;
+                const moveDX = atEdge ? dx * 0.25 : dx;
+
+                // Move current photo with finger
+                active.style.transition = 'none';
+                active.style.transform = `translateX(${moveDX}px)`;
+
+                // Show and position incoming photo
+                if (!atEdge) {
+                    const nextIdx = dx > 0 ? currentLightboxIdx - 1 : currentLightboxIdx + 1;
+                    const backImg = getBackImg();
+                    const src = photoSrc(nextIdx);
+                    if (!backImg.src.endsWith(src) && src) backImg.src = src;
+                    const inX = dx > 0 ? moveDX - window.innerWidth : moveDX + window.innerWidth;
+                    back.style.transition = 'none';
+                    back.style.transform = `translateX(${inX}px)`;
+                    back.style.visibility = 'visible';
+                } else {
+                    back.style.visibility = 'hidden';
+                }
+                return;
+            }
+
+            // Vertical — swipe to dismiss
+            if (swipeLocked === 'y' && dy > 30) {
+                isDraggingDown = true;
+                const active = getActiveLayer();
+                active.style.transition = 'none';
+                active.style.transform = `translateY(${dy}px) scale(${1 - dy * 0.001})`;
+            }
+        }, { passive: false });
+
+        lbBody.addEventListener('touchend', e => {
+            if (isAnimating) return;
+            if (isPinching) {
+                if (e.touches.length < 2) { isPinching = false; if (zoomScale < 1.1) resetZoom(); }
+                return;
+            }
+
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (isZoomed()) return;
+
+            const active = getActiveLayer();
+            const back = getBackLayer();
+
+            // Dismiss
+            if (isDraggingDown && dy > 120) { closeLightbox(); return; }
+            if (isDraggingDown) {
+                active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                active.style.transform = '';
+                return;
+            }
+
+            const THRESHOLD = 50;
+
+            if (swipeLocked === 'x' && Math.abs(swipeDX) > THRESHOLD) {
+                const nextIdx = swipeDX > 0 ? currentLightboxIdx - 1 : currentLightboxIdx + 1;
+                if (nextIdx >= 0 && nextIdx < filteredPhotos.length) {
+                    isAnimating = true;
+                    const dir = swipeDX > 0 ? 1 : -1;
+                    const vw = window.innerWidth;
+
+                    // Animate current photo off-screen
+                    active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                    active.style.transform = `translateX(${dir * vw}px)`;
+
+                    // Animate incoming photo to center
+                    back.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                    back.style.transform = 'translateX(0px)';
+
+                    setTimeout(() => {
+                        // Swap layers — back becomes active, no src changes on visible elements
+                        activeLayerId = activeLayerId === 'A' ? 'B' : 'A';
+                        // Now getActiveLayer() returns what was the back layer (visible, centered)
+                        // Hide old active (now the back layer, off-screen)
+                        const newBack = getBackLayer();
+                        newBack.style.transition = 'none';
+                        newBack.style.transform = '';
+                        newBack.style.visibility = 'hidden';
+                        newBack.style.zIndex = '1';
+                        // Ensure new active is on top
+                        const newActive = getActiveLayer();
+                        newActive.style.zIndex = '2';
+
+                        currentLightboxIdx = nextIdx;
+                        zoomScale = 1; zoomX = 0; zoomY = 0;
+                        const p = filteredPhotos[nextIdx];
+                        document.getElementById('lbFilename').textContent = p.filename;
+                        document.getElementById('lbFav').classList.toggle('favorited', p.is_favorite);
+                        updateInfoPanel(p);
+                        // Preload neighbors
+                        if (nextIdx > 0) { const i = new Image(); i.src = photoSrc(nextIdx - 1); }
+                        if (nextIdx < filteredPhotos.length - 1) { const i = new Image(); i.src = photoSrc(nextIdx + 1); }
+                        isAnimating = false;
+                    }, 310);
+
+                    swipeDX = 0;
+                    return;
+                }
+            }
+
+            // Snap back — return both to original positions
+            active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+            active.style.transform = '';
+            back.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+            back.style.transform = `translateX(${swipeDX > 0 ? '-' : ''}100vw)`;
+            setTimeout(() => { back.style.visibility = 'hidden'; }, 310);
+            swipeDX = 0;
+        }, { passive: true });
+
+        // Double-tap to zoom
+        lbBody.addEventListener('touchend', e => {
+            if (isAnimating || isPinching || e.touches.length > 0) return;
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                if (isZoomed()) { resetZoom(); }
+                else {
+                    zoomScale = 2.5;
+                    const rect = lbBody.getBoundingClientRect();
+                    const tapX = e.changedTouches[0].clientX - rect.left - rect.width / 2;
+                    const tapY = e.changedTouches[0].clientY - rect.top - rect.height / 2;
+                    zoomX = -tapX * 0.6; zoomY = -tapY * 0.6;
+                    applyZoom(true);
+                }
+                lastTap = 0;
+                return;
+            }
+            lastTap = now;
+        }, { passive: true });
+
+        // Click to toggle controls
+        lbBody.addEventListener('click', (e) => {
+            if (e.target.closest('.lightbox-nav') || e.target.closest('.similar-thumb')) return;
+            document.getElementById('lightbox').classList.toggle('controls-hidden');
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', e => {
+            if (!document.getElementById('lightbox').classList.contains('active')) return;
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') openLightbox(currentLightboxIdx - 1);
+            else if (e.key === 'ArrowRight') openLightbox(currentLightboxIdx + 1);
+            else if (e.key === 'f' || e.key === 'F') document.getElementById('lbFav').click();
+            else if (e.key === 'i' || e.key === 'I') document.getElementById('lbInfo').click();
+        });
+
+        // ═══════════════════════════════════════════════════════
+        // FAVORITE TOGGLE
+        // ═══════════════════════════════════════════════════════
+        async function toggleFav(id) {
+            const photo = allPhotos.find(p => p.id === id);
+            if (!photo) return;
+            const updated = await API.request('PATCH', `/gallery/photos/${id}`, { is_favorite: !photo.is_favorite });
+            Object.assign(photo, updated);
+            render();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // CONTEXT MENU
+        // ═══════════════════════════════════════════════════════
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('contextMenu');
+            menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - 250) + 'px';
+            menu.classList.add('visible');
+        }
+
+        document.addEventListener('click', () => document.getElementById('contextMenu').classList.remove('visible'));
+        document.getElementById('contextMenu').addEventListener('click', async (e) => {
+            const item = e.target.closest('.context-menu-item');
+            if (!item || !contextPhotoId) return;
+            const action = item.dataset.action;
+            const photo = allPhotos.find(p => p.id === contextPhotoId);
+
+            if (action === 'favorite') { await toggleFav(contextPhotoId); }
+            if (action === 'similar') {
+                const idx = allPhotos.findIndex(p => p.id === contextPhotoId);
+                if (idx >= 0) { openLightbox(idx); document.getElementById('lbSimilar').click(); }
+            }
+            if (action === 'download' && photo) {
+                const a = document.createElement('a'); a.href = photo.original_path; a.download = photo.filename; a.click();
+            }
+            if (action === 'share') {
+                try {
+                    const result = await API.post('/gallery/share', { photo_id: contextPhotoId });
+                    const url = `${window.location.origin}${result.url}`;
+                    await navigator.clipboard.writeText(url);
+                    showToast('Share link copied!');
+                } catch (e) { showToast('Failed to create share link', 'error'); }
+            }
+            if (action === 'delete') {
+                if (!confirm('Delete this photo?')) return;
+                await API.request('DELETE', `/gallery/photos/${contextPhotoId}`);
+                showToast('Photo deleted');
+                loadPhotos();
+            }
+            document.getElementById('contextMenu').classList.remove('visible');
+        });
+
+        // ═══════════════════════════════════════════════════════
+        // TOOLBAR EVENTS
+        // ═══════════════════════════════════════════════════════
+
+        // Auto-hide toolbar on scroll
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    const scrollY = window.scrollY;
+                    const toolbar = document.getElementById('toolbar');
+                    if (scrollY > lastScrollY && scrollY > 100) {
+                        toolbar.classList.add('hidden');
+                    } else {
+                        toolbar.classList.remove('hidden');
+                    }
+                    lastScrollY = scrollY;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // View switching
+        function switchView(view) {
+            currentView = view;
+            // Clear selection when switching views
+            if (selectMode || selectedIds.size > 0) {
+                selectMode = false;
+                selectedIds.clear();
+                updateBatchBar();
+                document.getElementById('selectBtn').classList.remove('active');
+                ['gridView', 'timelineView', 'tagsView'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.remove('select-mode');
+                    el.querySelectorAll('.photo-card.selected').forEach(c => c.classList.remove('selected'));
+                    el.querySelectorAll('.select-check.checked').forEach(c => c.classList.remove('checked'));
+                });
+            }
+            // Highlight active view in more menu
+            document.querySelectorAll('.more-menu-item[data-view]').forEach(t => t.classList.toggle('active-view', t.dataset.view === view));
+            render();
+        }
+
+        // 3-dot more menu
+        document.getElementById('moreBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('moreMenu').classList.toggle('open');
+        });
+        document.addEventListener('click', () => document.getElementById('moreMenu').classList.remove('open'));
+        document.querySelectorAll('.more-menu-item[data-view]').forEach(item => {
+            item.addEventListener('click', () => {
+                switchView(item.dataset.view);
+                document.getElementById('moreMenu').classList.remove('open');
+            });
+        });
+        document.getElementById('albumsMenuBtn').addEventListener('click', () => {
+            document.getElementById('albumsPanel').classList.toggle('open');
+            loadAlbums();
+            document.getElementById('moreMenu').classList.remove('open');
+        });
+        document.getElementById('colorMenuBtn').addEventListener('click', () => {
+            const bar = document.getElementById('colorBar');
+            bar.style.display = bar.style.display === 'none' ? '' : 'none';
+            document.getElementById('moreMenu').classList.remove('open');
+        });
+
+        // Search
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('focus', () => searchInput.classList.add('expanded'));
+        searchInput.addEventListener('blur', () => { if (!searchInput.value) searchInput.classList.remove('expanded'); });
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchQuery = e.target.value.trim();
+                loadPhotos();
+            }, 400);
+        });
+
+        // Favorites filter (button removed, available via collections)
+        document.getElementById('favFilter')?.addEventListener('click', () => {
+            favOnly = !favOnly;
+            document.getElementById('favFilter')?.classList.toggle('active', favOnly);
+            loadPhotos();
+        });
+
+        // Color filter toggle moved to 3-dot menu
+
+        // Select mode
+        document.getElementById('selectBtn').addEventListener('click', () => {
+            if (selectMode) {
+                clearSelection();
+            } else {
+                selectMode = true;
+                document.getElementById('selectBtn').classList.add('active');
+                ['gridView', 'timelineView', 'tagsView'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('select-mode');
+                });
+            }
+        });
+
+        function updateBatchBar() {
+            document.getElementById('selectedCount').textContent = selectedIds.size;
+            document.getElementById('batchBar').classList.toggle('visible', selectedIds.size > 0);
+        }
+
+        function clearSelection() {
+            selectMode = false;
+            selectedIds.clear();
+            updateBatchBar();
+            document.getElementById('selectBtn').classList.remove('active');
+            ['gridView', 'timelineView', 'tagsView'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('select-mode');
+                el.querySelectorAll('.photo-card.selected').forEach(c => c.classList.remove('selected'));
+                el.querySelectorAll('.select-check.checked').forEach(c => c.classList.remove('checked'));
+            });
+        }
+        document.getElementById('batchCancel').onclick = clearSelection;
+        document.getElementById('batchFav').onclick = async () => {
+            for (const id of selectedIds) await API.request('PATCH', `/gallery/photos/${id}`, { is_favorite: true });
+            showToast(`${selectedIds.size} photos favorited ✓`);
+            selectedIds.clear(); updateBatchBar(); loadPhotos();
+        };
+        document.getElementById('batchDel').onclick = async () => {
+            if (!confirm(`Delete ${selectedIds.size} photos?`)) return;
+            for (const id of selectedIds) await API.request('DELETE', `/gallery/photos/${id}`);
+            showToast(`${selectedIds.size} photos deleted`);
+            selectedIds.clear(); updateBatchBar(); loadPhotos();
+        };
+
+        // ─── Albums ───
+        // Albums button moved to 3-dot menu
+        async function loadAlbums() {
+            const albums = await API.get('/gallery/albums');
+            document.getElementById('albumsList').innerHTML = `
+                <div class="album-card" style="background:var(--surface2)" onclick="clearAlbumFilter()"><div class="name"><i data-lucide="camera" style="width:14px;height:14px;vertical-align:-2px"></i> All Photos</div></div>
+                ${albums.map(a => `<div class="album-card" data-album="${a.id}"><div class="name">${a.name}</div><div class="count">${a.photo_count} photos</div></div>`).join('')}
+            `;
+            document.querySelectorAll('.album-card[data-album]').forEach(card => {
+                card.addEventListener('click', () => {
+                    activeAlbum = parseInt(card.dataset.album);
+                    document.getElementById('albumsPanel').classList.remove('open');
+                    loadPhotos();
+                });
+            });
+        }
+        window.clearAlbumFilter = () => { activeAlbum = null; loadPhotos(); };
+
+        document.getElementById('createAlbumBtn').onclick = () => {
+            createModal({
+                title: 'New Album',
+                bodyHTML: `<div class="form-group"><label>Name</label><input class="form-input" name="name" placeholder="Album name" required></div>
+                           <div class="form-group"><label>Description</label><textarea class="form-input" name="desc" rows="2" placeholder="Optional"></textarea></div>`,
+                submitLabel: 'Create',
+                async onSubmit(modal) {
+                    const name = modal.querySelector('[name="name"]').value.trim();
+                    if (!name) throw new Error('Name required');
+                    await API.post('/gallery/albums', { name, description: modal.querySelector('[name="desc"]').value.trim() });
+                    showToast('Album created ✓');
+                    loadAlbums();
+                }
+            });
+        };
+
+        document.getElementById('batchAlbum').onclick = async () => {
+            const albums = await API.get('/gallery/albums');
+            if (!albums.length) { showToast('Create an album first', 'error'); return; }
+            createModal({
+                title: 'Add to Album',
+                bodyHTML: `<div class="form-group"><label>Album</label><select class="form-input" name="album">
+                    ${albums.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}</select></div>`,
+                submitLabel: 'Add',
+                async onSubmit(modal) {
+                    const albumId = modal.querySelector('[name="album"]').value;
+                    for (const id of selectedIds) await API.request('PATCH', `/gallery/photos/${id}`, { album_id: parseInt(albumId) });
+                    showToast(`${selectedIds.size} photos added to album ✓`);
+                    selectedIds.clear(); updateBatchBar(); loadPhotos();
+                }
+            });
+        };
+
+        // ═══════════════════════════════════════════════════════
+        // UPLOAD
+        // ═══════════════════════════════════════════════════════
+        document.getElementById('uploadBtn').onclick = () => document.getElementById('uploadOverlay').classList.add('active');
+        document.getElementById('uploadOverlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('uploadOverlay')) {
+                document.getElementById('uploadOverlay').classList.remove('active');
+                document.getElementById('uploadProgress').innerHTML = '';
+            }
+        });
+
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.onclick = (e) => {
+            if (e.target === uploadZone || e.target.closest('.icon') || e.target.closest('h3') || e.target.closest('p')) {
+                document.getElementById('fileInput').click();
+            }
+        };
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault(); uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // Global drag-and-drop
+        document.addEventListener('dragover', (e) => {
+            if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+                document.getElementById('uploadOverlay').classList.add('active');
+            }
+        });
+
+        async function handleFiles(files) {
+            if (!files.length) return;
+            const prog = document.getElementById('uploadProgress');
+            prog.innerHTML = '';
+
+            for (const file of files) {
+                // Create thumbnail preview
+                const thumbURL = URL.createObjectURL(file);
+                const item = document.createElement('div');
+                item.className = 'upload-item';
+                item.innerHTML = `
+                    <img class="thumb" src="${thumbURL}" alt="">
+                    <span class="name">${file.name}</span>
+                    <div class="prog-bar"><div class="prog-fill" style="width:0%"></div></div>
+                    <span class="status"><i data-lucide="camera" style="width:14px;height:14px"></i></span>
+                    <div class="upload-stages"></div>
+                `;
+                prog.appendChild(item);
+                lucide.createIcons({node: item});
+
+                try {
+                    item.querySelector('.status').innerHTML = '<i data-lucide="upload" style="width:14px;height:14px"></i>'; lucide.createIcons({node: item});
+                    const fd = new FormData();
+                    fd.append('photos', file);
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/gallery/upload');
+                    xhr.withCredentials = true;
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) item.querySelector('.prog-fill').style.width = (e.loaded / e.total * 100) + '%';
+                    };
+                    await new Promise((resolve, reject) => {
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                item.querySelector('.status').innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px"></i>'; lucide.createIcons({node: item});
+                                resolve();
+                            } else reject(new Error('Upload failed'));
+                        };
+                        xhr.onerror = () => reject(new Error('Network error'));
+                        xhr.send(fd);
+                    });
+                } catch (e) {
+                    item.querySelector('.status').innerHTML = '<i data-lucide="x-circle" style="width:14px;height:14px"></i>'; lucide.createIcons({node: item});
+                }
+            }
+            showToast(`${files.length} photo(s) uploaded ✓`);
+            setTimeout(() => {
+                document.getElementById('uploadOverlay').classList.remove('active');
+                prog.innerHTML = '';
+                loadPhotos();
+            }, 1200);
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════
+        // Show skeleton while loading
+        document.getElementById('gridView').innerHTML = `<div class="grid-skeleton">${Array(8).fill('<div class="skel-item"></div>').join('')}</div>`;
+
+        // Load everything in parallel
+        await Promise.all([loadPhotos(), loadColors(), loadCollections()]);
+        renderColorBar();
+        renderCollections();
+        // Mark default view in menu
+        document.querySelectorAll('.more-menu-item[data-view]').forEach(t => t.classList.toggle('active-view', t.dataset.view === currentView));
+    })();
+    </script>
+</body>
+</html>

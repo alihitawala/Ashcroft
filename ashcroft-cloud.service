@@ -1,0 +1,17 @@
+[Unit]
+Description=ashcroft.cloud Next.js App
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ashcroft
+WorkingDirectory=/home/ashcroft/www/ashcroft-cloud
+ExecStart=/usr/bin/node /home/ashcroft/www/ashcroft-cloud/node_modules/.bin/next start -p 3000
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/home/ashcroft/www/ashcroft-cloud/.env
+
+[Install]
+WantedBy=multi-user.target

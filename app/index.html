@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — ashcroft.cloud</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐢</text></svg>">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/app/manifest.json">
+    
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#635BFF">
+    
+    <link rel="stylesheet" href="/app/shared.css?v=1771810988">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s ease;
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .login-logo .turtle { font-size: 28px; display: block; margin-bottom: 12px; }
+        .login-logo .wordmark { font-size: 18px; font-weight: 700; }
+        .login-logo .dot { color: var(--accent); }
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+        .login-theme-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .login-form .btn-primary {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 44px;
+        }
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-logo">
+            <span class="turtle">🐢</span>
+            <span class="wordmark">ashcroft<span class="dot">.</span>cloud</span>
+        </div>
+        <div class="login-subtitle">Welcome back</div>
+
+        <div class="form-error" id="loginError">
+            <span>⚠️</span>
+            <span id="loginErrorMsg">Invalid email or password</span>
+        </div>
+
+        <form class="login-form" id="loginForm" autocomplete="on">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input class="form-input" id="email" name="email" type="email"
+                       placeholder="you@ashcroft.cloud" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input class="form-input" id="password" name="password" type="password"
+                       placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <div class="form-row">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="remember" id="remember"> Remember me
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+        </form>
+
+        <div class="login-footer">Private access · Household only</div>
+        <!-- theme toggle removed — use Settings -->
+
+    </div>
+
+    <script src="/app/shared.js"></script>
+    <script>
+        // If already logged in, go to dashboard
+        (async () => {
+            const user = await checkAuth();
+            if (user) {
+                window.location.href = '/app/dashboard.html';
+                return;
+            }
+
+            // Theme toggle
+            // theme toggle removed — use Settings
+
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('loginBtn');
+                const errEl = document.getElementById('loginError');
+                const errMsg = document.getElementById('loginErrorMsg');
+
+                errEl.classList.remove('visible');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span>';
+
+                try {
+                    await API.post('/auth/login', {
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                        remember: document.getElementById('remember').checked,
+                    });
+                    window.location.href = '/app/dashboard.html';
+                } catch (err) {
+                    errMsg.textContent = err.message || 'Invalid email or password';
+                    errEl.classList.add('visible');
+                    btn.disabled = false;
+                    btn.textContent = 'Sign In';
+                    document.getElementById('password').focus();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

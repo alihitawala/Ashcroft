@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ashcroft.cloud — Design Mocks</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --surface2: #1e1e1e;
+            --border: #2a2a2a;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --accent: #3b82f6;
+            --accent-dim: #1e3a5f;
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background: var(--bg); color: var(--text); }
+        .nav { display: flex; gap: 8px; padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .nav a { padding: 8px 16px; border-radius: 8px; background: var(--surface2); color: var(--text-dim); text-decoration: none; font-size: 14px; cursor: pointer; border: 1px solid var(--border); }
+        .nav a.active, .nav a:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+        .mock-frame { width: 100%; min-height: calc(100vh - 60px); border: none; }
+        .intro { padding: 40px 24px; max-width: 700px; margin: 0 auto; text-align: center; }
+        .intro h1 { font-size: 24px; font-weight: 600; margin-bottom: 12px; }
+        .intro p { color: var(--text-dim); line-height: 1.6; margin-bottom: 24px; }
+        .label { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+        .label-public { background: #164e63; color: #22d3ee; }
+        .label-auth { background: #3b1764; color: #c084fc; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="public-home.html">🌐 Public Home</a>
+        <a href="login.html">🔐 Login</a>
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="tasks.html">✅ Tasks</a>
+        <a href="events.html">📅 Events</a>
+        <a href="grocery.html">🛒 Grocery</a>
+        <a href="garden.html">🌳 Garden</a>
+        <a href="smarthome.html">🏠 Smart Home</a>
+        <a href="kanban.html">📋 Kanban</a>
+        <a href="settings.html">⚙️ Settings</a>
+    </nav>
+    <div class="intro">
+        <h1>ashcroft.cloud — Design Mocks 🐢</h1>
+        <p>Click the tabs above to browse wireframes for each section. These are interactive mockups showing layout, structure, and information hierarchy. Not final design — just the blueprint.</p>
+        <p style="font-size: 13px; color: #555;">Mobile: resize your browser window to see responsive behavior.</p>
+    </div>
+</body>
+</html>

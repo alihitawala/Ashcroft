@@ -1,0 +1,26 @@
+{
+  "name": "ashcroft.cloud",
+  "short_name": "Ashcroft",
+  "description": "Household management app for the Ashcroft family",
+  "start_url": "/app/dashboard.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#635BFF",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle"],
+  "lang": "en-US"
+}

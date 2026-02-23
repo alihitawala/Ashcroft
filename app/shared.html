@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Photos — ashcroft.cloud</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0b0e11; color: #f0f2f5; min-height: 100vh; }
+        .header { padding: 20px 24px; text-align: center; border-bottom: 1px solid #2a313a; }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header p { font-size: 13px; color: #8a94a0; margin-top: 4px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; justify-content: center; }
+        .photo { border-radius: 4px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .photo:hover { transform: scale(1.02); }
+        .photo img { height: 220px; width: auto; display: block; object-fit: cover; }
+        @media (max-width: 768px) { .photo img { height: 140px; } }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.96); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 92vw; max-height: 90vh; object-fit: contain; }
+        .lightbox .close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: #fff; font-size: 20px; cursor: pointer; }
+        .lightbox .info { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 24px 24px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: #fff; }
+        .lightbox .info .desc { font-size: 15px; margin-bottom: 6px; }
+        .lightbox .info .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .lightbox .info .tag { padding: 3px 10px; border-radius: 12px; background: rgba(99,91,255,0.3); color: #c4c0ff; font-size: 12px; }
+        .empty { text-align: center; padding: 60px; color: #8a94a0; }
+        .empty .icon { font-size: 48px; margin-bottom: 12px; }
+        .powered { text-align: center; padding: 20px; font-size: 12px; color: #5a6370; }
+        .powered a { color: #635bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="title">Shared Photos</h1>
+        <p id="subtitle"></p>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="lightbox" id="lightbox">
+        <button class="close" onclick="document.getElementById('lightbox').classList.remove('active')">✕</button>
+        <img id="lbImg" src="">
+        <div class="info">
+            <div class="desc" id="lbDesc"></div>
+            <div class="tags" id="lbTags"></div>
+        </div>
+    </div>
+    <div class="powered">Shared via <a href="https://ashcroft.cloud">ashcroft.cloud</a></div>
+    <script>
+    (async () => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (!token) { document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">🔗</div><p>Invalid share link</p></div>'; return; }
+        try {
+            const res = await fetch(`/api/gallery/shared/${encodeURIComponent(token)}`);
+            if (!res.ok) throw new Error('Not found');
+            const data = await res.json();
+            document.getElementById('title').textContent = data.album?.name || 'Shared Photos';
+            document.getElementById('subtitle').textContent = `${data.photos.length} photos`;
+            const grid = document.getElementById('grid');
+            grid.innerHTML = data.photos.map((p, i) => `
+                <div class="photo" data-idx="${i}">
+                    <img src="${p.thumbnail_path}" alt="${p.filename}" loading="lazy">
+                </div>
+            `).join('');
+            grid.querySelectorAll('.photo').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx);
+                    const p = data.photos[idx];
+                    document.getElementById('lbImg').src = p.medium_path || p.original_path;
+                    document.getElementById('lbDesc').textContent = p.ai_description || '';
+                    document.getElementById('lbTags').innerHTML = (p.ai_tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+                    document.getElementById('lightbox').classList.add('active');
+                });
+            });
+            document.getElementById('lightbox').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('lightbox')) document.getElementById('lightbox').classList.remove('active');
+            });
+        } catch (e) {
+            document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">🔗</div><p>Share link not found or expired</p></div>';
+        }
+    })();
+    </script>
+</body>
+</html>

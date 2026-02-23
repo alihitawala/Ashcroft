@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban — Mock</title>
+    <style>
+        [data-theme="dark"] {
+            --bg: #0b0e11; --surface: #13171c; --surface2: #1a1f26; --surface3: #222830;
+            --border: #2a313a; --border-hover: #3a4250; --text: #f0f2f5; --text-secondary: #8a94a0; --text-tertiary: #5a6370;
+            --accent: #635bff; --accent-bg: rgba(99,91,255,0.1); --accent-border: rgba(99,91,255,0.25);
+            --green: #3ecf8e; --green-bg: rgba(62,207,142,0.1); --red: #f45b69; --red-bg: rgba(244,91,105,0.1);
+            --amber: #f5a623; --amber-bg: rgba(245,166,35,0.1); --blue: #5b9cf6; --blue-bg: rgba(91,156,246,0.1);
+            --purple: #a78bfa; --purple-bg: rgba(167,139,250,0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        [data-theme="light"] {
+            --bg: #f6f8fa; --surface: #ffffff; --surface2: #f0f2f5; --surface3: #e8ecf0;
+            --border: #e0e4e8; --border-hover: #c8cdd3; --text: #1a1f36; --text-secondary: #596577; --text-tertiary: #8792a2;
+            --accent: #635bff; --accent-bg: rgba(99,91,255,0.06); --accent-border: rgba(99,91,255,0.2);
+            --green: #0e9f6e; --green-bg: rgba(14,159,110,0.08); --red: #e03e4e; --red-bg: rgba(224,62,78,0.08);
+            --amber: #d97706; --amber-bg: rgba(217,119,6,0.08); --blue: #3b82f6; --blue-bg: rgba(59,130,246,0.08);
+            --purple: #7c3aed; --purple-bg: rgba(124,58,237,0.08);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06); --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; height: 100vh; display: flex; flex-direction: column; }
+
+        .topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .topbar-left { display: flex; align-items: center; gap: 14px; }
+        .topbar h1 { font-size: 18px; font-weight: 700; }
+        .board-tabs { display: flex; gap: 4px; }
+        .board-tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; background: none; border: none; }
+        .board-tab:hover { color: var(--text-secondary); background: var(--surface2); }
+        .board-tab.active { color: var(--accent); background: var(--accent-bg); }
+        .topbar-right { display: flex; gap: 8px; align-items: center; }
+        .btn-sm { padding: 6px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; text-decoration: none; }
+        .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+        .btn-primary:hover { opacity: 0.9; }
+        .theme-toggle { width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+        /* Board */
+        .board { display: flex; gap: 16px; padding: 20px 24px; flex: 1; overflow-x: auto; align-items: flex-start; }
+        .column { min-width: 280px; max-width: 320px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 80px); }
+        .column-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 10px; }
+        .column-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+        .column-count { font-size: 11px; background: var(--surface2); color: var(--text-tertiary); padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+        .column-add { font-size: 18px; color: var(--text-tertiary); cursor: pointer; background: none; border: none; padding: 2px 6px; border-radius: 4px; }
+        .column-add:hover { color: var(--accent); background: var(--accent-bg); }
+        .column-body { padding: 0 10px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+
+        /* Cards */
+        .card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: grab; transition: all 0.15s; }
+        .card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .card-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; }
+        .card-labels { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+        .label { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .label-website { background: var(--accent-bg); color: var(--accent); }
+        .label-infra { background: var(--amber-bg); color: var(--amber); }
+        .label-home { background: var(--green-bg); color: var(--green); }
+        .label-design { background: var(--purple-bg); color: var(--purple); }
+        .label-bug { background: var(--red-bg); color: var(--red); }
+        .card-meta { display: flex; justify-content: space-between; align-items: center; }
+        .card-assignee { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+        .assignee-ali { background: var(--blue-bg); color: var(--blue); }
+        .assignee-bittu { background: var(--green-bg); color: var(--green); }
+        .assignee-both { background: var(--purple-bg); color: var(--purple); }
+        .card-due { font-size: 11px; color: var(--text-tertiary); }
+        .card-due.overdue { color: var(--red); }
+        .card-checklist { font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; }
+
+        @media (max-width: 700px) {
+            .board { padding: 12px; gap: 12px; }
+            .column { min-width: 260px; }
+            .board-tabs { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>📋 Kanban</h1>
+            <div class="board-tabs">
+                <button class="board-tab active">Ali & Bittu</button>
+                <button class="board-tab">Home Projects</button>
+                <button class="board-tab">Garden</button>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <button class="btn-primary btn-sm">+ New Card</button>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            <a class="btn-sm" href="dashboard.html">← Dashboard</a>
+            <a class="btn-sm" href="index.html">All Mocks</a>
+        </div>
+    </div>
+
+    <div class="board">
+        <!-- BACKLOG -->
+        <div class="column">
+            <div class="column-header">
+                <span class="column-title">Backlog <span class="column-count">5</span></span>
+                <button class="column-add">+</button>
+            </div>
+            <div class="column-body">
+                <div class="card">
+                    <div class="card-labels"><span class="label label-home">Home</span></div>
+                    <div class="card-title">Set up Raspberry Pi for local Home Assistant</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">No date</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-home">Home</span></div>
+                    <div class="card-title">Connect remaining devices: Hue, eufy, myQ, Dewenwils</div>
+                    <div class="card-meta"><span class="card-assignee assignee-both">Ali + Bittu</span><span class="card-due">After Pi</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-website">Website</span></div>
+                    <div class="card-title">Photo pipeline — Adobe integration research</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">No date</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-website">Website</span></div>
+                    <div class="card-title">Sports tracker — API research (football-data.org, cricinfo)</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">No date</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Set up WhatsApp notifications channel</div>
+                    <div class="card-meta"><span class="card-assignee assignee-both">Ali + Bittu</span><span class="card-due">No date</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TO DO -->
+        <div class="column">
+            <div class="column-header">
+                <span class="column-title">To Do <span class="column-count">4</span></span>
+                <button class="column-add">+</button>
+            </div>
+            <div class="column-body">
+                <div class="card">
+                    <div class="card-labels"><span class="label label-website">Website</span></div>
+                    <div class="card-title">Install PostgreSQL on server</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">This week</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-website">Website</span></div>
+                    <div class="card-title">Initialize Next.js project with Tailwind</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">This week</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-website">Website</span></div>
+                    <div class="card-title">Set up NextAuth with email/password</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">This week</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-labels"><span class="label label-home">Home</span><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Try Roborock + Schluter cloud integrations in HA</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">This week</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IN PROGRESS -->
+        <div class="column">
+            <div class="column-header">
+                <span class="column-title">In Progress <span class="column-count">2</span></span>
+                <button class="column-add">+</button>
+            </div>
+            <div class="column-body">
+                <div class="card" style="border-color: var(--accent-border);">
+                    <div class="card-labels"><span class="label label-design">Design</span><span class="label label-website">Website</span></div>
+                    <div class="card-title">Website design mocks — review & finalize vibe</div>
+                    <div class="card-meta"><span class="card-assignee assignee-both">Ali + Bittu</span><span class="card-checklist">☑ 3/5</span></div>
+                </div>
+                <div class="card" style="border-color: var(--accent-border);">
+                    <div class="card-labels"><span class="label label-home">Home</span></div>
+                    <div class="card-title">Home Assistant setup — cloud integrations</div>
+                    <div class="card-meta"><span class="card-assignee assignee-both">Ali + Bittu</span><span class="card-checklist">☑ 3/10 devices</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REVIEW -->
+        <div class="column">
+            <div class="column-header">
+                <span class="column-title">Review <span class="column-count">1</span></span>
+                <button class="column-add">+</button>
+            </div>
+            <div class="column-body">
+                <div class="card">
+                    <div class="card-labels"><span class="label label-design">Design</span></div>
+                    <div class="card-title">DESIGN.md — full feature spec & architecture</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">Review</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DONE -->
+        <div class="column">
+            <div class="column-header">
+                <span class="column-title">Done <span class="column-count">6</span></span>
+                <button class="column-add">+</button>
+            </div>
+            <div class="column-body">
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Set up ashcroft.cloud with HTTPS</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">Feb 15</span></div>
+                </div>
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Switch to nginx static serving (remove Node.js)</div>
+                    <div class="card-meta"><span class="card-assignee assignee-bittu">Bittu 🐢</span><span class="card-due">Feb 15</span></div>
+                </div>
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Connect Telegram channel</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">Feb 15</span></div>
+                </div>
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-infra">Infra</span></div>
+                    <div class="card-title">Install Docker + Home Assistant</div>
+                    <div class="card-meta"><span class="card-assignee assignee-both">Ali + Bittu</span><span class="card-due">Feb 15</span></div>
+                </div>
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-home">Home</span></div>
+                    <div class="card-title">Connect Rachio to HA</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">Feb 15</span></div>
+                </div>
+                <div class="card" style="opacity: 0.7;">
+                    <div class="card-labels"><span class="label label-home">Home</span></div>
+                    <div class="card-title">Connect HomeConnect + Nest to HA</div>
+                    <div class="card-meta"><span class="card-assignee assignee-ali">Ali</span><span class="card-due">Feb 15</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            if (html.getAttribute('data-theme') === 'dark') { html.setAttribute('data-theme', 'light'); btn.textContent = '☀️'; }
+            else { html.setAttribute('data-theme', 'dark'); btn.textContent = '🌙'; }
+        }
+    </script>
+</body>
+</html>

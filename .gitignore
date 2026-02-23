@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Old Next.js project (separate repo, not used)
+ashcroft-cloud/
+
+# Data files (fetched by cron)
+public/data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+pm2-logs/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploaded photos (user content)
+public/uploads/
+server/uploads/
+
+# Test coverage
+coverage/
+
+# Service worker cache version (auto-generated)
+# Keep sw.js but the cache version changes on deploy
