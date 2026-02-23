@@ -1,10 +1,16 @@
 // Service Worker for ashcroft.cloud PWA
 // Basic caching strategy: cache-first for app shell, network-first for API calls
 
-const CACHE_NAME = 'ashcroft-v1771810988';
+const CACHE_NAME = 'ashcroft-v1771820559';
 const STATIC_ASSETS = [
+  '/app/css/shared.css',
   '/app/shared.css',
   '/app/shared.js',
+  '/app/js/shared/api.js',
+  '/app/js/shared/auth.js',
+  '/app/js/shared/ui.js',
+  '/app/js/shared/components.js',
+  '/app/js/shared/nav.js',
   '/app/manifest.json',
   '/app/dashboard.html',
   '/app/tasks.html',
