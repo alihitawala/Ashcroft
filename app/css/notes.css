@@ -1,0 +1,352 @@
+/* ─── Notes Page Styles ─── */
+.notes-layout {
+    display: flex;
+    gap: 0;
+    height: calc(100vh - 60px);
+    margin: -28px -32px;
+}
+
+/* ─── Sidebar (Note List) ─── */
+.notes-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    overflow: hidden;
+}
+.notes-sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.notes-sidebar-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.notes-sidebar-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+.notes-search {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+.notes-search:focus { border-color: var(--accent); }
+.notes-search::placeholder { color: var(--text-tertiary); }
+
+.notes-sort {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 8px;
+}
+.sort-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.sort-btn:hover { color: var(--text); background: var(--surface2); }
+.sort-btn.active { color: var(--accent); background: var(--accent-bg); }
+
+.notes-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+.note-card {
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+}
+.note-card:hover { background: var(--surface2); }
+.note-card.active {
+    background: var(--accent-bg);
+    border-color: var(--accent-border);
+}
+.note-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.note-card-title .pin-icon { font-size: 11px; flex-shrink: 0; }
+.note-card-preview {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+.note-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+.note-card-meta .access-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.access-household {
+    background: var(--blue-bg);
+    color: var(--blue);
+}
+.access-admin {
+    background: var(--red-bg);
+    color: var(--red);
+    font-weight: 600;
+}
+.note-card-meta .tag-chip {
+    font-size: 10px;
+    background: var(--surface3);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.pinned-section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    padding: 8px 14px 4px;
+    font-weight: 600;
+}
+
+/* ─── Note Editor ─── */
+.note-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+.note-editor-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+}
+.toolbar-btn {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.toolbar-btn:hover { background: var(--surface2); color: var(--text); }
+.toolbar-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+}
+.save-indicator {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+.save-indicator.saving { color: var(--amber); }
+.save-indicator.saved { color: var(--green); }
+
+.editor-title-input {
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 20px 24px 8px;
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+}
+.editor-title-input::placeholder { color: var(--text-tertiary); }
+
+.editor-content {
+    flex: 1;
+    padding: 8px 24px 24px;
+    overflow-y: auto;
+}
+.editor-content textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+}
+.editor-content textarea::placeholder { color: var(--text-tertiary); }
+
+/* Tags */
+.editor-tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 24px 12px;
+    flex-wrap: wrap;
+}
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+}
+.tag-chip .tag-remove {
+    cursor: pointer;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.tag-chip .tag-remove:hover { opacity: 1; }
+.tag-add-input {
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    width: 80px;
+    font-family: inherit;
+}
+.tag-add-input::placeholder { color: var(--text-tertiary); }
+
+/* Footer */
+.editor-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+}
+.footer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.footer-toggle:hover { border-color: var(--accent); }
+.footer-toggle.active {
+    background: var(--accent-bg);
+    border-color: var(--accent-border);
+    color: var(--accent);
+}
+.footer-select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.footer-spacer { flex: 1; }
+.delete-note-btn {
+    font-size: 12px;
+    color: var(--red);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.delete-note-btn:hover { background: var(--red-bg); }
+
+/* ─── Mobile ─── */
+.mobile-back-btn {
+    display: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.mobile-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 768px) {
+    .notes-layout { margin: -18px -16px; height: calc(100vh - 52px); }
+    .notes-sidebar { width: 100%; }
+    .note-editor { display: none; }
+    .notes-layout.editor-open .notes-sidebar { display: none; }
+    .notes-layout.editor-open .note-editor { display: flex; }
+    .mobile-back-btn { display: inline-flex; }
+    .editor-title-input { font-size: 20px; padding: 16px 16px 6px; }
+    .editor-content { padding: 6px 16px 16px; }
+    .editor-tags { padding: 0 16px 8px; }
+}

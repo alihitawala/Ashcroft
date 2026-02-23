@@ -1,0 +1,101 @@
+.settings-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+.settings-section h2 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.settings-section h2 svg { width: 14px; height: 14px; }
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label {
+    font-size: 13px;
+    font-weight: 500;
+}
+.settings-row-sub {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+}
+.settings-row-value {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.theme-picker {
+    display: flex;
+    gap: 12px;
+}
+.theme-option {
+    width: 100px;
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    background: var(--surface2);
+}
+.theme-option:hover { border-color: var(--accent-border); }
+.theme-option.active { border-color: var(--accent); background: var(--accent-bg); }
+.theme-option .preview {
+    width: 100%;
+    height: 32px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+.theme-option .label { font-size: 12px; font-weight: 600; }
+.dark-preview { background: linear-gradient(135deg, #0b0e11, #1a1f26); border: 1px solid #2a313a; }
+.light-preview { background: linear-gradient(135deg, #f6f8fa, #ffffff); border: 1px solid #e0e4e8; }
+.password-form { max-width: 400px; }
+.password-form .form-group { margin-bottom: 12px; }
+.settings-section .form-group { margin-bottom: 12px; }
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.user-table th, .user-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.user-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+}
+.role-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.role-admin { background: var(--accent-bg); color: var(--accent); }
+.role-member { background: var(--surface2); color: var(--text-secondary); }
+.role-head { background: var(--green-bg); color: var(--green); }
+.role-user { background: var(--surface2); color: var(--text-secondary); }
+@media (max-width: 600px) {
+    .settings-section { padding: 14px; }
+    .theme-picker { flex-direction: row; }
+    .theme-option { width: 90px; padding: 8px; }
+}

@@ -1,0 +1,178 @@
+/* Dashboard-specific styles */
+.dash-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+@media (min-width: 768px) {
+    .dash-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .dash-grid .card.full-width {
+        grid-column: 1 / -1;
+    }
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.task-item:last-child { border-bottom: none; }
+
+.task-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+.task-check:hover { border-color: var(--accent); }
+.task-check.done {
+    background: var(--accent);
+    border-color: var(--accent);
+    position: relative;
+}
+.task-check.done::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 5px;
+    width: 6px; height: 9px;
+    border: solid white; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.priority-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.task-title { flex: 1; font-size: 14px; }
+.task-title.done { text-decoration: line-through; color: var(--text-tertiary); }
+
+.task-due {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+.due-today { background: var(--blue-bg); color: var(--blue); }
+.due-done { background: var(--green-bg); color: var(--green); }
+
+.event-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.event-item:last-child { border-bottom: none; }
+
+.event-date {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--accent-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.event-date .month {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    line-height: 1;
+}
+.event-date .day {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+}
+
+.event-title { font-size: 14px; font-weight: 500; }
+.event-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.event-badge {
+    display: inline-block;
+    background: var(--accent-bg);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--text-tertiary);
+}
+.empty-state .emoji { font-size: 32px; margin-bottom: 8px; }
+.empty-state p { font-size: 13px; margin-bottom: 12px; }
+
+/* Garden styles */
+.water-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.water-alert:last-child { border-bottom: none; }
+.water-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.water-dot.overdue { background: var(--red); }
+.water-dot.today { background: var(--amber); }
+.water-dot.soon { background: var(--blue); }
+.water-name { flex: 1; }
+.water-info { color: var(--text-tertiary); font-size: 12px; }
+
+.garden-rec {
+    padding: 10px 12px;
+    background: var(--accent-bg);
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 8px;
+    border-left: 3px solid var(--accent);
+}
+
+/* Activity styles */
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.activity-icon svg { width: 14px; height: 14px; }
+.activity-icon.task-icon { background: var(--blue-bg); color: var(--blue); }
+.activity-icon.event-icon { background: var(--amber-bg); color: var(--amber); }
+.activity-text { flex: 1; }
+.activity-time { color: var(--text-tertiary); font-size: 11px; flex-shrink: 0; }
