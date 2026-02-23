@@ -1,0 +1,509 @@
+let watches = [];
+let airports = []; // [iata, city, name, country]
+let airportMap = new Map(); // iata -> {city, name, country}
+
+async function loadAirports() {
+    if (airports.length) return;
+    try {
+        const resp = await fetch('/data/airports.json');
+        airports = await resp.json();
+        airports.forEach(a => airportMap.set(a[0], { city: a[1], name: a[2], country: a[3] }));
+    } catch { airports = []; }
+}
+
+function searchAirports(query, limit = 8) {
+    if (!query || query.length < 2) return [];
+    const q = query.toLowerCase();
+    const exact = [];
+    const startsWith = [];
+    const contains = [];
+    for (const a of airports) {
+        const iata = a[0].toLowerCase();
+        const city = a[1].toLowerCase();
+        const name = a[2].toLowerCase();
+        if (iata === q) { exact.push(a); continue; }
+        if (iata.startsWith(q) || city.startsWith(q)) { startsWith.push(a); continue; }
+        if (city.includes(q) || name.includes(q) || iata.includes(q)) { contains.push(a); }
+    }
+    return [...exact, ...startsWith, ...contains].slice(0, limit);
+}
+
+function getAirportLabel(iata) {
+    const a = airportMap.get(iata);
+    return a ? `${a.city} (${iata})` : iata;
+}
+
+function getAirportCity(iata) {
+    const a = airportMap.get(iata);
+    return a ? a.city : '';
+}
+
+function airportInputHTML(name, label, value = '', valueName = '') {
+    const displayVal = value ? (valueName || value) : '';
+    return `
+        <div class="form-group">
+            <label>${label}</label>
+            <div class="airport-input-wrap">
+                <input class="form-input airport-search" data-target="${name}" 
+                       placeholder="Search city or IATA code..." 
+                       value="${esc(displayVal)}" autocomplete="off">
+                <input type="hidden" name="${name}" value="${esc(value)}">
+                <input type="hidden" name="${name}_name" value="${esc(valueName)}">
+                <div class="airport-suggestions" id="suggest-${name}"></div>
+            </div>
+        </div>`;
+}
+
+function initAirportInputs(container) {
+    container.querySelectorAll('.airport-search').forEach(input => {
+        const target = input.dataset.target;
+        const suggestEl = container.querySelector('#suggest-' + target);
+        const hiddenCode = container.querySelector(`[name="${target}"]`);
+        const hiddenName = container.querySelector(`[name="${target}_name"]`);
+        let activeIdx = -1;
+
+        input.addEventListener('input', () => {
+            const results = searchAirports(input.value);
+            activeIdx = -1;
+            // Clear selection if user is typing
+            hiddenCode.value = '';
+            hiddenName.value = '';
+            if (!results.length) { suggestEl.classList.remove('visible'); return; }
+            suggestEl.innerHTML = results.map((a, i) =>
+                `<div class="airport-suggestion" data-idx="${i}" data-iata="${a[0]}" data-city="${a[1]}">
+                    <span class="as-code">${a[0]}</span>
+                    <span class="as-city">${a[1]}, ${a[3]}</span>
+                    <span class="as-name">${esc(a[2])}</span>
+                </div>`
+            ).join('');
+            suggestEl.classList.add('visible');
+        });
+
+        input.addEventListener('keydown', (e) => {
+            const items = suggestEl.querySelectorAll('.airport-suggestion');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); }
+            else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); items[activeIdx].click(); return; }
+            else return;
+            items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+        });
+
+        suggestEl.addEventListener('click', (e) => {
+            const item = e.target.closest('.airport-suggestion');
+            if (!item) return;
+            const iata = item.dataset.iata;
+            const city = item.dataset.city;
+            hiddenCode.value = iata;
+            hiddenName.value = city;
+            input.value = `${city} (${iata})`;
+            suggestEl.classList.remove('visible');
+        });
+
+        input.addEventListener('blur', () => {
+            setTimeout(() => suggestEl.classList.remove('visible'), 200);
+        });
+
+        input.addEventListener('focus', () => {
+            if (input.value.length >= 2 && !hiddenCode.value) {
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDuration(min) {
+    if (!min) return '';
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function timeAgo(ts) {
+    if (!ts) return 'Never';
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// ─── Boot ───
+(async () => {
+    try { await requireAuth(); } catch { return; }
+    loadAirports().then(() => { if (watches.length) renderWatches(); }); // preload + re-render with city names
+
+    const shell = renderAppShell('Flights', 'flights');
+    document.getElementById('appLayout').innerHTML = `
+        ${shell.sidebar}
+        ${shell.bottomNav}
+        <div class="main-content">
+            ${shell.topbar}
+            <div class="main-body" id="flightsBody">
+                <div id="watchesContainer">
+                    <div class="skeleton skeleton-card" style="height:100px;margin-bottom:12px"></div>
+                    <div class="skeleton skeleton-card" style="height:100px;margin-bottom:12px"></div>
+                </div>
+            </div>
+        </div>
+        <button class="add-fab" onclick="addWatchModal()" title="Add flight watch">+</button>
+    `;
+    initAppShell('flights');
+    await loadWatches();
+})();
+
+async function loadWatches() {
+    try {
+        watches = await API.get('/flights/watches');
+        renderWatches();
+    } catch (err) {
+        showToast('Failed to load flights', 'error');
+    }
+}
+
+function renderWatches() {
+    const container = document.getElementById('watchesContainer');
+    if (watches.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding:48px 16px">
+                <div class="emoji"><i data-lucide="plane"></i></div>
+                <p>No flights tracked yet. Tap + to start watching a route!</p>
+            </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = watches.map(w => {
+        const hasPrice = w.best_price != null;
+        const isGoodDeal = hasPrice && w.max_price && parseFloat(w.best_price) <= parseFloat(w.max_price);
+        let trendClass = 'flat', trendIcon = '→';
+        if (w.latest_price && w.previous_price) {
+            const diff = parseFloat(w.latest_price) - parseFloat(w.previous_price);
+            if (diff < 0) { trendClass = 'down'; trendIcon = '↓'; }
+            else if (diff > 0) { trendClass = 'up'; trendIcon = '↑'; }
+        }
+        const dateRange = formatDate(w.depart_date_from) + (w.depart_date_to ? ' – ' + formatDate(w.depart_date_to) : '');
+        const returnRange = w.trip_type === 'round-trip' && w.return_date_from
+            ? ' ↩ ' + formatDate(w.return_date_from) + (w.return_date_to ? ' – ' + formatDate(w.return_date_to) : '')
+            : '';
+
+        return `
+        <div class="flight-card${w.active ? '' : ' inactive'}" id="watch-${w.id}">
+            <div class="flight-card-header" onclick="toggleHistory(${w.id})">
+                <div class="flight-route">
+                    <div class="flight-route-codes">
+                        ${esc(w.origin)} <span class="arrow">${w.trip_type === 'round-trip' ? '⇄' : '→'}</span> ${esc(w.destination)}
+                    </div>
+                    <div class="flight-route-names">${esc(w.origin_name || getAirportCity(w.origin))} → ${esc(w.destination_name || getAirportCity(w.destination))}</div>
+                    <div class="flight-dates"><i data-lucide="calendar" style="width:12px;height:12px;vertical-align:-2px"></i> ${dateRange}${returnRange}</div>
+                    <div class="flight-badges">
+                        <span class="flight-badge${w.trip_type === 'round-trip' ? ' roundtrip' : ''}">${w.trip_type === 'round-trip' ? '↩ Round-trip' : '→ One-way'}</span>
+                        ${w.passengers > 1 ? `<span class="flight-badge"><i data-lucide="users" style="width:12px;height:12px;vertical-align:-2px"></i> ${w.passengers}</span>` : ''}
+                        ${w.cabin_class !== 'economy' ? `<span class="flight-badge">${esc(w.cabin_class)}</span>` : ''}
+                        <span class="flight-badge">${w.access === 'household' ? '<i data-lucide="home" style="width:12px;height:12px;vertical-align:-2px"></i>' : '<i data-lucide="lock" style="width:12px;height:12px;vertical-align:-2px"></i>'}</span>
+                        ${w.max_price ? `<span class="flight-badge"><i data-lucide="target" style="width:12px;height:12px;vertical-align:-2px"></i> ≤ $${parseFloat(w.max_price).toFixed(0)}</span>` : ''}
+                        ${w.max_stops != null ? `<span class="flight-badge">≤ ${w.max_stops} stop${w.max_stops !== 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                </div>
+                <div class="flight-price-col">
+                    ${hasPrice ? `
+                        <div class="flight-best-price${isGoodDeal ? ' good-deal' : ''}">$${parseFloat(w.best_price).toFixed(0)}</div>
+                        <div class="flight-best-price-airline">${esc(w.best_price_airline || '')}</div>
+                        <div class="flight-trend ${trendClass}">${trendIcon}</div>
+                    ` : '<div class="flight-best-price" style="font-size:14px;color:var(--text-tertiary)">No data</div>'}
+                    ${w.best_duration ? `<div class="flight-best-duration"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:-2px"></i> ${formatDuration(w.best_duration)} · ${esc(w.best_duration_airline || '')}</div>` : ''}
+                </div>
+            </div>
+            <div class="flight-last-checked">Last checked: ${timeAgo(w.last_checked)}</div>
+            <div class="flight-card-actions">
+                <button class="flight-action-btn" onclick="toggleActive(${w.id},${!w.active})">${w.active ? '<i data-lucide="pause" style="width:14px;height:14px;vertical-align:-2px"></i> Pause' : '<i data-lucide="play" style="width:14px;height:14px;vertical-align:-2px"></i> Resume'}</button>
+                <button class="flight-action-btn" onclick="addPriceModal(${w.id})"><i data-lucide="dollar-sign" style="width:14px;height:14px;vertical-align:-2px"></i> Add Price</button>
+                <button class="flight-action-btn" onclick="editWatchModal(${w.id})"><i data-lucide="pencil" style="width:14px;height:14px;vertical-align:-2px"></i> Edit</button>
+                <button class="flight-action-btn danger" onclick="deleteWatch(${w.id})"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px"></i> Delete</button>
+            </div>
+            <div class="price-history" id="history-${w.id}"></div>
+        </div>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function toggleHistory(id) {
+    const el = document.getElementById(`history-${id}`);
+    if (el.classList.contains('visible')) {
+        el.classList.remove('visible');
+        return;
+    }
+    el.innerHTML = '<div style="padding:8px;color:var(--text-tertiary);font-size:12px">Loading...</div>';
+    el.classList.add('visible');
+    try {
+        const prices = await API.get(`/flights/watches/${id}/prices?limit=20`);
+        if (prices.length === 0) {
+            el.innerHTML = '<div style="padding:8px;color:var(--text-tertiary);font-size:12px">No price history yet</div>';
+            return;
+        }
+        el.innerHTML = `
+            <div class="price-history-title">Price History</div>
+            ${prices.map((p, i) => {
+                const next = prices[i + 1];
+                let deltaHtml = '';
+                if (next) {
+                    const diff = parseFloat(p.price) - parseFloat(next.price);
+                    if (diff !== 0) {
+                        const cls = diff > 0 ? 'up' : 'down';
+                        deltaHtml = `<span class="pe-delta ${cls}">${diff > 0 ? '↑' : '↓'} $${Math.abs(diff).toFixed(0)}</span>`;
+                    }
+                }
+                let entryClass = '';
+                let bestTag = '';
+                if (p.is_best_price) { entryClass = 'best-price'; bestTag = '<span class="pe-best-tag price">Best Price</span>'; }
+                else if (p.is_best_duration) { entryClass = 'best-duration'; bestTag = '<span class="pe-best-tag duration">Fastest</span>'; }
+
+                // Parse segments
+                let segs = p.segments;
+                if (typeof segs === 'string') try { segs = JSON.parse(segs); } catch { segs = null; }
+                let segHtml = '';
+                if (segs && segs.length) {
+                    segHtml = '<div class="price-entry-segments">' + segs.map((s, si) => {
+                        const depTime = s.departAt ? new Date(s.departAt).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true}) : '';
+                        const arrTime = s.arriveAt ? new Date(s.arriveAt).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true}) : '';
+                        let html = `<div class="segment-leg">
+                            <span class="seg-flight">${esc(s.flightNumber || '')}</span>
+                            <span class="seg-route">${esc(s.from)} → ${esc(s.to)}${getAirportCity(s.to) ? ' · '+esc(getAirportCity(s.to)) : ''}</span>
+                            <span class="seg-time">${depTime}–${arrTime} · ${s.duration ? formatDuration(s.duration) : ''}</span>
+                        </div>`;
+                        if (s.layoverMin != null) {
+                            const cls = s.layoverMin > 300 ? 'layover-long' : s.layoverMin < 90 ? 'layover-short' : '';
+                            const layCity = getAirportCity(s.layoverCity || s.to) || s.layoverCity || s.to;
+                            html += `<div class="segment-layover"><span class="${cls}"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:-2px"></i> ${formatDuration(s.layoverMin)} in ${esc(layCity)}</span></div>`;
+                        }
+                        return html;
+                    }).join('') + '</div>';
+                }
+
+                const stopsLabel = p.stops === 0 ? 'Nonstop' : p.stops + ' stop' + (p.stops > 1 ? 's' : '');
+
+                return `
+                <div class="price-entry ${entryClass}">
+                    <div class="price-entry-top">
+                        <span class="pe-price">$${parseFloat(p.price).toFixed(0)}</span>
+                        <span class="pe-airline">${esc(p.airline || p.airlines || '')}</span>
+                        ${bestTag}
+                        ${deltaHtml}
+                    </div>
+                    <div class="price-entry-meta">
+                        <span class="pe-badge"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:-2px"></i> ${formatDuration(p.duration_min)}</span>
+                        <span class="pe-badge">${stopsLabel}</span>
+                        <span class="pe-badge">${p.route_summary || ''}</span>
+                        <span class="pe-badge">${formatDate(p.fetched_at)}</span>
+                    </div>
+                    ${segHtml}
+                </div>`;
+            }).join('')}
+        `;
+        if (window.lucide) lucide.createIcons();
+    } catch (err) {
+        el.innerHTML = '<div style="padding:8px;color:var(--red);font-size:12px">Failed to load</div>';
+    }
+}
+
+async function toggleActive(id, active) {
+    try {
+        await API.put(`/flights/watches/${id}`, { active });
+        const w = watches.find(w => w.id === id);
+        if (w) w.active = active;
+        renderWatches();
+        showToast(active ? 'Watch resumed ✓' : 'Watch paused ✓');
+    } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteWatch(id) {
+    if (!confirm('Delete this flight watch and all its price history?')) return;
+    try {
+        await API.delete(`/flights/watches/${id}`);
+        watches = watches.filter(w => w.id !== id);
+        renderWatches();
+        showToast('Deleted ✓');
+    } catch (err) { showToast(err.message, 'error'); }
+}
+
+function watchFormHTML(w = {}) {
+    const isRT = (w.trip_type || 'one-way') === 'round-trip';
+    return `
+        ${airportInputHTML('origin', 'Origin', w.origin || '', w.origin_name || '')}
+        ${airportInputHTML('destination', 'Destination', w.destination || '', w.destination_name || '')}
+        <div class="form-group">
+            <label>Trip Type</label>
+            <select class="form-input" name="trip_type" onchange="document.getElementById('returnFields').style.display=this.value==='round-trip'?'block':'none'">
+                <option value="one-way"${!isRT ? ' selected' : ''}>→ One-way</option>
+                <option value="round-trip"${isRT ? ' selected' : ''}>↩ Round-trip</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Departure From</label>
+            <input class="form-input" name="depart_date_from" type="date" value="${w.depart_date_from ? w.depart_date_from.slice(0,10) : ''}" required>
+        </div>
+        <div class="form-group">
+            <label>Departure To (optional range)</label>
+            <input class="form-input" name="depart_date_to" type="date" value="${w.depart_date_to ? w.depart_date_to.slice(0,10) : ''}">
+        </div>
+        <div id="returnFields" style="display:${isRT ? 'block' : 'none'}">
+            <div class="form-group">
+                <label>Return From</label>
+                <input class="form-input" name="return_date_from" type="date" value="${w.return_date_from ? w.return_date_from.slice(0,10) : ''}">
+            </div>
+            <div class="form-group">
+                <label>Return To (optional range)</label>
+                <input class="form-input" name="return_date_to" type="date" value="${w.return_date_to ? w.return_date_to.slice(0,10) : ''}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Passengers</label>
+            <input class="form-input" name="passengers" type="number" min="1" max="9" value="${w.passengers || 1}">
+        </div>
+        <div class="form-group">
+            <label>Cabin Class</label>
+            <select class="form-input" name="cabin_class">
+                <option value="economy"${(w.cabin_class||'economy')==='economy'?' selected':''}>Economy</option>
+                <option value="premium_economy"${w.cabin_class==='premium_economy'?' selected':''}>Premium Economy</option>
+                <option value="business"${w.cabin_class==='business'?' selected':''}>Business</option>
+                <option value="first"${w.cabin_class==='first'?' selected':''}>First</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Target Price — alert when ≤ this ($, optional)</label>
+            <input class="form-input" name="max_price" type="number" min="0" step="1" placeholder="e.g. 800" value="${w.max_price || ''}">
+        </div>
+        <div class="form-group">
+            <label>Max Stops (optional, 0 = nonstop only)</label>
+            <input class="form-input" name="max_stops" type="number" min="0" max="5" placeholder="Any" value="${w.max_stops != null ? w.max_stops : ''}">
+        </div>
+        <div class="form-group">
+            <label class="form-checkbox">
+                <input type="checkbox" name="nearby_airports" ${w.nearby_airports ? 'checked' : ''}>
+                Include nearby airports
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Access</label>
+            <select class="form-input" name="access">
+                <option value="private"${(w.access||'private')==='private'?' selected':''}>🔒 Private</option>
+                <option value="household"${w.access==='household'?' selected':''}>🏠 Family</option>
+            </select>
+        </div>
+    `;
+}
+
+function getFormData(modal) {
+    const val = n => modal.querySelector(`[name="${n}"]`)?.value?.trim() || '';
+    return {
+        origin: val('origin').toUpperCase(),
+        origin_name: val('origin_name') || null,
+        destination: val('destination').toUpperCase(),
+        destination_name: val('destination_name') || null,
+        depart_date_from: val('depart_date_from'),
+        depart_date_to: val('depart_date_to') || null,
+        return_date_from: val('return_date_from') || null,
+        return_date_to: val('return_date_to') || null,
+        trip_type: val('trip_type'),
+        passengers: parseInt(val('passengers')) || 1,
+        cabin_class: val('cabin_class'),
+        max_price: val('max_price') ? parseFloat(val('max_price')) : null,
+        max_stops: val('max_stops') !== '' ? parseInt(val('max_stops')) : null,
+        nearby_airports: modal.querySelector('[name="nearby_airports"]')?.checked || false,
+        access: val('access'),
+    };
+}
+
+async function addWatchModal() {
+    await loadAirports();
+    const modal = createModal({
+        title: 'New Flight Watch',
+        bodyHTML: watchFormHTML(),
+        submitLabel: 'Create Watch',
+        async onSubmit(modal) {
+            const data = getFormData(modal);
+            if (!data.origin || !data.destination || !data.depart_date_from) throw new Error('Origin, destination, and departure date required');
+            const watch = await API.post('/flights/watches', data);
+            watches.unshift(watch);
+            renderWatches();
+            showToast('Flight watch created ✓');
+        },
+    });
+    initAirportInputs(document.querySelector('.modal-backdrop') || document.body);
+}
+
+async function editWatchModal(id) {
+    const w = watches.find(x => x.id === id);
+    if (!w) return;
+    await loadAirports();
+    createModal({
+        title: 'Edit Flight Watch',
+        bodyHTML: watchFormHTML(w),
+        submitLabel: 'Save',
+        async onSubmit(modal) {
+            const data = getFormData(modal);
+            if (!data.origin || !data.destination || !data.depart_date_from) throw new Error('Origin, destination, and departure date required');
+            const updated = await API.put(`/flights/watches/${id}`, data);
+            Object.assign(w, updated);
+            renderWatches();
+            showToast('Watch updated ✓');
+        },
+    });
+    initAirportInputs(document.querySelector('.modal-backdrop') || document.body);
+}
+
+function addPriceModal(id) {
+    createModal({
+        title: 'Add Price Entry',
+        bodyHTML: `
+            <div class="form-group">
+                <label>Price ($)</label>
+                <input class="form-input" name="price" type="number" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>Airline</label>
+                <input class="form-input" name="airline" placeholder="e.g. United">
+            </div>
+            <div class="form-group">
+                <label>Stops</label>
+                <input class="form-input" name="stops" type="number" min="0" max="5" value="0">
+            </div>
+            <div class="form-group">
+                <label>Duration (minutes)</label>
+                <input class="form-input" name="duration_min" type="number" min="0" placeholder="e.g. 360">
+            </div>
+            <div class="form-group">
+                <label>Booking URL (optional)</label>
+                <input class="form-input" name="booking_url" type="url" placeholder="https://...">
+            </div>
+        `,
+        submitLabel: 'Add Price',
+        async onSubmit(modal) {
+            const val = n => modal.querySelector(`[name="${n}"]`)?.value?.trim() || '';
+            const price = parseFloat(val('price'));
+            if (!price) throw new Error('Price is required');
+            await API.post(`/flights/watches/${id}/prices`, {
+                price,
+                airline: val('airline') || null,
+                stops: parseInt(val('stops')) || 0,
+                duration_min: val('duration_min') ? parseInt(val('duration_min')) : null,
+                booking_url: val('booking_url') || null,
+            });
+            await loadWatches();
+            showToast('Price added ✓');
+        },
+    });
+}
