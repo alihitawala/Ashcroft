@@ -1,0 +1,1535 @@
+/* ═══════════════════════════════════════════════════════
+   GARDEN TRACKER — Apple Health meets Plant Care
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Health Color Tokens ─── */
+:root {
+    --health-excellent: #22c55e;
+    --health-good: #84cc16;
+    --health-fair: #eab308;
+    --health-poor: #f97316;
+    --health-critical: #ef4444;
+    --health-new: #3b82f6;
+}
+
+/* ─── Layout ─── */
+.garden-page .main-body {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+.content-area {
+    padding: 16px !important;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    max-width: 1200px !important;
+    margin: 0 auto;
+}
+
+/* ─── Toolbar ─── */
+.garden-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.garden-toolbar .toolbar-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.garden-toolbar .toolbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+.garden-toolbar .plant-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+.garden-toolbar .toolbar-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+.toolbar-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.toolbar-btn.active {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.add-plant-btn {
+    background: var(--accent);
+    color: #fff !important;
+    border-color: var(--accent);
+    width: auto;
+    padding: 0 14px;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 10px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s;
+}
+.add-plant-btn:hover {
+    background: var(--accent-hover);
+}
+.add-plant-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ─── Sort/Filter Bar ─── */
+.garden-filters {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.garden-filters::-webkit-scrollbar { display: none; }
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 16px;
+    background: var(--surface2);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+.filter-chip:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+}
+.filter-chip.active {
+    background: var(--accent-bg);
+    border-color: var(--accent-border);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ─── Plant Cards Grid ─── */
+.plants-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 0;
+}
+
+@media (min-width: 640px) {
+    .plants-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .content-area { padding: 20px !important; }
+}
+@media (min-width: 1024px) {
+    .plants-grid { grid-template-columns: repeat(4, 1fr); }
+    .content-area { padding: 24px 32px !important; }
+}
+
+/* ─── Plant Card ─── */
+.plant-card {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s ease;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: cardFadeIn 0.4s ease forwards;
+}
+.plant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+.plant-card:active {
+    transform: scale(0.97);
+}
+
+@keyframes cardFadeIn {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Card hero photo */
+.plant-card-hero {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--surface2);
+}
+.plant-card-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+.plant-card:hover .plant-card-hero img {
+    transform: scale(1.05);
+}
+
+/* Gradient placeholder when no photo */
+.plant-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+}
+.plant-card-placeholder svg {
+    width: 40px;
+    height: 40px;
+    color: rgba(255,255,255,0.7);
+    stroke-width: 1.5;
+}
+
+/* Type-based gradient backgrounds */
+.gradient-tree { background: linear-gradient(135deg, #065f46 0%, #059669 50%, #34d399 100%); }
+.gradient-herb { background: linear-gradient(135deg, #4d7c0f 0%, #84cc16 50%, #bef264 100%); }
+.gradient-flower { background: linear-gradient(135deg, #9333ea 0%, #c084fc 50%, #f0abfc 100%); }
+.gradient-vegetable { background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fcd34d 100%); }
+.gradient-fruit { background: linear-gradient(135deg, #dc2626 0%, #f87171 50%, #fca5a5 100%); }
+.gradient-succulent { background: linear-gradient(135deg, #0e7490 0%, #22d3ee 50%, #a5f3fc 100%); }
+.gradient-default { background: linear-gradient(135deg, #475569 0%, #64748b 50%, #94a3b8 100%); }
+
+/* Card bottom overlay */
+.plant-card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 12px 10px;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);
+    color: #fff;
+}
+.plant-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.plant-card-species {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Health score badge */
+.health-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    z-index: 2;
+}
+.health-score-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    border: 2px solid rgba(255,255,255,0.3);
+}
+.health-score-circle.excellent { background: rgba(34,197,94,0.9); }
+.health-score-circle.good { background: rgba(132,204,22,0.9); }
+.health-score-circle.fair { background: rgba(234,179,8,0.9); }
+.health-score-circle.poor { background: rgba(249,115,22,0.9); }
+.health-score-circle.critical { background: rgba(239,68,68,0.9); }
+.health-score-circle.new-plant { background: rgba(59,130,246,0.9); font-size: 9px; font-weight: 700; letter-spacing: 0.03em; }
+
+.trend-arrow {
+    font-size: 14px;
+    font-weight: 700;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.trend-arrow.improving { color: #4ade80; }
+.trend-arrow.stable { color: rgba(255,255,255,0.6); }
+.trend-arrow.declining { color: #f87171; }
+
+/* ─── Add Plant Card ─── */
+.add-plant-card {
+    border-radius: 14px;
+    border: 2px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    aspect-ratio: 3 / 2;
+    color: var(--text-tertiary);
+    background: var(--surface);
+    opacity: 0;
+    transform: translateY(16px);
+    animation: cardFadeIn 0.4s ease forwards;
+}
+.add-plant-card:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-bg);
+    transform: translateY(-2px);
+}
+.add-plant-card svg {
+    width: 28px;
+    height: 28px;
+    stroke-width: 1.5;
+}
+.add-plant-card span {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ─── Skeleton Loading ─── */
+.skeleton-card {
+    border-radius: 14px;
+    aspect-ratio: 3 / 2;
+    background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* ─── Empty State ─── */
+.garden-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 24px;
+    min-height: 50vh;
+}
+.garden-empty-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #065f46, #34d399);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: pulseGlow 3s ease-in-out infinite;
+}
+.garden-empty-icon svg {
+    width: 40px;
+    height: 40px;
+    color: #fff;
+    stroke-width: 1.5;
+}
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.3); }
+    50% { box-shadow: 0 0 0 16px rgba(52,211,153,0); }
+}
+.garden-empty h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+.garden-empty p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    max-width: 300px;
+    line-height: 1.6;
+}
+.garden-empty .btn {
+    padding: 10px 24px;
+    font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DETAIL PANEL — Slide-in from right (desktop) / bottom (mobile)
+   ═══════════════════════════════════════════════════════ */
+
+.detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.detail-overlay.open {
+    pointer-events: auto;
+    opacity: 1;
+}
+.detail-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.detail-overlay.open .detail-backdrop {
+    opacity: 1;
+}
+
+.detail-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 500px;
+    max-width: 100%;
+    background: var(--bg);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(.32,.72,0,1);
+    box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+}
+.detail-overlay.open .detail-panel {
+    transform: translateX(0);
+}
+
+/* Mobile: full-screen slide-up */
+@media (max-width: 640px) {
+    .detail-panel {
+        width: 100%;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        transform: translateY(100%);
+        box-shadow: 0 -4px 30px rgba(0,0,0,0.2);
+        border-radius: 0;
+    }
+    .detail-overlay.open .detail-panel {
+        transform: translateY(0);
+    }
+}
+
+/* ─── Detail Hero ─── */
+.detail-hero {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--surface2);
+}
+.detail-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.detail-hero-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.detail-hero-placeholder svg {
+    width: 56px;
+    height: 56px;
+    color: rgba(255,255,255,0.6);
+    stroke-width: 1.25;
+}
+.detail-hero-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 40px 20px 16px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 70%, transparent 100%);
+    color: #fff;
+}
+.detail-hero-name {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.detail-hero-species {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    margin-top: 2px;
+}
+.detail-hero-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+}
+.detail-hero-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.detail-hero-meta svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Back button */
+.detail-back {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 5;
+}
+.detail-back:hover {
+    background: rgba(0,0,0,0.6);
+}
+.detail-back svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Edit/delete button */
+.detail-actions-top {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 5;
+}
+.detail-actions-top button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.detail-actions-top button:hover { background: rgba(0,0,0,0.6); }
+.detail-actions-top svg { width: 16px; height: 16px; }
+
+/* ─── Detail Body ─── */
+.detail-body {
+    padding: 0 20px 120px;
+}
+
+/* ─── Health Dashboard ─── */
+.health-dashboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 0 16px;
+}
+
+/* SVG Gauge */
+.health-gauge {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 12px;
+}
+.health-gauge svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+.health-gauge-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 8;
+}
+.health-gauge-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1), stroke 0.5s ease;
+}
+.health-gauge-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.health-gauge-number {
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+.health-gauge-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
+.health-trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+.health-trend-badge.improving { background: rgba(34,197,94,0.12); color: var(--health-excellent); }
+.health-trend-badge.stable { background: var(--surface2); color: var(--text-secondary); }
+.health-trend-badge.declining { background: rgba(239,68,68,0.12); color: var(--health-critical); }
+
+/* Dimension bars */
+.health-dimensions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+@media (max-width: 400px) {
+    .health-dimensions { grid-template-columns: 1fr; }
+}
+.health-dim {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+.health-dim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.health-dim-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.health-dim-score {
+    font-size: 13px;
+    font-weight: 700;
+}
+.health-dim-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+    overflow: hidden;
+}
+.health-dim-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+    width: 0;
+}
+
+/* ─── Section Headers ─── */
+.detail-section {
+    margin-top: 24px;
+}
+.detail-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.detail-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.detail-section-title svg {
+    width: 16px;
+    height: 16px;
+    color: var(--accent);
+}
+
+/* ─── AI Recommendations ─── */
+.rec-card {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    transition: all 0.2s;
+}
+.rec-card:hover {
+    box-shadow: var(--shadow-sm);
+}
+.rec-card-border {
+    width: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.rec-card-border.urgent { background: var(--health-critical); }
+.rec-card-border.soon { background: var(--health-fair); }
+.rec-card-border.routine { background: var(--health-excellent); }
+
+.rec-card-content {
+    flex: 1;
+    min-width: 0;
+}
+.rec-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+.rec-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.rec-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.rec-card-link:hover { opacity: 0.8; }
+
+.rec-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* ─── Photo Timeline ─── */
+.photo-timeline {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 0;
+    scrollbar-width: none;
+}
+.photo-timeline::-webkit-scrollbar { display: none; }
+
+.timeline-photo {
+    flex-shrink: 0;
+    width: 72px;
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: transform 0.2s;
+}
+.timeline-photo:hover { transform: scale(1.05); }
+.timeline-photo-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+.timeline-photo.active .timeline-photo-img {
+    border-color: var(--accent);
+}
+.timeline-photo-date {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-align: center;
+    margin-top: 4px;
+    white-space: nowrap;
+}
+
+/* ─── Garden Photo Lightbox ─── */
+.garden-lightbox {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.95);
+    display: none; flex-direction: column;
+    opacity: 0; transition: opacity 0.25s ease;
+}
+.garden-lightbox.active { display: flex; opacity: 1; }
+.garden-lightbox-header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+    transition: opacity 0.3s;
+}
+.garden-lightbox.controls-hidden .garden-lightbox-header { opacity: 0; pointer-events: none; }
+.garden-lightbox-title { color: #fff; font-size: 14px; font-weight: 600; }
+.garden-lightbox-date { color: rgba(255,255,255,0.6); font-size: 12px; }
+.garden-lightbox-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.garden-lightbox-close:hover { background: rgba(255,255,255,0.25); }
+.garden-lightbox-body {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+    touch-action: none;
+}
+.garden-lightbox-img {
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    transition: transform 0.25s ease;
+    user-select: none; -webkit-user-drag: none;
+}
+.garden-lightbox-img.dragging { transition: none; }
+.garden-lightbox-counter {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: center; align-items: center; gap: 6px;
+    padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    transition: opacity 0.3s;
+}
+.garden-lightbox.controls-hidden .garden-lightbox-counter { opacity: 0; pointer-events: none; }
+.garden-lightbox-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.4); transition: all 0.2s;
+}
+.garden-lightbox-dot.active { background: #fff; width: 8px; height: 8px; }
+.garden-lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.8);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10;
+}
+.garden-lightbox-nav:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.garden-lightbox-prev { left: 12px; }
+.garden-lightbox-next { right: 12px; }
+@media (max-width: 768px) { .garden-lightbox-nav { display: none; } }
+
+.timeline-comparison {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 500;
+}
+.comparison-positive { color: var(--health-excellent); }
+.comparison-negative { color: var(--health-critical); }
+.comparison-neutral { color: var(--text-tertiary); }
+
+/* ─── Care Log ─── */
+.care-log-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.care-log-item:last-child { border: none; }
+
+.care-log-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+.care-log-icon.water { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.care-log-icon.prune { background: rgba(249,115,22,0.12); color: #f97316; }
+.care-log-icon.fertilize { background: rgba(34,197,94,0.12); color: #22c55e; }
+.care-log-icon.photo { background: rgba(168,85,247,0.12); color: #a855f7; }
+.care-log-icon.other { background: var(--surface2); color: var(--text-secondary); }
+
+.care-log-content { flex: 1; min-width: 0; }
+.care-log-action {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+}
+.care-log-notes {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.care-log-date {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.care-log-empty {
+    text-align: center;
+    padding: 16px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+/* ─── Quick Action Bar (sticky bottom) ─── */
+.quick-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+    display: none;
+}
+.detail-overlay.open .quick-action-bar { display: block; }
+@media (min-width: 641px) {
+    .quick-action-bar {
+        position: absolute;
+        left: auto;
+        width: 500px;
+        max-width: 100%;
+    }
+}
+
+.quick-actions-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+.quick-act-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 10px;
+    font-weight: 600;
+    max-width: 80px;
+}
+.quick-act-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-bg);
+}
+.quick-act-btn:active {
+    transform: scale(0.95);
+}
+.quick-act-btn .emoji {
+    font-size: 20px;
+    line-height: 1;
+}
+.quick-act-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ─── Photo upload hidden input ─── */
+#photoUploadInput { display: none; }
+
+/* ─── Form Layout in Modals ─── */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Photo upload area in add modal */
+.photo-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+.photo-upload-area:hover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    color: var(--accent);
+}
+.photo-upload-area svg {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 6px;
+}
+.photo-upload-area.has-file {
+    border-color: var(--health-excellent);
+    color: var(--health-excellent);
+    border-style: solid;
+}
+
+/* ─── AI Summary ─── */
+.ai-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.ai-summary-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ai-summary-label svg { width: 12px; height: 12px; }
+
+/* ─── No-health state in detail ─── */
+.no-health-state {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-secondary);
+}
+.no-health-state svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+    stroke-width: 1.25;
+}
+.no-health-state h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.no-health-state p {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ─── Confirmation Modal for delete ─── */
+.danger-zone {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.danger-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--red);
+    background: var(--red-bg);
+    color: var(--red);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.danger-btn:hover {
+    background: var(--red);
+    color: #fff;
+}
+
+/* ─── Watering Schedule ─── */
+.watering-schedule {
+    margin-bottom: 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.watering-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.watering-summary:hover { background: var(--surface2); }
+.watering-summary-text {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.watering-summary-text .ws-overdue { color: var(--red); font-weight: 600; }
+.watering-summary-text .ws-today { color: var(--accent); font-weight: 600; }
+.watering-summary-text .ws-soon { color: var(--amber); font-weight: 600; }
+.watering-chevron {
+    color: var(--text-tertiary);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+.watering-chevron.open { transform: rotate(180deg); }
+.watering-chevron svg { width: 16px; height: 16px; }
+.watering-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(.4,0,.2,1);
+}
+.watering-details.open { max-height: 1200px; }
+.watering-group-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 8px 14px 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.wg-overdue { color: var(--red); }
+.wg-today { color: var(--accent); }
+.wg-soon { color: var(--amber); }
+.wg-upcoming { color: var(--text-tertiary); }
+.watering-plant-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    transition: opacity 0.3s, max-height 0.3s, padding 0.3s;
+    max-height: 80px;
+    overflow: hidden;
+}
+.watering-plant-row.watered-out {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+.watering-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--surface2);
+}
+.watering-thumb-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.watering-thumb-placeholder svg { width: 18px; height: 18px; color: var(--text-tertiary); }
+.watering-plant-info {
+    flex: 1;
+    min-width: 0;
+}
+.watering-plant-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.watering-plant-meta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.watering-gallons {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.watering-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-border);
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.watering-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.watering-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.watering-btn svg { width: 12px; height: 12px; }
+
+/* Watering info on plant cards */
+.plant-card-watering {
+    font-size: 11px;
+    padding: 0 12px 6px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.plant-card-watering.pcw-overdue { color: var(--red); }
+.plant-card-watering.pcw-today { color: var(--accent); }
+
+@media (max-width: 480px) {
+    .watering-gallons { font-size: 10px; }
+}
+
+/* ─── Utilities ─── */
+.hidden { display: none !important; }
+
+/* ─── Garden Tabs ─── */
+.garden-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px;
+    background: var(--surface2);
+    margin: 0 16px;
+    border-radius: 10px;
+    margin-top: 8px;
+}
+.garden-tab {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.garden-tab:hover { color: var(--text); }
+.garden-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+}
+.garden-tab svg { width: 15px; height: 15px; }
+
+/* ─── Supplies Tab Content ─── */
+.supplies-content { padding: 16px; max-width: 1200px; margin: 0 auto; }
+.supplies-section { margin-bottom: 32px; }
+.supplies-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+.supplies-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.supplies-section-title svg { width: 18px; height: 18px; color: var(--accent); }
+
+/* ─── Shopping Cards ─── */
+.shopping-list { display: flex; flex-direction: column; gap: 10px; }
+.shopping-card {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
+    transition: all 0.2s;
+}
+.shopping-card:hover { box-shadow: var(--shadow-sm); }
+.shopping-card.urgent { border-left-color: var(--health-critical); }
+.shopping-card.soon { border-left-color: var(--health-fair); }
+.shopping-card.routine { border-left-color: var(--health-excellent); }
+.shopping-card-body { flex: 1; min-width: 0; }
+.shopping-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.shopping-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+.shopping-card-plants { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.plant-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 500;
+}
+.shopping-card-product { margin: 8px 0; padding: 10px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); }
+.shopping-card-product-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.shopping-card-product-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); }
+.shopping-card-product-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.shopping-card-product-brand { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.shopping-card-product-desc { font-size: 11px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+.shopping-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.shopping-card-actions .btn { font-size: 11px; padding: 4px 10px; border-radius: 8px; }
+.shopping-card-owned { display: flex; align-items: center; gap: 4px; color: #22c55e; font-size: 12px; font-weight: 600; }
+.shopping-card-owned {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--health-excellent);
+    padding: 4px 10px;
+    background: rgba(34,197,94,0.1);
+    border-radius: 8px;
+}
+
+/* ─── Supply Cards ─── */
+.supplies-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+@media (min-width: 640px) { .supplies-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .supplies-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.supply-card {
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    transition: all 0.2s;
+}
+.supply-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.supply-card-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.supply-card-brand { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.supply-card-meta { font-size: 11px; color: var(--text-tertiary); line-height: 1.6; }
+.supply-card-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s;
+}
+.supply-card:hover .supply-card-delete { opacity: 1; }
+.supply-card-delete:hover { color: var(--health-critical); border-color: var(--health-critical); }
+.supply-card-delete svg { width: 14px; height: 14px; }
+
+.supply-category {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+.supply-category.fertilizer { background: rgba(34,197,94,0.12); color: #22c55e; }
+.supply-category.pesticide { background: rgba(239,68,68,0.12); color: #ef4444; }
+.supply-category.fungicide { background: rgba(168,85,247,0.12); color: #a855f7; }
+.supply-category.soil_amendment { background: rgba(180,83,9,0.12); color: #b45309; }
+.supply-category.tool { background: rgba(100,116,139,0.12); color: #64748b; }
+.supply-category.mulch { background: rgba(180,83,9,0.12); color: #92400e; }
+.supply-category.pot_container { background: rgba(14,116,144,0.12); color: #0e7490; }
+.supply-category.irrigation { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.supply-category.protection { background: rgba(234,179,8,0.12); color: #ca8a04; }
+.supply-category.other { background: var(--surface2); color: var(--text-secondary); }
+
+.shopping-empty, .supplies-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+}
+.shopping-empty svg, .supplies-empty svg {
+    width: 40px; height: 40px; margin-bottom: 8px; stroke-width: 1.25;
+}
+
+/* ─── Plans Tab ─── */
+.plans-content { padding: 16px; max-width: 1200px; margin: 0 auto; }
+.plan-card {
+    border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm); margin-bottom: 14px; overflow: hidden;
+    transition: all 0.2s;
+}
+.plan-card.completed { opacity: 0.7; }
+.plan-card-header {
+    display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+    cursor: pointer; user-select: none; transition: background 0.15s;
+}
+.plan-card-header:hover { background: var(--surface2); }
+.plan-card-header-left { flex: 1; min-width: 0; }
+.plan-card-title {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.plan-card-date { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.plan-card-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+}
+.plan-card-badge.completed-badge { background: rgba(34,197,94,0.12); color: var(--health-excellent); }
+.plan-progress-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.plan-progress { flex: 1; height: 5px; border-radius: 3px; background: var(--surface2); overflow: hidden; }
+.plan-progress-fill { height: 100%; border-radius: 3px; background: var(--health-excellent); transition: width 0.4s ease; }
+.plan-progress-text { font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.plan-card-chevron { color: var(--text-tertiary); transition: transform 0.2s; flex-shrink: 0; }
+.plan-card-chevron.open { transform: rotate(180deg); }
+.plan-card-chevron svg { width: 18px; height: 18px; }
+.plan-steps { display: none; padding: 0 16px 14px; }
+.plan-steps.open { display: block; }
+.plan-section-header {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    padding: 10px 0 6px; margin-top: 4px;
+    border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.plan-step {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 0;
+    transition: opacity 0.3s;
+}
+.plan-step.completed { opacity: 0.6; }
+.plan-step-checkbox {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; margin-top: 1px; background: transparent;
+}
+.plan-step-checkbox:hover { border-color: var(--health-excellent); }
+.plan-step-checkbox.checked {
+    background: var(--health-excellent); border-color: var(--health-excellent); color: #fff;
+}
+.plan-step-checkbox.checked svg { width: 14px; height: 14px; }
+.plan-step-content { flex: 1; min-width: 0; }
+.plan-step-title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.plan-step.completed .plan-step-title { text-decoration: line-through; color: var(--text-secondary); }
+.plan-step-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
+.plan-step-icon { flex-shrink: 0; width: 20px; height: 20px; color: var(--text-tertiary); }
+.plan-step-icon svg { width: 16px; height: 16px; }
+.plan-step-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.plan-step.warning {
+    background: rgba(234,179,8,0.08); border-radius: 8px; padding: 10px 12px;
+    border-left: 3px solid var(--health-fair); margin: 4px 0;
+}
+.plan-step.warning .plan-step-title { color: #ca8a04; font-weight: 600; }
+.plan-step.note-step {
+    background: var(--surface2); border-radius: 8px; padding: 10px 12px;
+    border-left: 3px solid var(--text-tertiary); margin: 4px 0;
+}
+.plan-step.note-step .plan-step-title { color: var(--text-secondary); font-style: italic; }
+.plans-empty {
+    text-align: center; padding: 40px 16px; color: var(--text-tertiary); font-size: 14px;
+}
+.plans-empty svg { width: 40px; height: 40px; margin-bottom: 8px; stroke-width: 1.25; }
+.plan-complete-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--health-excellent); color: #fff; padding: 10px 20px;
+    border-radius: 12px; font-size: 14px; font-weight: 700; z-index: 9999;
+    box-shadow: 0 4px 20px rgba(34,197,94,0.4); animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
