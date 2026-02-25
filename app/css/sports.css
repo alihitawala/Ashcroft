@@ -52,34 +52,42 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 /* ─── Tab Bar ─── */
 .sport-tabs {
     display: flex;
-    gap: 0;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    padding: 0 20px;
+    gap: 4px;
+    padding: 8px 16px;
+    background: var(--surface2);
+    margin: 0 16px;
+    border-radius: 10px;
+    margin-top: 8px;
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
 }
 .sport-tabs::-webkit-scrollbar { display: none; }
 .sport-tab {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 13px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    cursor: pointer;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     border: none;
-    background: none;
-    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
 }
 .sport-tab:hover { color: var(--text); }
-.sport-tab.active { color: var(--sport-primary); border-bottom-color: var(--sport-primary); }
-.sport-tab .tab-icon { font-size: 15px; }
+.sport-tab.active {
+    background: var(--surface);
+    color: var(--sport-primary);
+    box-shadow: var(--shadow-sm);
+}
+.sport-tab .tab-icon { font-size: 14px; }
 
 /* ─── Section Headers ─── */
 .sh {
@@ -1122,7 +1130,7 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
     .sports-content { padding: 12px 10px calc(60px + env(safe-area-inset-bottom, 0px)); }
-    .sport-tabs { padding: 0 10px; }
+    .sport-tabs { margin: 0 8px; padding: 6px 8px; }
     .teams-row { grid-template-columns: 1fr; }
     .player-grid { grid-template-columns: 1fr 1fr 1fr; }
 }

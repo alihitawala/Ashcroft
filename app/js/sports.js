@@ -48,9 +48,9 @@ const GRAND_SLAMS = [
 
 const SPORTS = [
     { id:'football', icon:'⚽', label:'Football' },
+    { id:'f1', icon:'🏎️', label:'F1' },
     { id:'cricket', icon:'🏏', label:'Cricket' },
     { id:'tennis', icon:'🎾', label:'Tennis' },
-    { id:'f1', icon:'🏎️', label:'F1' },
 ];
 
 // ─── Init ───
