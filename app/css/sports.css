@@ -1598,3 +1598,25 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .sports-content::-webkit-scrollbar,
 .filter-bar::-webkit-scrollbar,
 .mini-results::-webkit-scrollbar { display: none; }
+
+/* ─── Dark Mode Card Glow on Hover ─── */
+@media (prefers-color-scheme: dark) {
+  .cricket-card:hover, .fix-card:hover, .news-card:hover,
+  .f1-race-card:hover, .h2h-card:hover, .player-card:hover,
+  .tc-card:hover, .hero-card:hover, .mr-row:hover,
+  .ai-summary:hover {
+    box-shadow: 0 0 16px 2px rgba(var(--sport-glow), 0.15),
+                0 4px 12px rgba(0,0,0,0.3);
+    border-color: rgba(var(--sport-glow), 0.3);
+  }
+}
+/* Also apply in .dark-mode class if theme is toggled manually */
+.dark-mode .cricket-card:hover, .dark-mode .fix-card:hover,
+.dark-mode .news-card:hover, .dark-mode .f1-race-card:hover,
+.dark-mode .h2h-card:hover, .dark-mode .player-card:hover,
+.dark-mode .tc-card:hover, .dark-mode .hero-card:hover,
+.dark-mode .mr-row:hover, .dark-mode .ai-summary:hover {
+  box-shadow: 0 0 16px 2px rgba(var(--sport-glow), 0.15),
+              0 4px 12px rgba(0,0,0,0.3);
+  border-color: rgba(var(--sport-glow), 0.3);
+}
