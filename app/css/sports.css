@@ -1557,3 +1557,44 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
   border-color: var(--sport-primary);
   transform: scale(1.1);
 }
+
+/* ─── Mobile Polish ─── */
+/* Scroll snap for horizontal scrollable areas */
+.filter-bar, .sport-tabs, .mini-results {
+  scroll-snap-type: x mandatory;
+}
+.filter-bar > *, .sport-tab, .mini-results > * {
+  scroll-snap-align: start;
+}
+
+/* Scroll indicators — fade edges on scrollable rows */
+.filter-bar, .mini-results {
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent);
+}
+
+/* Touch feedback on interactive cards */
+.cricket-card, .fix-card, .news-card, .mr-row, .f1-race-card,
+.h2h-card, .player-card, .tc-card, .hero-card {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+@media (hover: none) and (pointer: coarse) {
+  .cricket-card:active, .fix-card:active, .news-card:active,
+  .mr-row:active, .f1-race-card:active, .h2h-card:active,
+  .player-card:active, .tc-card:active, .hero-card:active {
+    transform: scale(0.97);
+    box-shadow: none;
+    transition: transform 0.08s ease;
+  }
+}
+
+/* Smooth momentum scroll on iOS */
+.sports-content, .filter-bar, .mini-results, .sport-tabs {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.sports-content::-webkit-scrollbar,
+.filter-bar::-webkit-scrollbar,
+.mini-results::-webkit-scrollbar { display: none; }
