@@ -1530,3 +1530,30 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
   background: var(--sport-primary);
   color: #fff;
 }
+
+/* Sound Toggle + Tab Row */
+.sport-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sport-tabs-row .sport-tabs { flex: 1; }
+.sound-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sound-toggle:hover {
+  background: var(--sport-primary);
+  border-color: var(--sport-primary);
+  transform: scale(1.1);
+}

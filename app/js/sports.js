@@ -70,13 +70,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         <main class="main-content">
             ${shell.topbar}
             <div class="page-content">
-                <div class="sport-tabs" id="sportTabs"></div>
+                <div class="sport-tabs-row">
+                    <div class="sport-tabs" id="sportTabs"></div>
+                    <button class="sound-toggle" id="soundToggle" onclick="this.textContent = sportsSounds.toggle() ? '🔊' : '🔇'" title="Toggle sound effects">🔊</button>
+                </div>
                 <div class="sports-content" id="sportsContent"></div>
             </div>
             ${shell.bottomNav}
         </main>`;
     initAppShell('sports');
     renderTabBar();
+    // Init sound toggle state
+    const stBtn = document.getElementById('soundToggle');
+    if (stBtn && typeof sportsSounds !== 'undefined') stBtn.textContent = sportsSounds.enabled ? '🔊' : '🔇';
     switchTab(currentSport);
 });
 
