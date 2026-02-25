@@ -375,6 +375,10 @@ async function renderFootball() {
             html += '</div>';
         }
 
+        // LEAGUE TABLES
+        html += renderLeagueTable('Premier League', plTable, 'Manchester United');
+        html += renderLeagueTable('La Liga', pdTable, 'Real Madrid');
+
         // TITLE RACE
         html += renderTitleRace('🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', plTable);
         html += renderTitleRace('🇪🇸 La Liga', pdTable);
@@ -391,6 +395,28 @@ async function renderFootball() {
         console.error('Football error:', e);
         showError('Failed to load football data.');
     }
+}
+
+function renderLeagueTable(title, data, highlightTeam) {
+    const top6 = (data || []).slice(0, 6);
+    if (!top6.length) return '';
+    let html = `<div class="sport-section"><div class="sport-section-title">📊 ${title}</div>`;
+    html += '<table class="league-table"><thead><tr><th class="lt-pos">#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th class="lt-pts">Pts</th></tr></thead><tbody>';
+    top6.forEach(t => {
+        const isHL = highlightTeam && t.name.includes(highlightTeam);
+        const posClass = t.position <= 4 ? 'lt-pos-cl' : t.position <= 6 ? 'lt-pos-el' : '';
+        const gdSign = t.goalDifference > 0 ? '+' : '';
+        const gdClass = t.goalDifference > 0 ? 'lt-gd-pos' : t.goalDifference < 0 ? 'lt-gd-neg' : '';
+        html += `<tr class="${isHL ? 'lt-highlight' : ''}">
+            <td class="lt-pos ${posClass}">${t.position}</td>
+            <td><div class="lt-team">${crest(t.crest, 20)} ${short(t.name)}</div></td>
+            <td>${t.playedGames}</td><td>${t.won}</td><td>${t.draw}</td><td>${t.lost}</td>
+            <td class="${gdClass}">${gdSign}${t.goalDifference}</td>
+            <td class="lt-pts">${t.points}</td>
+        </tr>`;
+    });
+    html += '</tbody></table></div>';
+    return html;
 }
 
 function heroMatchCard(m, isLive) {

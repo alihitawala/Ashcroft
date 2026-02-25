@@ -1183,3 +1183,17 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     color: var(--text-tertiary);
     white-space: nowrap;
 }
+
+/* League Table - Compact */
+.league-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.league-table th { text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 600; border-bottom: 1px solid var(--border); }
+.league-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.league-table tr:last-child td { border-bottom: none; }
+.league-table .lt-pos { width: 24px; text-align: center; font-weight: 700; font-size: 11px; }
+.league-table .lt-pos-cl { color: #3b82f6; }
+.league-table .lt-pos-el { color: #f59e0b; }
+.league-table .lt-team { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.league-table .lt-pts { font-weight: 700; color: var(--text); }
+.league-table .lt-gd-pos { color: var(--green); }
+.league-table .lt-gd-neg { color: var(--red); }
+.league-table .lt-highlight { background: var(--accent-bg); }
