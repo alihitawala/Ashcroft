@@ -46,6 +46,15 @@ const GRAND_SLAMS = [
     { name:'US Open', start:'2026-08-31', end:'2026-09-13', color1:'#1E3A5F', color2:'#0D1F2F', venue:'Flushing Meadows', country:'🇺🇸', surface:'Hard', cssClass:'hero-tennis-uso' },
 ];
 
+const SLAM_WINNERS = {
+    'Australian Open': { '2026': 'Carlos Alcaraz', '2025': 'Jannik Sinner' },
+    'Roland Garros': { '2025': 'Carlos Alcaraz' },
+    'Wimbledon': { '2025': 'Carlos Alcaraz' },
+    'US Open': { '2025': 'Jannik Sinner' },
+};
+
+const SURFACE_COLORS = { 'Clay': '#C84B31', 'Hard': '#0091D2', 'Grass': '#006633' };
+
 const SPORTS = [
     { id:'football', icon:'⚽', label:'Football' },
     { id:'f1', icon:'🏎️', label:'F1' },
@@ -719,15 +728,46 @@ async function renderTennis() {
         // Grand Slam Hero
         const nextSlam = GRAND_SLAMS.find(gs => new Date(gs.end) > now);
         const lastCompleted = [...GRAND_SLAMS].reverse().find(gs => new Date(gs.end) < now);
-        if (nextSlam) {
+        const completedCount = GRAND_SLAMS.filter(gs => new Date(gs.end) < now).length;
+
+        // Check if a slam just ended (within 7 days)
+        const justEnded = lastCompleted && (now - new Date(lastCompleted.end)) < 7 * 24 * 60 * 60 * 1000;
+
+        // Helper to get defender/winner
+        const getWinner = (gs) => {
+            const w = SLAM_WINNERS[gs.name];
+            if (!w) return null;
+            const yr = new Date(gs.start).getFullYear();
+            return w[String(yr)] || w[String(yr - 1)] || Object.values(w)[0];
+        };
+
+        if (justEnded && !nextSlam) {
+            // Celebration hero for just-ended slam
+            const winner = getWinner(lastCompleted);
+            html += `<div class="slam-hero ${lastCompleted.cssClass}">
+                <div class="slam-name">🏆 ${lastCompleted.name} 🏆</div>
+                <div class="slam-venue">${lastCompleted.venue}, ${lastCompleted.country}</div>
+                <div class="slam-surface-badge" style="background:${SURFACE_COLORS[lastCompleted.surface] || 'rgba(255,255,255,0.2)'}">${lastCompleted.surface}</div>
+                ${winner ? `<div class="slam-champion-line">CHAMPION: ${winner}</div>` : ''}
+                <div class="slam-progress">Slam ${completedCount} of 4</div>
+            </div>`;
+        } else if (nextSlam) {
             const started = new Date(nextSlam.start) <= now;
-            html += `<div class="grand-slam-hero ${nextSlam.cssClass}">
-                <div class="hero-label">${started ? '🎾 NOW PLAYING' : '🎾 NEXT GRAND SLAM'}</div>
-                <div class="slam-name">${nextSlam.country} ${nextSlam.name}</div>
-                <div class="slam-venue">${nextSlam.venue} · ${nextSlam.surface}</div>
-                ${!started ? '<div class="countdown" id="tennisCountdown"></div>' : ''}
-                <div class="slam-dates">${fmtShort(nextSlam.start)} – ${fmtShort(nextSlam.end)}</div>
-                ${lastCompleted ? `<div class="slam-last-winner">Last completed: ${lastCompleted.name}</div>` : ''}
+            const slamIdx = GRAND_SLAMS.indexOf(nextSlam) + 1;
+            const defender = getWinner(nextSlam);
+            const surfColor = SURFACE_COLORS[nextSlam.surface] || 'rgba(255,255,255,0.2)';
+            const daysUntil = Math.ceil((new Date(nextSlam.start) - now) / (1000*60*60*24));
+            const pulseClass = !started && daysUntil <= 30 ? ' slam-countdown-pulse' : '';
+
+            html += `<div class="slam-hero ${nextSlam.cssClass}${pulseClass}">
+                ${started ? '<div class="slam-live-badge"><span class="slam-live-dot"></span> LIVE NOW</div>' : '<div class="slam-hero-label">🎾 NEXT GRAND SLAM</div>'}
+                <div class="slam-name">${nextSlam.name}</div>
+                <div class="slam-venue">${nextSlam.venue}, ${nextSlam.country}</div>
+                <div class="slam-surface-badge" style="background:${surfColor}">${nextSlam.surface}</div>
+                ${!started ? `<div class="slam-flip-countdown" id="tennisFlipCountdown"></div>
+                <div class="slam-dates">${fmtShort(nextSlam.start)} – ${fmtShort(nextSlam.end)}</div>` : ''}
+                ${defender ? `<div class="slam-defender">🏆 Defending: ${defender}</div>` : ''}
+                <div class="slam-progress">Slam ${slamIdx} of 4</div>
             </div>`;
         }
 
@@ -792,25 +832,22 @@ async function renderTennis() {
             });
         }
 
-        // Grand Slam Calendar
+        // Grand Slam Calendar Grid
         html += '<div class="sh stagger" style="--i:14"><span class="sh-emoji">🎾</span> 2026 GRAND SLAM CALENDAR</div>';
-        html += '<div class="race-table stagger" style="--i:15">';
+        html += '<div class="slam-calendar stagger" style="--i:15">';
         GRAND_SLAMS.forEach((gs, i) => {
             const started = new Date(gs.start) <= now;
             const ended = new Date(gs.end) < now;
             const active = started && !ended;
-            let dotCls = 'sc-dot sc-big';
-            let dotStyle = `background:${gs.color1}`;
-            if (ended) { dotCls += ' sc-check'; }
-            else if (active) { dotCls += ' sc-pulse'; }
-            html += `<div class="slam-cal-item ${active ? 'sc-active' : ''} ${ended ? 'sc-done' : ''}">
-                <div class="${dotCls}" style="${dotStyle}"></div>
-                <div class="sc-info">
-                    <div class="sc-name">${gs.country} ${gs.name}</div>
-                    <div class="sc-detail">${gs.venue} · ${gs.surface}</div>
-                </div>
-                <div class="sc-dates">${fmtShort(gs.start)} – ${fmtShort(gs.end)}</div>
-                ${active ? '<span class="live-badge"><span class="live-dot"></span> LIVE</span>' : ''}
+            const isNext = !started && !ended && gs === nextSlam;
+            const winner = getWinner(gs);
+            const cardClass = (active || isNext) ? ' current' : '';
+            html += `<div class="slam-mini-card${cardClass}" style="background:linear-gradient(135deg, ${gs.color2}, ${gs.color1})${ended ? ';opacity:0.7' : ''}">
+                <div class="slam-mini-name">${gs.country} ${gs.name}</div>
+                <div class="slam-mini-dates">${fmtShort(gs.start)} – ${fmtShort(gs.end)}</div>
+                <div class="slam-mini-surface">${gs.surface}</div>
+                ${ended && winner ? `<div class="slam-mini-winner">✓ ${winner}</div>` : ''}
+                ${active ? '<div class="slam-mini-winner">🔴 LIVE</div>' : ''}
             </div>`;
         });
         html += '</div>';
@@ -821,6 +858,23 @@ async function renderTennis() {
         document.getElementById('sportsContent').innerHTML = html;
 
         if (nextSlam && new Date(nextSlam.start) > now) {
+            const flipEl = document.getElementById('tennisFlipCountdown');
+            if (flipEl) {
+                const updateFlip = () => {
+                    const diff = new Date(nextSlam.start) - new Date();
+                    if (diff <= 0) { flipEl.innerHTML = '<span class="slam-flip-label">STARTING NOW</span>'; return; }
+                    const d = Math.floor(diff / 86400000);
+                    const h = Math.floor((diff % 86400000) / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    flipEl.innerHTML = `<div class="slam-flip-unit"><span class="slam-flip-num">${d}</span><span class="slam-flip-label">DAYS</span></div>
+                        <div class="slam-flip-sep">:</div>
+                        <div class="slam-flip-unit"><span class="slam-flip-num">${String(h).padStart(2,'0')}</span><span class="slam-flip-label">HRS</span></div>
+                        <div class="slam-flip-sep">:</div>
+                        <div class="slam-flip-unit"><span class="slam-flip-num">${String(m).padStart(2,'0')}</span><span class="slam-flip-label">MIN</span></div>`;
+                };
+                updateFlip();
+                setInterval(updateFlip, 60000);
+            }
             const el = document.getElementById('tennisCountdown');
             if (el) startCountdown(nextSlam.start, el);
         }

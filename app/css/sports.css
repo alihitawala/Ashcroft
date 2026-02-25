@@ -688,19 +688,69 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     background: radial-gradient(ellipse at 75% 15%, rgba(255,255,255,0.1), transparent 50%);
     pointer-events: none;
 }
+
+/* New dramatic slam hero */
+.slam-hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 28px 24px;
+    color: white;
+    text-align: center;
+    overflow: hidden;
+    animation: slideUp 0.5s ease both;
+    margin-bottom: 4px;
+}
+.slam-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 75% 15%, rgba(255,255,255,0.12), transparent 50%);
+    pointer-events: none;
+}
+.slam-hero::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+    pointer-events: none;
+}
+.slam-hero-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.8;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
 .slam-name {
     font-size: 24px;
     font-weight: 800;
     text-align: center;
-    margin: 6px 0;
+    margin: 6px 0 4px;
     position: relative;
     z-index: 1;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .slam-venue {
-    font-size: 12px;
+    font-size: 13px;
     text-align: center;
-    opacity: 0.75;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 4px;
+}
+.slam-surface-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.2);
+    margin-bottom: 16px;
     position: relative;
     z-index: 1;
 }
@@ -712,6 +762,30 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     position: relative;
     z-index: 1;
 }
+.slam-defender {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 12px;
+    position: relative;
+    z-index: 1;
+}
+.slam-progress {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: relative;
+    z-index: 1;
+}
+.slam-champion-line {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 16px 0 8px;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
 .slam-last-winner {
     font-size: 11px;
     text-align: center;
@@ -721,6 +795,99 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     z-index: 1;
     font-style: italic;
 }
+
+/* Live badge */
+.slam-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255,0,0,0.25);
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+}
+.slam-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4444;
+    animation: pulse 1.2s ease infinite;
+}
+
+/* Flip countdown */
+.slam-flip-countdown {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 8px;
+    position: relative;
+    z-index: 1;
+}
+.slam-flip-unit { text-align: center; }
+.slam-flip-num {
+    display: block;
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.slam-flip-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+.slam-flip-sep {
+    font-size: 24px;
+    font-weight: 700;
+    opacity: 0.4;
+    margin-top: -12px;
+}
+
+/* Pulsing glow when < 30 days */
+.slam-countdown-pulse {
+    animation: slideUp 0.5s ease both, slamGlow 2s ease-in-out infinite;
+}
+@keyframes slamGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+    50% { box-shadow: 0 0 40px rgba(255,255,255,0.25); }
+}
+
+/* Slam calendar grid */
+.slam-calendar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 0;
+}
+.slam-mini-card {
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    color: white;
+    font-size: 11px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+.slam-mini-card.current {
+    border: 2px solid white;
+    box-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+.slam-mini-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.slam-mini-dates { font-size: 10px; opacity: 0.8; }
+.slam-mini-winner { font-size: 10px; margin-top: 4px; opacity: 0.9; }
+.slam-mini-surface { font-size: 9px; opacity: 0.7; margin-top: 2px; }
 
 /* Player Spotlight */
 .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -1196,6 +1363,8 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     .hero-tname { font-size: 12px; }
     .hero-score-big { font-size: 28px; }
     .slam-name { font-size: 20px; }
+    .slam-calendar { grid-template-columns: repeat(2, 1fr); }
+    .slam-flip-num { font-size: 24px; }
     .f1-hero-title { font-size: 20px; }
 }
 
