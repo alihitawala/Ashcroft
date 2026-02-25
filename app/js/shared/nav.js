@@ -57,6 +57,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/grocery.html" data-page="grocery"><i data-lucide="shopping-cart" class="nav-icon"></i> Grocery</a>
                     <a href="/app/gallery.html" data-page="gallery"><i data-lucide="camera" class="nav-icon"></i> Gallery</a>
                     <a href="/app/garden.html" data-page="garden"><i data-lucide="flower-2" class="nav-icon"></i> Garden</a>
+                    <a href="/app/sports.html" data-page="sports"><i data-lucide="trophy" class="nav-icon"></i> Sports</a>
                     <a href="/app/flights.html" data-page="flights"><i data-lucide="plane" class="nav-icon"></i> Flights</a>
                     <a href="/app/events.html" data-page="events"><i data-lucide="calendar" class="nav-icon"></i> Events</a>
                     <a href="/app/notes.html" data-page="notes"><i data-lucide="file-text" class="nav-icon"></i> Notes</a>
@@ -99,13 +100,14 @@ function renderAppShell(pageTitle, activePage) {
                 <a href="/app/garden.html" class="bottom-nav-item${activePage==='garden'?' active':''}" data-page="garden">
                     <i data-lucide="flower-2" class="bottom-nav-icon"></i><span class="bottom-nav-label">Garden</span>
                 </a>
-                <a href="/app/flights.html" class="bottom-nav-item${activePage==='flights'?' active':''}" data-page="flights">
-                    <i data-lucide="plane" class="bottom-nav-icon"></i><span class="bottom-nav-label">Flights</span>
+                <a href="/app/sports.html" class="bottom-nav-item${activePage==='sports'?' active':''}" data-page="sports">
+                    <i data-lucide="trophy" class="bottom-nav-icon"></i><span class="bottom-nav-label">Sports</span>
                 </a>
                 <a href="#" class="bottom-nav-item bottom-nav-more" data-page="more">
                     <i data-lucide="more-horizontal" class="bottom-nav-icon"></i><span class="bottom-nav-label">More</span>
                 </a>
                 <div class="bottom-nav-menu">
+                    <a href="/app/flights.html" class="bottom-nav-menu-item${activePage==='flights'?' active':''}"><i data-lucide="plane" class="menu-icon"></i> Flights</a>
                     <a href="/app/events.html" class="bottom-nav-menu-item${activePage==='events'?' active':''}"><i data-lucide="calendar" class="menu-icon"></i> Events</a>
                     <a href="/app/notes.html" class="bottom-nav-menu-item${activePage==='notes'?' active':''}"><i data-lucide="file-text" class="menu-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? `<a href="/app/kanban.html" class="bottom-nav-menu-item${activePage==='kanban'?' active':''}"><i data-lucide="kanban" class="menu-icon"></i> Kanban</a>` : ''}

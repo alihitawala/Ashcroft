@@ -14,6 +14,7 @@ const kanbanRoutes = require('./routes/kanban');
 const gardenRoutes = require('./routes/garden');
 const flightRoutes = require('./routes/flights');
 const galleryRoutes = require('./routes/gallery');
+const sportsRoutes = require('./routes/sports');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -66,6 +67,8 @@ app.use('/api/garden', authenticate, gardenRoutes);
 app.use('/api/flights', flightRoutes);
 app.get('/api/public/gallery', galleryRoutes.getPublicPhoto);
 app.use('/api/gallery', authenticate, galleryRoutes);
+
+app.use('/api/sports', authenticate, sportsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
