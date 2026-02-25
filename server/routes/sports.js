@@ -682,4 +682,57 @@ router.get('/summary/:sport', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to generate summary' }); }
 });
 
+/** GET /next-up - Cross-sport upcoming events for dashboard widget */
+router.get('/next-up', async (req, res) => {
+  try {
+    const result = await cached('next-up', 600000, async () => {
+      const events = [];
+      // Football
+      try {
+        const [mu, rm] = await Promise.all([
+          fetchJSON(`${FB_BASE}/teams/66/matches?limit=3&status=SCHEDULED`, fbHeaders()).then(j => j?.matches || []),
+          fetchJSON(`${FB_BASE}/teams/86/matches?limit=3&status=SCHEDULED`, fbHeaders()).then(j => j?.matches || []),
+        ]);
+        [...mu, ...rm].forEach(m => {
+          events.push({ sport: 'football', title: `${m.homeTeam?.shortName || m.homeTeam?.name} vs ${m.awayTeam?.shortName || m.awayTeam?.name}`, competition: m.competition?.name || '', date: m.utcDate, name: m.homeTeam?.shortName });
+        });
+      } catch(e) {}
+      // Cricket
+      try {
+        const json = await fetchJSON(`https://api.cricapi.com/v1/matches?apikey=${cricKey()}&offset=0`);
+        const matches = (json?.data || []).filter(m => isICCMenMatch(m) && !m.matchStarted);
+        matches.slice(0, 3).forEach(m => {
+          events.push({ sport: 'cricket', title: m.teams?.join(' vs ') || m.name, competition: m.series || '', date: m.date || m.dateTimeGMT });
+        });
+      } catch(e) {}
+      // F1
+      try {
+        let json = await fetchJSON(`${JOLPICA}/2026/races.json`);
+        let races = json?.MRData?.RaceTable?.Races || [];
+        if (!races.length) { json = await fetchJSON(`${JOLPICA}/2025/races.json`); races = json?.MRData?.RaceTable?.Races || []; }
+        const now = new Date();
+        races.filter(r => new Date(r.date) > now).slice(0, 2).forEach(r => {
+          events.push({ sport: 'f1', title: r.raceName || r.name, competition: 'Formula 1', date: r.date });
+        });
+      } catch(e) {}
+      // Tennis — next slam
+      try {
+        const now = new Date();
+        const slams = [
+          { name: 'Australian Open', date: '2026-01-19', surface: 'Hard' },
+          { name: 'Roland Garros', date: '2026-05-25', surface: 'Clay' },
+          { name: 'Wimbledon', date: '2026-06-29', surface: 'Grass' },
+          { name: 'US Open', date: '2026-08-31', surface: 'Hard' },
+        ];
+        const next = slams.find(s => new Date(s.date) > now);
+        if (next) events.push({ sport: 'tennis', title: next.name, competition: `Grand Slam · ${next.surface}`, date: next.date });
+      } catch(e) {}
+      // Sort by date
+      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+      return events.slice(0, 5);
+    });
+    respond(res, result, cache.has('next-up'));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch next-up' }); }
+});
+
 module.exports = router;

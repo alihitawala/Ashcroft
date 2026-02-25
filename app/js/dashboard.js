@@ -27,13 +27,14 @@ let todayTasks = [];
 
 // ─── Load All Data ───
 async function loadDashboard() {
-    const [allTasks, todayRes, events, grocery, watering, gardenDash] = await Promise.all([
+    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext] = await Promise.all([
         API.get('/tasks').catch(() => []),
         API.get('/tasks?due=today').catch(() => []),
         API.get('/events?upcoming=5').catch(() => []),
         API.get('/grocery-items?list_id=1').catch(() => []),
         API.get('/garden/watering-schedule').catch(() => ({ overdue: [], today: [], soon: [], upcoming: [] })),
         API.get('/garden/plants/dashboard').catch(() => ({ needs_attention_count: 0, recommendations: [] })),
+        API.get('/sports/next-up').catch(() => null),
     ]);
 
     const norm = v => Array.isArray(v) ? v : (v?.items || []);
@@ -47,7 +48,7 @@ async function loadDashboard() {
     const needsAttention = gardenDash.needs_attention_count || 0;
 
     renderSummary(incompleteTasks, evts.length, uncheckedGrocery, needsAttention);
-    renderWidgets(evts, watering, gardenDash, tasks);
+    renderWidgets(evts, watering, gardenDash, tasks, sportsNext);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -101,8 +102,9 @@ function renderSummary(taskCount, eventCount, groceryCount, gardenCount) {
 }
 
 // ─── Widgets ───
-function renderWidgets(events, watering, gardenDash, allTasks) {
+function renderWidgets(events, watering, gardenDash, allTasks, sportsNext) {
     document.getElementById('widgets').innerHTML = `
+        ${renderSportsNextUp(sportsNext)}
         <div class="card">
             <div class="card-header"><h3>Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
             <div class="card-body" id="tasksList">${renderTodayTasks()}</div>
@@ -263,6 +265,45 @@ function timeAgo(date) {
     if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
     const d = Math.floor(s / 86400);
     return d === 1 ? 'yesterday' : `${d}d ago`;
+}
+
+// ─── Sports Next Up Widget ───
+function renderSportsNextUp(data) {
+    const events = data?.data || data;
+    if (!events || !events.length) return '';
+    const icons = { football: '⚽', cricket: '🏏', tennis: '🎾', f1: '🏎️' };
+    const colors = { football: '#2D8544', cricket: '#FF9933', tennis: '#4CAF50', f1: '#FF1801' };
+    const items = events.slice(0, 3).map(e => {
+        const dt = e.date ? new Date(e.date) : null;
+        const timeStr = dt ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+        const relTime = dt ? getRelativeTime(dt) : '';
+        return `<div class="sports-next-item" style="border-left: 3px solid ${colors[e.sport] || '#666'}">
+            <div style="font-size:20px">${icons[e.sport] || '🏅'}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title || e.name || 'TBA')}</div>
+                <div style="font-size:11px;opacity:0.6">${e.competition || e.series || ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:11px;font-weight:600;color:${colors[e.sport] || '#888'}">${relTime}</div>
+                <div style="font-size:10px;opacity:0.5">${timeStr}</div>
+            </div>
+        </div>`;
+    }).join('');
+    return `<div class="card">
+        <div class="card-header"><h3>⚡ Sports Next Up</h3><a href="/app/sports.html" class="link">View All →</a></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
+    </div>`;
+}
+
+function getRelativeTime(date) {
+    const now = new Date();
+    const diff = date - now;
+    if (diff < 0) return 'Live/Past';
+    const hours = Math.floor(diff / 3600000);
+    if (hours < 1) return `${Math.floor(diff / 60000)}m`;
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
 }
 
 // ─── Helpers ───

@@ -176,3 +176,15 @@
 .activity-icon.event-icon { background: var(--amber-bg); color: var(--amber); }
 .activity-text { flex: 1; }
 .activity-time { color: var(--text-tertiary); font-size: 11px; flex-shrink: 0; }
+
+/* Sports Next Up Widget */
+.sports-next-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-secondary, rgba(128,128,128,0.05));
+  transition: background 0.2s;
+}
+.sports-next-item:hover { background: rgba(128,128,128,0.1); }
