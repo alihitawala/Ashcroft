@@ -5,10 +5,10 @@
 
 /* ─── Sport Theme Tokens ─── */
 .sports-page { --sport-primary: #2D8544; --sport-accent: #E74C3C; --sport-bg: rgba(45,133,68,0.07); --sport-glow: 45,133,68; }
-body[data-sport="football"] { --sport-primary: #2D8544; --sport-accent: #E74C3C; --sport-bg: rgba(45,133,68,0.07); --sport-glow: 45,133,68; }
-body[data-sport="cricket"] { --sport-primary: #FF9933; --sport-accent: #138808; --sport-bg: rgba(255,153,51,0.07); --sport-glow: 255,153,51; }
-body[data-sport="tennis"] { --sport-primary: #4CAF50; --sport-accent: #FF9800; --sport-bg: rgba(76,175,80,0.07); --sport-glow: 76,175,80; }
-body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --sport-bg: rgba(255,24,1,0.07); --sport-glow: 255,24,1; }
+body[data-sport="football"] { --sport-primary: #2D8544; --sport-accent: #E74C3C; --sport-bg: rgba(45,133,68,0.07); --sport-glow: 45,133,68; --sport-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='12' fill='none' stroke='rgba(45,133,68,0.04)' stroke-width='1.5'/%3E%3Cline x1='18' y1='30' x2='42' y2='30' stroke='rgba(45,133,68,0.03)' stroke-width='1'/%3E%3Cline x1='30' y1='18' x2='30' y2='42' stroke='rgba(45,133,68,0.03)' stroke-width='1'/%3E%3C/svg%3E"); }
+body[data-sport="cricket"] { --sport-primary: #FF9933; --sport-accent: #138808; --sport-bg: rgba(255,153,51,0.07); --sport-glow: 255,153,51; --sport-pattern: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cellipse cx='20' cy='20' rx='6' ry='9' fill='none' stroke='rgba(255,153,51,0.04)' stroke-width='1.5' transform='rotate(15 20 20)'/%3E%3Cline x1='14' y1='28' x2='14' y2='38' stroke='rgba(255,153,51,0.04)' stroke-width='1.5'/%3E%3C/svg%3E"); }
+body[data-sport="tennis"] { --sport-primary: #4CAF50; --sport-accent: #FF9800; --sport-bg: rgba(76,175,80,0.07); --sport-glow: 76,175,80; --sport-pattern: url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='25' cy='25' r='8' fill='none' stroke='rgba(76,175,80,0.04)' stroke-width='1.5'/%3E%3Cpath d='M17 25 Q25 18 33 25' fill='none' stroke='rgba(76,175,80,0.04)' stroke-width='1'/%3E%3Cpath d='M17 25 Q25 32 33 25' fill='none' stroke='rgba(76,175,80,0.04)' stroke-width='1'/%3E%3C/svg%3E"); }
+body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --sport-bg: rgba(255,24,1,0.07); --sport-glow: 255,24,1; --sport-pattern: url("data:image/svg+xml,%3Csvg width='48' height='48' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='24' height='24' fill='rgba(255,24,1,0.02)'/%3E%3Crect x='24' y='24' width='24' height='24' fill='rgba(255,24,1,0.02)'/%3E%3C/svg%3E"); }
 
 /* ─── Animations ─── */
 @keyframes slideUp {
@@ -47,7 +47,20 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     max-width: 920px;
     width: 100%;
     animation: fadeIn 0.25s ease;
+    position: relative;
 }
+.sports-content::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--sport-pattern);
+    background-repeat: repeat;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    animation: patternFadeIn 0.5s ease 0.3s forwards;
+}
+@keyframes patternFadeIn { to { opacity: 1; } }
 
 /* ─── Tab Bar ─── */
 .sport-tabs {
