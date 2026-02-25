@@ -834,12 +834,13 @@ async function renderTennis() {
 async function renderF1() {
     showSkeletons();
     try {
-        const [drivers, constructors, calendar, f1News, f1Summary] = await Promise.all([
+        const [drivers, constructors, calendar, f1News, f1Summary, f1Recap] = await Promise.all([
             fetchCached('f1-drv', () => safeGet('/sports/f1/standings/drivers')),
             fetchCached('f1-con', () => safeGet('/sports/f1/standings/constructors')),
             fetchCached('f1-cal', () => safeGet('/sports/f1/calendar')),
             fetchCached('f1-news', () => safeGet('/sports/news/f1')),
             fetchCached('f1-summary', () => safeGet('/sports/summary/f1')),
+            fetchCached('f1-recap', () => safeGet('/sports/f1/recap/2025')),
         ]);
 
         const races = calendar?.data || [];
@@ -868,8 +869,37 @@ async function renderF1() {
         // AI Summary
         html += renderSummary(f1Summary?.data || f1Summary);
 
-        // 2025 CHAMPIONS RECAP
-        if (!driverList.length) {
+        // 2025 SEASON RECAP
+        const recapData = f1Recap?.data || f1Recap;
+        if (recapData?.finalStandings) {
+            const fs = recapData.finalStandings;
+            const maxConsPts = fs.constructors[0]?.pts || 1;
+            html += `<div class="recap-section stagger" style="--i:1">
+                <div class="sh"><span class="sh-emoji">🏆</span> 2025 SEASON RECAP</div>
+                <div class="recap-headline">${fs.headline}</div>
+                <div class="sh" style="margin-top:16px"><span class="sh-emoji">🏁</span> DRIVERS CHAMPIONSHIP</div>
+                ${fs.drivers.map(d => {
+                    const color = findTeamColor(d.team);
+                    return `<div class="recap-driver-row">
+                        <span class="recap-pos${d.pos === 1 ? ' champion' : ''}">${d.pos}</span>
+                        <div class="recap-team-dot" style="background:${color}"></div>
+                        <div class="recap-driver-name">${d.name.split(' ').map((n,i) => i===0 ? n[0]+'.' : n).join(' ')}${d.pos === 1 ? ' 🏆' : ''}</div>
+                        <div class="recap-driver-team">${d.team}</div>
+                        <span class="recap-driver-pts">${d.pts}</span>
+                        ${d.wins ? `<span class="recap-driver-wins">${d.wins}W</span>` : ''}
+                    </div>`;
+                }).join('')}
+                <div class="sh" style="margin-top:16px"><span class="sh-emoji">🏗️</span> CONSTRUCTORS CHAMPIONSHIP</div>
+                ${fs.constructors.map(c => {
+                    const pct = Math.round((c.pts / maxConsPts) * 100);
+                    return `<div class="recap-constructor-row">
+                        <span class="recap-constructor-name">${c.name}</span>
+                        <div style="flex:1"><div class="recap-constructor-bar" style="width:${pct}%;background:${c.color};--bar-w:${pct}%"></div></div>
+                        <span class="recap-constructor-pts">${c.pts}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        } else if (!driverList.length) {
             html += `<div class="info-card stagger" style="--i:1">
                 <div class="info-card-title">🏆 2025 Season Champions</div>
                 <div class="champ-item">

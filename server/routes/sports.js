@@ -322,6 +322,46 @@ router.get('/tennis/calendar', async (req, res) => {
 // ═══════════════════════════════════════
 const JOLPICA = 'https://api.jolpi.ca/ergast/f1';
 
+/** GET /f1/recap/2025 - Last season recap */
+router.get('/f1/recap/2025', async (req, res) => {
+  try {
+    const result = await cached('f1-recap-2025', TTL.calendar, async () => {
+      const json = await fetchJSON('https://api.jolpi.ca/ergast/f1/2025/results.json?limit=500');
+      const apiRaces = json?.MRData?.RaceTable?.Races || [];
+
+      const finalStandings = {
+        drivers: [
+          { pos: 1, name: 'Lando Norris', team: 'McLaren', pts: 423, wins: 8 },
+          { pos: 2, name: 'Max Verstappen', team: 'Red Bull', pts: 421, wins: 9 },
+          { pos: 3, name: 'Oscar Piastri', team: 'McLaren', pts: 410, wins: 5 },
+          { pos: 4, name: 'George Russell', team: 'Mercedes', pts: 319, wins: 2 },
+          { pos: 5, name: 'Charles Leclerc', team: 'Ferrari', pts: 242, wins: 0 },
+          { pos: 6, name: 'Lewis Hamilton', team: 'Ferrari', pts: 156, wins: 0 },
+        ],
+        constructors: [
+          { pos: 1, name: 'McLaren', pts: 833, color: '#FF8000' },
+          { pos: 2, name: 'Mercedes', pts: 468, color: '#27F4D2' },
+          { pos: 3, name: 'Red Bull', pts: 446, color: '#3671C6' },
+          { pos: 4, name: 'Ferrari', pts: 398, color: '#E8002D' },
+        ],
+        headline: "Norris dethroned Verstappen in a nail-biting finale — just 2 points separated champion from challenger after 24 races. McLaren's dominance with Norris and Piastri secured their 2nd consecutive Constructors' title.",
+        totalRaces: 24,
+      };
+
+      const raceResults = apiRaces.map(r => ({
+        round: parseInt(r.round),
+        name: r.raceName,
+        winner: r.Results?.[0] ? `${r.Results[0].Driver?.givenName?.[0]}. ${r.Results[0].Driver?.familyName}` : '?',
+        team: r.Results?.[0]?.Constructor?.name || '?',
+        country: r.Circuit?.Location?.country || '',
+      }));
+
+      return { finalStandings, raceResults };
+    });
+    respond(res, result, cache.has('f1-recap-2025'));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch F1 recap' }); }
+});
+
 /** GET /f1/standings/drivers - Driver standings */
 router.get('/f1/standings/drivers', async (req, res) => {
   try {

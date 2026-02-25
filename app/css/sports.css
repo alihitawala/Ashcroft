@@ -1165,6 +1165,23 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
   color: var(--text-tertiary);
 }
 
+/* ─── Recap Section ─── */
+.recap-section { margin-bottom: 20px; }
+.recap-headline { font-size: 14px; line-height: 1.6; color: var(--text-secondary); font-style: italic; margin-bottom: 16px; padding: 0 4px; }
+.recap-driver-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.recap-driver-row:last-child { border-bottom: none; }
+.recap-pos { font-size: 14px; font-weight: 800; min-width: 20px; color: var(--text-tertiary); }
+.recap-pos.champion { color: #FFD700; }
+.recap-team-dot { width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0; }
+.recap-driver-name { font-size: 13px; font-weight: 600; flex: 1; }
+.recap-driver-team { font-size: 11px; color: var(--text-tertiary); }
+.recap-driver-pts { font-size: 14px; font-weight: 700; }
+.recap-driver-wins { font-size: 11px; color: var(--text-tertiary); margin-left: 4px; }
+.recap-constructor-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.recap-constructor-name { font-size: 13px; font-weight: 600; min-width: 80px; }
+.recap-constructor-bar { height: 8px; border-radius: 4px; animation: barGrow 0.8s ease both; }
+.recap-constructor-pts { font-size: 12px; font-weight: 700; min-width: 40px; text-align: right; }
+
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
     .sports-content { padding: 12px 10px calc(60px + env(safe-area-inset-bottom, 0px)); }
