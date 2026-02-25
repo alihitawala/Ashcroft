@@ -40,6 +40,43 @@ function fetchJSON(url, headers = {}) {
   });
 }
 
+function fetchText(url) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http;
+    const req = mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 10000 }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchText(res.headers.location).then(resolve).catch(reject);
+      }
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', () => resolve(''));
+    req.on('timeout', () => { req.destroy(); resolve(''); });
+  });
+}
+
+function parseRSS(xml) {
+  const items = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let match;
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const extract = (tag) => {
+      const r = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, 'i');
+      const m = match[1].match(r);
+      return m ? m[1].trim() : '';
+    };
+    items.push({
+      title: extract('title'),
+      description: extract('description'),
+      author: extract('dc:creator'),
+      link: extract('link'),
+      pubDate: extract('pubDate'),
+    });
+  }
+  return items;
+}
+
 function respond(res, data, isCached = false) {
   res.json({ data, cached: isCached, updatedAt: new Date().toISOString() });
 }
@@ -133,46 +170,101 @@ router.get('/football/title-race/:competition', async (req, res) => {
 // ═══════════════════════════════════════
 const cricKey = () => process.env.CRICAPI_KEY || '';
 
-/** GET /cricket/live - Live cricket scores */
+// ICC Full Member teams only (men's international cricket)
+const ICC_FULL_MEMBERS = [
+  'india', 'australia', 'england', 'south africa', 'new zealand',
+  'pakistan', 'sri lanka', 'west indies', 'bangladesh', 'zimbabwe',
+  'afghanistan', 'ireland'
+];
+const ICC_CODES = ['IND','AUS','ENG','SA','NZ','PAK','SL','WI','BAN','ZIM','AFG','IRE'];
+
+function isICCMenMatch(teams, name) {
+  const nameStr = (name || '').toLowerCase();
+  const teamsArr = (teams || []).map(t => t.toLowerCase());
+  const teamsStr = teamsArr.join(' ');
+  // Exclude women's matches
+  if (nameStr.includes('women') || teamsStr.includes('women') || teamsStr.includes('[w]')) return false;
+  // Exclude domestic/A-team/emerging/provincial/county/u19 matches
+  const domesticKeywords = ['emerging', 'provincial', ' a ', ' a,', 'knights', 'titans', 'warriors',
+    'dolphins', 'cobras', 'lions,', 'counties', 'county', 'domestic', 'premier league',
+    'u19', 'under-19', 'under 19', 'academy', 'development', 'limpopo', 'boland',
+    'north west', 'kwazulu', 'inland', 'division', 'challenge'];
+  if (domesticKeywords.some(k => nameStr.includes(k) || teamsStr.includes(k))) return false;
+  // Exclude A-team tours (e.g., "Pakistan A", "England Lions")  
+  if (teamsArr.some(t => /\b[a-z]+ a\b/.test(t) || t.includes('lions') || t.includes('emerging'))) return false;
+  // Must have ICC team code in brackets like [IND], [AUS] — this is the strongest signal for international
+  const hasICCCode = ICC_CODES.some(c => teamsStr.includes(`[${c.toLowerCase()}]`));
+  if (hasICCCode) return true;
+  // Or match name contains international markers
+  if (nameStr.includes('t20i') || nameStr.includes('odi') || nameStr.includes('test match') ||
+      nameStr.includes('world cup') || nameStr.includes('champions trophy') || nameStr.includes('icc') ||
+      nameStr.includes('asia cup') || nameStr.includes('ipl')) return true;
+  // Check if BOTH teams are ICC full member names (exact-ish match, not substring)
+  const teamMatches = teamsArr.filter(t => 
+    ICC_FULL_MEMBERS.some(m => t.startsWith(m) && (t.length === m.length || t[m.length] === ' ' || t[m.length] === '['))
+  );
+  return teamMatches.length >= 2;
+}
+
+/** GET /cricket/live - Live cricket scores (international men's only) */
 router.get('/cricket/live', async (req, res) => {
   try {
     const result = await cached('cric-live', TTL.live, async () => {
       const json = await fetchJSON(`https://api.cricapi.com/v1/cricScore?apikey=${cricKey()}`);
       if (!json?.data) return [];
-      return json.data.map(m => ({
-        id: m.id, name: m.name, status: m.status, venue: m.venue,
-        teams: [m.t1, m.t2], scores: [m.t1s, m.t2s],
-        t1img: m.t1img, t2img: m.t2img, matchType: m.matchType
-      }));
+      return json.data
+        .filter(m => isICCMenMatch([m.t1, m.t2], m.name))
+        .map(m => ({
+          id: m.id, name: m.name, status: m.status, venue: m.venue,
+          teams: [m.t1, m.t2], scores: [m.t1s, m.t2s],
+          t1img: m.t1img, t2img: m.t2img, matchType: m.matchType
+        }));
     });
     respond(res, result, cache.has('cric-live'));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch live cricket' }); }
 });
 
-/** GET /cricket/upcoming - Upcoming cricket matches */
+/** GET /cricket/upcoming - Upcoming cricket matches (international men's only) */
 router.get('/cricket/upcoming', async (req, res) => {
   try {
     const result = await cached('cric-upcoming', TTL.standings, async () => {
-      const json = await fetchJSON(`https://api.cricapi.com/v1/matches?apikey=${cricKey()}&offset=0`);
+      // Use /cricScore which has clean international scheduled matches with [CODE] brackets
+      const json = await fetchJSON(`https://api.cricapi.com/v1/cricScore?apikey=${cricKey()}`);
       if (!json?.data) return [];
-      return json.data.filter(m => m.matchStarted === false || m.status === 'Match not started').slice(0, 20).map(m => ({
-        id: m.id, name: m.name, venue: m.venue, date: m.date || m.dateTimeGMT,
-        teams: m.teams, matchType: m.matchType, status: m.status
-      }));
+      return json.data
+        .filter(m => isICCMenMatch([m.t1, m.t2], m.name))
+        .filter(m => (m.status || '').toLowerCase().includes('match starts'))
+        .map(m => ({
+          id: m.id, name: m.name, venue: m.venue, date: null,
+          teams: [m.t1, m.t2], matchType: m.matchType, status: m.status,
+          t1img: m.t1img, t2img: m.t2img
+        }))
+        .slice(0, 20);
     });
     respond(res, result, cache.has('cric-upcoming'));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch upcoming cricket' }); }
 });
 
-/** GET /cricket/series - Current series list */
+/** GET /cricket/series - Current series list (international men's only) */
 router.get('/cricket/series', async (req, res) => {
   try {
     const result = await cached('cric-series', TTL.calendar, async () => {
       const json = await fetchJSON(`https://api.cricapi.com/v1/series?apikey=${cricKey()}&offset=0`);
       if (!json?.data) return [];
-      return json.data.slice(0, 20).map(s => ({
-        id: s.id, name: s.name, startDate: s.startDate, endDate: s.endDate, odi: s.odi, t20: s.t20, test: s.test
-      }));
+      return json.data
+        .filter(s => {
+          const name = (s.name || '').toLowerCase();
+          if (name.includes('women')) return false;
+          // Filter for international series (ICC members, world cup, IPL, etc.)
+          return ICC_FULL_MEMBERS.some(t => name.includes(t)) ||
+                 name.includes('ipl') || name.includes('world cup') || name.includes('champions trophy') ||
+                 name.includes('asia cup') || name.includes('icc') || name.includes('t20i') ||
+                 name.includes('odi') || name.includes('test');
+        })
+        .slice(0, 20)
+        .map(s => ({
+          id: s.id, name: s.name, startDate: s.startDate, endDate: s.endDate, odi: s.odi, t20: s.t20, test: s.test
+        }));
     });
     respond(res, result, cache.has('cric-series'));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch cricket series' }); }
@@ -414,6 +506,125 @@ router.delete('/notifications/:id', async (req, res) => {
     if (!rowCount) return res.status(404).json({ error: 'Notification not found' });
     res.json({ success: true });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to delete notification' }); }
+});
+
+// ═══════════════════════════════════════
+// NEWS (ESPN RSS)
+// ═══════════════════════════════════════
+const RSS_URLS = {
+  football: 'https://www.espn.com/espn/rss/soccer/news',
+  cricket: 'https://www.espn.com/espn/rss/cricket/news',
+  tennis: 'https://www.espn.com/espn/rss/tennis/news',
+  f1: 'https://www.espn.com/espn/rss/rpm/news',
+};
+
+/** GET /news/:sport - ESPN news feed */
+router.get('/news/:sport', async (req, res) => {
+  try {
+    const sport = req.params.sport;
+    const url = RSS_URLS[sport];
+    if (!url) return res.status(400).json({ error: 'Unknown sport' });
+    const key = `news-${sport}`;
+    const result = await cached(key, 1800000, async () => {
+      const xml = await fetchText(url);
+      return parseRSS(xml).slice(0, 8);
+    });
+    respond(res, result, cache.has(key));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch news' }); }
+});
+
+// ═══════════════════════════════════════
+// AI SUMMARY (server-generated narratives)
+// ═══════════════════════════════════════
+
+async function generateFootballSummary() {
+  const [muData, rmData, plStandings, pdStandings] = await Promise.all([
+    cached('fb-matches-66', TTL.results, () => fetchJSON(`${FB_BASE}/teams/66/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])).then(d => d?.recent || d),
+    cached('fb-matches-86', TTL.results, () => fetchJSON(`${FB_BASE}/teams/86/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])).then(d => d?.recent || d),
+    cached('fb-standings-PL', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PL/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
+    cached('fb-standings-PD', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PD/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
+  ]);
+  const parts = [];
+  const plTable = Array.isArray(plStandings) ? plStandings : [];
+  const pdTable = Array.isArray(pdStandings) ? pdStandings : [];
+  const muPos = plTable.find(t => t.name?.includes('Manchester United') || t.team?.name?.includes('Manchester United'));
+  if (muPos) {
+    const p = muPos.position || muPos.position;
+    const pts = muPos.points;
+    parts.push(`Man Utd sit ${p}${p===1?'st':p===2?'nd':p===3?'rd':'th'} in the Premier League with ${pts} points (${muPos.won || 0}W ${muPos.draw || 0}D ${muPos.lost || 0}L).`);
+  }
+  const rmPos = pdTable.find(t => t.name?.includes('Real Madrid') || t.team?.name?.includes('Real Madrid'));
+  if (rmPos) {
+    const leader = pdTable[0];
+    const gap = (leader?.points || 0) - (rmPos.points || 0);
+    parts.push(`In La Liga, Real Madrid are ${rmPos.position === 1 ? 'top' : rmPos.position + (rmPos.position===2?'nd':rmPos.position===3?'rd':'th')} with ${rmPos.points} pts${gap > 0 ? `, ${gap} points behind leaders ${leader.name || leader.team?.name}` : ''}.`);
+  }
+  return parts.join(' ') || 'Football data is currently being updated. Check back soon for the latest summary.';
+}
+
+async function generateCricketSummary() {
+  const upcoming = await cached('cric-upcoming', TTL.standings, async () => {
+    const json = await fetchJSON(`https://api.cricapi.com/v1/matches?apikey=${cricKey()}&offset=0`);
+    return json?.data || [];
+  });
+  const indiaMatches = (Array.isArray(upcoming) ? upcoming : []).filter(m => m.teams?.some(t => t.toLowerCase().includes('india')));
+  if (indiaMatches.length) {
+    const next = indiaMatches[0];
+    return `India's next fixture: ${next.name || next.teams?.join(' vs ')}${next.venue ? ' at ' + next.venue : ''}${next.date ? ' on ' + new Date(next.date).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : ''}. ${indiaMatches.length > 1 ? `${indiaMatches.length} upcoming India matches on the schedule.` : ''}`;
+  }
+  return 'No upcoming India matches currently scheduled. Check back for updates as the cricket calendar unfolds.';
+}
+
+async function generateTennisSummary() {
+  const rankings = await cached('tennis-rankings', TTL.standings, async () => {
+    const json = await fetchJSON('https://site.api.espn.com/apis/site/v2/sports/tennis/atp/rankings');
+    return json?.rankings?.[0]?.ranks?.slice(0, 10).map(r => ({ rank: r.current, name: r.athlete?.displayName, points: r.points })) || [];
+  });
+  const players = Array.isArray(rankings) ? rankings : [];
+  if (players.length >= 3) {
+    const top3 = players.slice(0, 3);
+    const now = new Date();
+    const slams = [
+      { name: 'Australian Open', start: '2026-01-19' }, { name: 'Roland Garros', start: '2026-05-25' },
+      { name: 'Wimbledon', start: '2026-06-29' }, { name: 'US Open', start: '2026-08-31' },
+    ];
+    const nextSlam = slams.find(s => new Date(s.start) > now);
+    return `${top3[0].name} leads the ATP rankings at #1 with ${(top3[0].points||0).toLocaleString()} points. ${top3[1].name} sits at #2 (${(top3[1].points||0).toLocaleString()} pts), with ${top3[2].name} rounding out the top 3 (${(top3[2].points||0).toLocaleString()} pts).${nextSlam ? ` Next Grand Slam: ${nextSlam.name}.` : ''}`;
+  }
+  return 'Tennis rankings data is being updated. Check back shortly.';
+}
+
+async function generateF1Summary() {
+  const calendar = await cached('f1-calendar', TTL.calendar, async () => {
+    let json = await fetchJSON(`${JOLPICA}/2026/races.json`);
+    let races = json?.MRData?.RaceTable?.Races;
+    if (!races || !races.length) { json = await fetchJSON(`${JOLPICA}/2025/races.json`); races = json?.MRData?.RaceTable?.Races || []; }
+    return races;
+  });
+  const races = Array.isArray(calendar) ? calendar : [];
+  const now = new Date();
+  const nextRace = races.find(r => new Date(r.date) > now);
+  if (nextRace) {
+    const country = nextRace.Circuit?.Location?.country || nextRace.country || '';
+    return `The next F1 race is the ${nextRace.raceName || nextRace.name} in ${country} on ${new Date(nextRace.date).toLocaleDateString('en-GB', { day:'numeric', month:'long' })}. 2026 marks a revolutionary new era with completely redesigned regulations — simplified aero, active aero elements, and a new power unit formula. Reigning champion Lando Norris (McLaren) will look to defend his title after edging Max Verstappen by just 2 points in a dramatic 2025 season.`;
+  }
+  return 'The F1 season calendar is being updated. Stay tuned for race schedules and previews.';
+}
+
+/** GET /summary/:sport - AI-generated narrative summary */
+router.get('/summary/:sport', async (req, res) => {
+  try {
+    const sport = req.params.sport;
+    const generators = { football: generateFootballSummary, cricket: generateCricketSummary, tennis: generateTennisSummary, f1: generateF1Summary };
+    const gen = generators[sport];
+    if (!gen) return res.status(400).json({ error: 'Unknown sport' });
+    const key = `summary-${sport}`;
+    const result = await cached(key, 900000, async () => {
+      const text = await gen();
+      return { text, generatedAt: new Date().toISOString() };
+    });
+    respond(res, result, cache.has(key));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to generate summary' }); }
 });
 
 module.exports = router;
