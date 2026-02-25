@@ -637,6 +637,21 @@ async function renderCricket() {
             }
         }
 
+        // T20 World Cup section (if any WC matches in upcoming)
+        if (cricketFilter === 'all' || cricketFilter === 't20i' || cricketFilter === 't20') {
+            const wcMatches = upcoming.filter(m => {
+                const n = ((m.name || '') + ' ' + (m.series || '')).toLowerCase();
+                return n.includes('world cup') || n.includes('wc');
+            });
+            if (wcMatches.length) {
+                html += `<div class="sh stagger" style="--i:6">
+                    <span class="sh-emoji">🏆</span> T20 WORLD CUP
+                    <span style="font-size:11px;opacity:0.6;margin-left:8px">${wcMatches.length} match${wcMatches.length > 1 ? 'es' : ''}</span>
+                </div>`;
+                wcMatches.slice(0, 6).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 7, false));
+            }
+        }
+
         // Upcoming
         if (cricketFilter !== 'india') {
             html += '<div class="sh stagger" style="--i:7"><span class="sh-emoji">📅</span> UPCOMING</div>';
