@@ -66,12 +66,27 @@ function parseRSS(xml) {
       const m = match[1].match(r);
       return m ? m[1].trim() : '';
     };
+    // Extract image from media:content, media:thumbnail, or enclosure
+    let image = '';
+    const mediaUrl = match[1].match(/url\s*=\s*"([^"]+\.(?:jpg|jpeg|png|webp|gif)[^"]*)"/i);
+    if (mediaUrl) image = mediaUrl[1];
+    if (!image) {
+      const enclosure = match[1].match(/<enclosure[^>]+url="([^"]+)"/i);
+      if (enclosure) image = enclosure[1];
+    }
+    // Try to extract from description img tags
+    if (!image) {
+      const descImg = match[1].match(/<img[^>]+src="([^"]+)"/i);
+      if (descImg) image = descImg[1];
+    }
+
     items.push({
       title: extract('title'),
       description: extract('description'),
       author: extract('dc:creator'),
       link: extract('link'),
       pubDate: extract('pubDate'),
+      image,
     });
   }
   return items;

@@ -205,10 +205,13 @@ function renderNews(articles) {
     <div class="news-section">
       <div class="news-header">📰 Latest News</div>
       ${articles.slice(0, 6).map((a, i) => `
-        <div class="news-card" style="--i:${i}">
-          <div class="news-title"><a href="${a.link}" target="_blank" rel="noopener">${a.title}</a></div>
-          ${a.description ? `<div class="news-desc">${a.description}</div>` : ''}
-          <div class="news-meta">${a.author ? a.author + ' · ' : ''}${timeAgo(a.pubDate)}</div>
+        <div class="news-card ${a.image ? 'has-img' : ''}" style="--i:${i}">
+          ${a.image ? `<div class="news-img"><img src="${a.image}" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>` : ''}
+          <div class="news-body">
+            <div class="news-title"><a href="${a.link}" target="_blank" rel="noopener">${a.title}</a></div>
+            ${a.description ? `<div class="news-desc">${a.description}</div>` : ''}
+            <div class="news-meta">${a.author ? a.author + ' · ' : ''}${timeAgo(a.pubDate)}</div>
+          </div>
         </div>
       `).join('')}
     </div>`;
