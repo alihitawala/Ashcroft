@@ -243,29 +243,36 @@ async function renderFootball() {
         const liveMatch = [...muRecent, ...rmRecent, ...muUpcoming, ...rmUpcoming].find(m => m.status === 'IN_PLAY' || m.status === 'PAUSED' || m.status === 'LIVE');
 
         if (liveMatch) {
-            html += heroMatchCard(liveMatch, true);
+            html += heroMatchCard(liveMatch, true, [...plTable, ...pdTable]);
         } else if (nextMatch) {
-            html += `<div class="hero-card hero-football">
+            const heroClass = getHeroClass(nextMatch);
+            const teamKey = (nextMatch.homeTeam?.name || '').includes('Manchester United') || (nextMatch.awayTeam?.name || '').includes('Manchester United')
+                ? 'Manchester United' : 'Real Madrid';
+            const allStandings = [...plTable, ...pdTable];
+            const context = getMatchContext(nextMatch, allStandings, teamKey);
+            const isHome = nextMatch.homeTeam?.name?.includes(teamKey);
+            const venue = isHome ? (teamKey.includes('Manchester') ? 'Old Trafford' : 'Santiago Bernabéu') : null;
+
+            html += `<div class="hero-card hero-football ${heroClass}">
+                <div class="hero-comp-badge">${nextMatch.competition || ''}</div>
                 <div class="hero-label">⚽ NEXT MATCH</div>
-                <div class="hero-matchup">
-                    <div class="hero-side">
-                        ${crest(nextMatch.homeTeam?.crest, 48)}
-                        <div class="hero-tname">${short(nextMatch.homeTeam?.name)}</div>
-                    </div>
-                    <div class="hero-center">
-                        <div class="hero-vs">VS</div>
-                        <span class="hero-comp-pill">${nextMatch.competition || ''}</span>
-                    </div>
-                    <div class="hero-side">
-                        ${crest(nextMatch.awayTeam?.crest, 48)}
-                        <div class="hero-tname">${short(nextMatch.awayTeam?.name)}</div>
-                    </div>
+                <div class="hero-crests">
+                    ${crest(nextMatch.homeTeam?.crest, 56)}
+                    <span class="hero-vs">VS</span>
+                    ${crest(nextMatch.awayTeam?.crest, 56)}
+                </div>
+                <div class="hero-matchup" style="margin-top:-4px">
+                    <div class="hero-side"><div class="hero-tname">${short(nextMatch.homeTeam?.name)}</div></div>
+                    <div class="hero-center"></div>
+                    <div class="hero-side"><div class="hero-tname">${short(nextMatch.awayTeam?.name)}</div></div>
                 </div>
                 <div class="countdown" id="fbCountdown"></div>
+                ${context ? `<div class="hero-context">${context}</div>` : ''}
+                ${venue ? `<div class="hero-venue">📍 ${venue}</div>` : ''}
                 <div class="hero-meta">${fmtDate(nextMatch.date)}</div>
             </div>`;
         } else if (allRecent[0]) {
-            html += heroMatchCard(allRecent[0], false);
+            html += heroMatchCard(allRecent[0], false, [...plTable, ...pdTable]);
         }
 
         // AI Summary
@@ -419,23 +426,81 @@ function renderLeagueTable(title, data, highlightTeam) {
     return html;
 }
 
-function heroMatchCard(m, isLive) {
+function getHeroClass(m) {
+    const home = m.homeTeam?.name || '';
+    const away = m.awayTeam?.name || '';
+    if (home.includes('Manchester United') || away.includes('Manchester United')) return 'hero-mu';
+    if (home.includes('Real Madrid') || away.includes('Real Madrid')) return 'hero-rm';
+    return '';
+}
+
+function getMatchContext(match, standings, teamKey) {
+    if (!match || !standings || !teamKey) return '';
+    const teamPos = standings.find(t => t.name && t.name.includes(teamKey));
+    const isHome = match.homeTeam?.name?.includes(teamKey);
+    const opponent = isHome ? match.awayTeam?.name : match.homeTeam?.name;
+    const opponentPos = standings.find(t => t.name && opponent && t.name.includes(short(opponent)));
+    const venue = isHome ? (teamKey.includes('Manchester') ? 'Old Trafford' : 'Santiago Bernabéu') : null;
+    const pos = teamPos?.position;
+
+    if (opponentPos && opponentPos.position <= 3) return `Big test against title challengers ${short(opponent)}`;
+    if (pos && pos <= 4) return 'Defending their Champions League spot';
+    if (pos && pos >= 5 && pos <= 7) return `A win could push ${teamKey.includes('Manchester') ? 'United' : 'Madrid'} into the top 4`;
+    if (isHome && venue) {
+        const hour = new Date(match.date).getHours();
+        return hour >= 17 ? `Under the lights at ${venue}` : `Home advantage at ${venue}`;
+    }
+    const matchday = match.matchday || '';
+    const comp = match.competition || 'the league';
+    return matchday ? `Matchday ${matchday} of ${comp}` : '';
+}
+
+function getResultContext(m, teamKey) {
+    const isHome = m.homeTeam?.name?.includes(teamKey);
+    const h = m.score?.fullTime?.home ?? 0, a = m.score?.fullTime?.away ?? 0;
+    const won = isHome ? h > a : a > h;
+    const lost = isHome ? h < a : a < h;
+    const teamShort = teamKey.includes('Manchester') ? 'Man Utd' : 'Real Madrid';
+    const opponent = short(isHome ? m.awayTeam?.name : m.homeTeam?.name);
+    const venue = isHome ? 'home' : 'away';
+
+    if (won) return `${teamShort} ${venue === 'away' ? 'claim a gritty away win' : 'secure the three points'} against ${opponent}`;
+    if (lost) return `${teamShort} fall to ${opponent} ${venue === 'away' ? 'on the road' : 'at home'}`;
+    return `${teamShort} held to a draw by ${opponent}`;
+}
+
+function getResultBorderClass(m, teamKey) {
+    const isHome = m.homeTeam?.name?.includes(teamKey);
+    const h = m.score?.fullTime?.home ?? 0, a = m.score?.fullTime?.away ?? 0;
+    const won = isHome ? h > a : a > h;
+    const lost = isHome ? h < a : a < h;
+    if (won) return 'hero-result-win';
+    if (lost) return 'hero-result-loss';
+    return 'hero-result-draw';
+}
+
+function heroMatchCard(m, isLive, standings) {
     const h = m.score?.fullTime?.home, a = m.score?.fullTime?.away;
-    return `<div class="hero-card hero-football">
-        <div class="hero-label">${isLive ? '<span class="live-dot"></span> LIVE' : '⚽ LATEST RESULT'} ${m.competition ? `<span class="hero-comp-pill">${m.competition}</span>` : ''}</div>
-        <div class="hero-matchup">
-            <div class="hero-side">
-                ${crest(m.homeTeam?.crest, 48)}
-                <div class="hero-tname">${short(m.homeTeam?.name)}</div>
-            </div>
-            <div class="hero-center">
-                <div class="hero-score-big">${h ?? '?'} – ${a ?? '?'}</div>
-            </div>
-            <div class="hero-side">
-                ${crest(m.awayTeam?.crest, 48)}
-                <div class="hero-tname">${short(m.awayTeam?.name)}</div>
-            </div>
+    const heroClass = getHeroClass(m);
+    const teamKey = (m.homeTeam?.name || '').includes('Manchester United') || (m.awayTeam?.name || '').includes('Manchester United')
+        ? 'Manchester United' : 'Real Madrid';
+    const resultBorder = !isLive ? getResultBorderClass(m, teamKey) : '';
+    const context = !isLive ? getResultContext(m, teamKey) : '';
+
+    return `<div class="hero-card hero-football ${heroClass} ${resultBorder}">
+        <div class="hero-comp-badge">${m.competition || ''}</div>
+        <div class="hero-label">${isLive ? '<span class="live-dot"></span> LIVE' : '⚽ LATEST RESULT'}</div>
+        <div class="hero-crests">
+            ${crest(m.homeTeam?.crest, 56)}
+            <div class="hero-result-score">${h ?? '?'} – ${a ?? '?'}</div>
+            ${crest(m.awayTeam?.crest, 56)}
         </div>
+        <div class="hero-matchup" style="margin-top:-4px">
+            <div class="hero-side"><div class="hero-tname">${short(m.homeTeam?.name)}</div></div>
+            <div class="hero-center"></div>
+            <div class="hero-side"><div class="hero-tname">${short(m.awayTeam?.name)}</div></div>
+        </div>
+        ${context ? `<div class="hero-context">${context}</div>` : ''}
         <div class="hero-meta">${fmtDate(m.date)}</div>
     </div>`;
 }

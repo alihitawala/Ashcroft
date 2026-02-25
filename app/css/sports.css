@@ -137,6 +137,18 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     pointer-events: none;
 }
 .hero-football { background: linear-gradient(135deg, #14532d, #166534, #1a7a42); }
+.hero-card.hero-mu { background: linear-gradient(135deg, #DA291C 0%, #6E1010 50%, #1A1A2E 100%); }
+.hero-card.hero-rm { background: linear-gradient(135deg, #FEBE10 0%, #00529F 100%); }
+.hero-card.hero-result-win { border: 2px solid rgba(14,159,110,0.5); box-shadow: 0 0 20px rgba(14,159,110,0.15); }
+.hero-card.hero-result-loss { border: 2px solid rgba(224,62,78,0.5); box-shadow: 0 0 20px rgba(224,62,78,0.15); }
+.hero-card.hero-result-draw { border: 2px solid rgba(107,114,128,0.4); }
+.hero-crests { display: flex; align-items: center; justify-content: center; gap: 24px; margin: 16px 0; position: relative; z-index: 1; }
+.hero-crests .crest { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.15); padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.hero-crests .hero-vs { font-size: 16px; font-weight: 800; opacity: 0.7; letter-spacing: 0.1em; }
+.hero-comp-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; position: relative; z-index: 1; backdrop-filter: blur(4px); }
+.hero-context { font-size: 13px; opacity: 0.85; text-align: center; margin-top: 8px; font-style: italic; position: relative; z-index: 1; }
+.hero-venue { font-size: 11px; opacity: 0.6; text-align: center; margin-top: 4px; position: relative; z-index: 1; }
+.hero-result-score { font-size: 36px; font-weight: 900; text-align: center; letter-spacing: 0.04em; text-shadow: 0 2px 12px rgba(0,0,0,0.3); position: relative; z-index: 1; }
 .hero-cricket { background: linear-gradient(135deg, #1a1a4e, #1e3a6e, #234680); }
 .hero-tennis-ao { background: linear-gradient(135deg, #005A8C, #0091D2); }
 .hero-tennis-rg { background: linear-gradient(135deg, #8B3121, #C84B31); }
