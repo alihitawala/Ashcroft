@@ -1421,3 +1421,44 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .league-table .lt-gd-pos { color: var(--green); }
 .league-table .lt-gd-neg { color: var(--red); }
 .league-table .lt-highlight { background: var(--accent-bg); }
+
+/* ─── Tennis H2H ─── */
+.h2h-grid { display: flex; flex-direction: column; gap: 10px; }
+.h2h-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.h2h-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,168,107,0.12); }
+.h2h-players { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.h2h-p { display: flex; align-items: center; gap: 6px; }
+.h2h-left { flex: 1; justify-content: flex-start; }
+.h2h-right { flex: 1; justify-content: flex-end; }
+.h2h-flag { font-size: 1.3rem; }
+.h2h-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.h2h-wins { font-size: 1.4rem; font-weight: 800; color: #00A86B; min-width: 24px; text-align: center; }
+.h2h-vs { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); letter-spacing: 2px; padding: 0 8px; }
+.h2h-bar-track {
+    display: flex; height: 22px; border-radius: 11px; overflow: hidden; background: var(--surface2);
+    font-size: 0.65rem; font-weight: 700; color: #fff;
+}
+.h2h-bar-left {
+    width: var(--bar-w); background: linear-gradient(90deg, #00A86B, #00C97B);
+    display: flex; align-items: center; justify-content: center;
+    animation: barGrow 0.6s ease both; border-radius: 11px 0 0 11px;
+}
+.h2h-bar-right {
+    width: var(--bar-w); background: linear-gradient(90deg, #E8544E, #FF6B6B);
+    display: flex; align-items: center; justify-content: center;
+    animation: barGrow 0.6s ease both; border-radius: 0 11px 11px 0;
+}
+.h2h-last {
+    margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.h2h-surface {
+    display: inline-block; padding: 1px 7px; border-radius: 8px;
+    font-size: 0.6rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
+}

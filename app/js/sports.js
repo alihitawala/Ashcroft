@@ -710,6 +710,51 @@ function renderUpcomingCricketCard(m, i, highlight) {
 }
 
 // ─── TENNIS ───
+// ─── Tennis H2H Data & Renderer ───
+const TENNIS_H2H = [
+    { p1: 'Carlos Alcaraz', p2: 'Jannik Sinner', w1: 6, w2: 6, last: 'Sinner d. Alcaraz 6-3 6-4 (AO SF 2026)', surface: 'Hard' },
+    { p1: 'Carlos Alcaraz', p2: 'Alexander Zverev', w1: 5, w2: 5, last: 'Zverev d. Alcaraz 7-5 6-3 (ATP Finals 2025)', surface: 'Hard' },
+    { p1: 'Jannik Sinner', p2: 'Alexander Zverev', w1: 4, w2: 4, last: 'Sinner d. Zverev 6-4 3-6 6-3 (AO QF 2026)', surface: 'Hard' },
+    { p1: 'Carlos Alcaraz', p2: 'Novak Djokovic', w1: 5, w2: 4, last: 'Alcaraz d. Djokovic 6-4 6-4 (Wimbledon F 2025)', surface: 'Grass' },
+    { p1: 'Jannik Sinner', p2: 'Novak Djokovic', w1: 4, w2: 8, last: 'Djokovic d. Sinner 7-6 6-2 (ATP Finals 2025)', surface: 'Hard' },
+];
+
+function renderTennisH2H() {
+    let html = '<div class="sh stagger" style="--i:3"><span class="sh-emoji">⚔️</span> HEAD-TO-HEAD</div>';
+    html += '<div class="h2h-grid stagger" style="--i:4">';
+    TENNIS_H2H.forEach(m => {
+        const total = m.w1 + m.w2;
+        const pct1 = Math.round((m.w1 / total) * 100);
+        const pct2 = 100 - pct1;
+        const f1 = PLAYER_FLAGS[m.p1] || '🎾';
+        const f2 = PLAYER_FLAGS[m.p2] || '🎾';
+        const lastName = n => n.split(' ').pop();
+        const surfColor = SURFACE_COLORS[m.surface] || '#888';
+        html += `<div class="h2h-card">
+            <div class="h2h-players">
+                <div class="h2h-p h2h-left">
+                    <span class="h2h-flag">${f1}</span>
+                    <span class="h2h-name">${lastName(m.p1)}</span>
+                    <span class="h2h-wins">${m.w1}</span>
+                </div>
+                <div class="h2h-vs">VS</div>
+                <div class="h2h-p h2h-right">
+                    <span class="h2h-wins">${m.w2}</span>
+                    <span class="h2h-name">${lastName(m.p2)}</span>
+                    <span class="h2h-flag">${f2}</span>
+                </div>
+            </div>
+            <div class="h2h-bar-track">
+                <div class="h2h-bar-left" style="--bar-w:${pct1}%">${pct1}%</div>
+                <div class="h2h-bar-right" style="--bar-w:${pct2}%">${pct2}%</div>
+            </div>
+            <div class="h2h-last"><span class="h2h-surface" style="background:${surfColor}">${m.surface}</span>${m.last}</div>
+        </div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
 async function renderTennis() {
     showSkeletons();
     try {
@@ -790,6 +835,9 @@ async function renderTennis() {
                 </div>`;
             });
             html += '</div>';
+
+            // Head-to-Head Records
+            html += renderTennisH2H();
 
             // ATP Top 10
             html += '<div class="sh stagger" style="--i:5"><span class="sh-emoji">🏆</span> ATP TOP 10</div>';
