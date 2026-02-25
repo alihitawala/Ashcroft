@@ -128,6 +128,28 @@ async function fetchCached(key, fetcher) {
 
 function safeGet(path) { return API.get(path).catch(() => null); }
 
+let lastUpdatedTs = 0;
+function updateFooter() {
+    lastUpdatedTs = Date.now();
+    const el = document.getElementById('sportsContent');
+    if (!el) return;
+    el.insertAdjacentHTML('beforeend', `
+        <div class="sports-footer" id="sportsFooter">
+            <span class="footer-time" id="footerTime">Updated just now</span>
+            <button class="footer-refresh" onclick="switchTab('${currentSport}')">↻ Refresh</button>
+        </div>`);
+    // Update relative time every 30s
+    if (window._footerInterval) clearInterval(window._footerInterval);
+    window._footerInterval = setInterval(() => {
+        const el = document.getElementById('footerTime');
+        if (!el) return;
+        const sec = Math.floor((Date.now() - lastUpdatedTs) / 1000);
+        if (sec < 60) el.textContent = 'Updated just now';
+        else if (sec < 3600) el.textContent = `Updated ${Math.floor(sec/60)} min ago`;
+        else el.textContent = `Updated ${Math.floor(sec/3600)}h ago`;
+    }, 30000);
+}
+
 function crest(url, size = 32) {
     if (!url) return '';
     const cls = `crest crest-${size}`;
@@ -406,6 +428,7 @@ async function renderFootball() {
         html += renderNews(fbNews?.data || fbNews);
 
         document.getElementById('sportsContent').innerHTML = html;
+        updateFooter();
         if (nextMatch && !liveMatch) {
             const el = document.getElementById('fbCountdown');
             if (el) startCountdown(nextMatch.date, el);
@@ -671,6 +694,7 @@ async function renderCricket() {
 
         document.getElementById('sportsContent').innerHTML = html || emptyCard('🏏', 'No Cricket Data', 'Check back later');
 
+        updateFooter();
         // Countdown for India match
         const nextIndia = upcoming.find(m => m.teams?.some(t => t.toLowerCase().includes('india')));
         if (!heroMatch && nextIndia) {
@@ -923,6 +947,7 @@ async function renderTennis() {
 
         document.getElementById('sportsContent').innerHTML = html;
 
+        updateFooter();
         if (nextSlam && new Date(nextSlam.start) > now) {
             const flipEl = document.getElementById('tennisFlipCountdown');
             if (flipEl) {
@@ -1118,6 +1143,7 @@ async function renderF1() {
         html += renderNews(f1News?.data || f1News);
 
         document.getElementById('sportsContent').innerHTML = html;
+        updateFooter();
 
         if (nextRace) {
             const el = document.getElementById('f1Countdown');

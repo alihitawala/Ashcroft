@@ -1483,3 +1483,32 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     display: inline-block; padding: 1px 7px; border-radius: 8px;
     font-size: 0.6rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
 }
+
+/* Last Updated Footer */
+.sports-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0 8px;
+  margin-top: 12px;
+  opacity: 0.5;
+  font-size: 12px;
+  transition: opacity 0.2s;
+}
+.sports-footer:hover { opacity: 0.8; }
+.footer-time { color: var(--text-secondary, #888); }
+.footer-refresh {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--sport-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.footer-refresh:hover {
+  background: var(--sport-primary);
+  color: #fff;
+}
