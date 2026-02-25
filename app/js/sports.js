@@ -107,7 +107,32 @@ function switchTab(sport) {
 
 // ─── Helpers ───
 function showSkeletons() {
-    document.getElementById('sportsContent').innerHTML = '<div class="skel-hero"></div>' + '<div class="skel-card"></div>'.repeat(4);
+    const skels = {
+        football: `<div class="skel-hero"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-match"></div><div class="skel-match"></div><div class="skel-match"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-table"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-news-row"><div class="skel-news-img"></div><div class="skel-news-lines"></div></div>
+            <div class="skel-news-row"><div class="skel-news-img"></div><div class="skel-news-lines"></div></div>`,
+        cricket: `<div class="skel-hero"></div>
+            <div class="skel-filter-bar"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-match"></div><div class="skel-match"></div><div class="skel-match"></div>
+            <div class="skel-news-row"><div class="skel-news-img"></div><div class="skel-news-lines"></div></div>`,
+        tennis: `<div class="skel-hero" style="height:220px"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-ranking"></div><div class="skel-ranking"></div><div class="skel-ranking"></div><div class="skel-ranking"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-h2h-row"></div><div class="skel-h2h-row"></div>`,
+        f1: `<div class="skel-hero"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-card" style="height:100px"></div><div class="skel-card" style="height:100px"></div>
+            <div class="skel-section-title"></div>
+            <div class="skel-standing"></div><div class="skel-standing"></div><div class="skel-standing"></div>`,
+    };
+    document.getElementById('sportsContent').innerHTML = skels[currentSport] || skels.football;
 }
 
 function showError(msg) {

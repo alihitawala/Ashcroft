@@ -1249,22 +1249,27 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .sport-error .err-icon { font-size: 36px; margin-bottom: 10px; }
 .sport-error p { font-size: 13px; margin-bottom: 12px; }
 
-.skel-hero {
-    height: 200px;
-    border-radius: 18px;
+.skel-hero, .skel-card, .skel-match, .skel-section-title, .skel-table,
+.skel-filter-bar, .skel-ranking, .skel-h2h-row, .skel-standing,
+.skel-news-img, .skel-news-lines {
     background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
-    margin-bottom: 12px;
-}
-.skel-card {
-    height: 80px;
     border-radius: 12px;
-    background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
     margin-bottom: 8px;
 }
+.skel-hero { height: 200px; border-radius: 18px; margin-bottom: 16px; }
+.skel-card { height: 80px; }
+.skel-section-title { height: 20px; width: 40%; border-radius: 8px; margin: 16px 0 10px; }
+.skel-match { height: 64px; border-radius: 10px; }
+.skel-table { height: 180px; border-radius: 14px; }
+.skel-filter-bar { height: 36px; width: 80%; border-radius: 18px; margin: 12px auto; }
+.skel-ranking { height: 48px; border-radius: 10px; }
+.skel-h2h-row { height: 72px; border-radius: 12px; }
+.skel-standing { height: 44px; border-radius: 10px; }
+.skel-news-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.skel-news-img { width: 90px; height: 90px; border-radius: 8px; flex-shrink: 0; }
+.skel-news-lines { flex: 1; height: 90px; border-radius: 8px; }
 
 /* ─── AI Summary Card ─── */
 .ai-summary {
