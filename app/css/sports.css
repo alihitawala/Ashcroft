@@ -991,6 +991,32 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 }
 .done-check { color: var(--green); font-size: 13px; font-weight: 700; }
 
+/* F1 Enhanced Calendar */
+.f1-season-progress { display: flex; gap: 4px; padding: 12px 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+.f1-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.2s; cursor: default; }
+.f1-dot.done { background: var(--sport-primary); }
+.f1-dot.next { background: var(--sport-primary); animation: pulse 1.5s ease infinite; box-shadow: 0 0 8px var(--sport-primary); }
+.f1-dot.future { background: var(--surface3, var(--surface2)); }
+.race-next-card { background: var(--surface); border: 2px solid var(--sport-primary); border-radius: 14px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; }
+.race-next-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #FF1801, #FF8000, #FFD700); }
+.race-next-flag { font-size: 36px; }
+.race-next-name { font-size: 18px; font-weight: 800; margin: 4px 0; }
+.race-next-circuit { font-size: 12px; color: var(--text-secondary); }
+.race-next-date { font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
+.race-next-round { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+.race-next-countdown { display: flex; gap: 8px; margin-top: 12px; align-items: flex-end; }
+.race-item-enhanced { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; transition: all 0.2s; }
+.race-item-enhanced:hover { border-color: var(--sport-primary); }
+.race-item-enhanced.completed { opacity: 0.5; }
+.race-flag-large { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+.race-info { flex: 1; min-width: 0; }
+.race-gp-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-circuit-name { font-size: 11px; color: var(--text-tertiary); }
+.race-date-col { text-align: right; flex-shrink: 0; }
+.race-date-day { font-size: 12px; font-weight: 600; }
+.race-date-month { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
+.sprint-badge { font-size: 9px; background: #FF8000; color: white; padding: 1px 5px; border-radius: 3px; font-weight: 700; text-transform: uppercase; margin-left: 4px; vertical-align: middle; }
+
 /* F1 Driver/Constructor Standings */
 .standings-card {
     background: var(--surface);

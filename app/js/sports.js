@@ -918,27 +918,7 @@ async function renderF1() {
         // RACE CALENDAR
         if (races.length) {
             html += '<div class="sh stagger" style="--i:3"><span class="sh-emoji">📅</span> RACE CALENDAR</div>';
-            html += '<div class="f1-cal">';
-            let nextFound = false;
-            races.forEach((r, i) => {
-                const rDate = new Date(r.date);
-                const done = rDate < now;
-                const isNext = !done && !nextFound;
-                if (isNext) nextFound = true;
-                const flag = COUNTRY_FLAGS[r.country] || '🏁';
-                html += `<div class="f1-race ${done ? 'f1-done' : ''} ${isNext ? 'f1-next' : ''} stagger" style="--i:${Math.min(i + 4, 18)}">
-                    <span class="f1-round">R${r.round}</span>
-                    <span class="f1-flag">${flag}</span>
-                    <div class="f1-rinfo">
-                        <span class="f1-rname">${r.name}</span>
-                        <span class="f1-rcircuit">${r.circuit || ''}</span>
-                    </div>
-                    <span class="f1-rdate">${fmtShort(r.date)}</span>
-                    ${isNext ? '<span class="next-badge">NEXT</span>' : ''}
-                    ${done ? '<span class="done-check">✓</span>' : ''}
-                </div>`;
-            });
-            html += '</div>';
+            html += renderF1Calendar(races, now);
         }
 
         // STANDINGS (when data exists)
@@ -997,6 +977,97 @@ async function renderF1() {
         console.error('F1 error:', e);
         showError('Failed to load F1 data.');
     }
+}
+
+// Known 2026 sprint rounds (typical F1 sprint weekends)
+const F1_SPRINT_ROUNDS = new Set([2, 4, 6, 11, 14, 17, 19, 21]);
+
+function renderF1Calendar(races, now) {
+    let nextIdx = races.findIndex(r => new Date(r.date) > now);
+    if (nextIdx === -1) nextIdx = races.length; // all done
+
+    // Season progress dots
+    let html = '<div class="f1-season-progress">';
+    races.forEach((r, i) => {
+        const cls = i < nextIdx ? 'done' : i === nextIdx ? 'next' : 'future';
+        const flag = COUNTRY_FLAGS[r.country] || '🏁';
+        html += `<div class="f1-dot ${cls}" title="R${r.round} ${r.name}"></div>`;
+    });
+    html += '</div>';
+
+    html += '<div class="f1-cal">';
+
+    // Completed races (collapsed)
+    if (nextIdx > 0) {
+        races.slice(0, nextIdx).forEach((r, i) => {
+            const flag = COUNTRY_FLAGS[r.country] || '🏁';
+            const d = new Date(r.date);
+            const mon = d.toLocaleDateString('en-US', { month: 'short' });
+            const day = d.getDate();
+            const hasSprint = F1_SPRINT_ROUNDS.has(Number(r.round));
+            html += `<div class="race-item-enhanced completed stagger" style="--i:${Math.min(i + 4, 12)}">
+                <span class="race-flag-large">${flag}</span>
+                <div class="race-info">
+                    <div class="race-gp-name">${r.name} ${hasSprint ? '<span class="sprint-badge">SPRINT</span>' : ''}</div>
+                    <div class="race-circuit-name">${r.circuit || ''}</div>
+                </div>
+                <div class="race-date-col">
+                    <div class="race-date-day">${day}</div>
+                    <div class="race-date-month">${mon}</div>
+                </div>
+                <span class="done-check">✓</span>
+            </div>`;
+        });
+    }
+
+    // NEXT race — hero card
+    if (nextIdx < races.length) {
+        const r = races[nextIdx];
+        const flag = COUNTRY_FLAGS[r.country] || '🏁';
+        const raceDateTime = new Date(r.date + 'T' + (r.time || '00:00:00Z'));
+        const ptDate = raceDateTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const diff = raceDateTime - now;
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const hasSprint = F1_SPRINT_ROUNDS.has(Number(r.round));
+
+        html += `<div class="race-next-card stagger" style="--i:${Math.min(nextIdx + 4, 14)}">
+            <div class="race-next-round">Round ${r.round} of ${races.length} ${hasSprint ? '<span class="sprint-badge">SPRINT</span>' : ''}</div>
+            <div class="race-next-flag">${flag}</div>
+            <div class="race-next-name">${r.name}</div>
+            <div class="race-next-circuit">${r.circuit || ''}</div>
+            <div class="race-next-date">🏁 ${ptDate} PT</div>
+            <div class="race-next-countdown">
+                ${diff > 0 ? `<span style="font-size:22px;font-weight:800;color:var(--text)">${days}d ${hours}h</span><span style="font-size:12px;color:var(--text-tertiary);align-self:flex-end;padding-bottom:2px">until lights out</span>` : '<span style="font-size:14px;font-weight:700;color:var(--sport-primary)">Race Day! 🏎️</span>'}
+            </div>
+        </div>`;
+    }
+
+    // Future races
+    if (nextIdx + 1 < races.length) {
+        races.slice(nextIdx + 1).forEach((r, i) => {
+            const flag = COUNTRY_FLAGS[r.country] || '🏁';
+            const d = new Date(r.date);
+            const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+            const mon = d.toLocaleDateString('en-US', { month: 'short' });
+            const day = d.getDate();
+            const hasSprint = F1_SPRINT_ROUNDS.has(Number(r.round));
+            html += `<div class="race-item-enhanced stagger" style="--i:${Math.min(nextIdx + i + 5, 18)}">
+                <span class="race-flag-large">${flag}</span>
+                <div class="race-info">
+                    <div class="race-gp-name">${r.name} ${hasSprint ? '<span class="sprint-badge">SPRINT</span>' : ''}</div>
+                    <div class="race-circuit-name">${r.circuit || ''}</div>
+                </div>
+                <div class="race-date-col">
+                    <div class="race-date-day">${weekday} ${day}</div>
+                    <div class="race-date-month">${mon}</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    html += '</div>';
+    return html;
 }
 
 function findTeamColor(team) {
