@@ -9,9 +9,8 @@ const router = Router();
 const cache = new Map();
 function cached(key, ttlMs, fetchFn) {
   const entry = cache.get(key);
-  if (entry && Date.now() < entry.expires) return entry.data;
+  if (entry && Date.now() < entry.expires) return Promise.resolve(entry.data);
   const promise = fetchFn().then(data => {
-    // Don't cache null/undefined results — they indicate a transient API failure
     if (data === null || data === undefined) {
       console.warn(`Cache skip null result [${key}]`);
       return entry?.data || data;
@@ -22,7 +21,7 @@ function cached(key, ttlMs, fetchFn) {
     console.error(`Cache fetch error [${key}]:`, err.message);
     return entry?.data || null;
   });
-  if (entry?.data) return entry.data;
+  if (entry?.data) return Promise.resolve(entry.data);
   return promise;
 }
 
