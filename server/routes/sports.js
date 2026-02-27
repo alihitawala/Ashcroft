@@ -577,7 +577,16 @@ const RSS_URLS = {
   f1: 'https://www.espn.com/espn/rss/rpm/news',
 };
 
-/** GET /news/:sport - ESPN news feed */
+/** Fetch og:image from article URL */
+async function fetchOgImage(url) {
+  try {
+    const html = await fetchText(url);
+    const match = html.match(/og:image["']\s*content=["']([^"']+)/i);
+    return match?.[1] || '';
+  } catch { return ''; }
+}
+
+/** GET /news/:sport - ESPN news feed with article images */
 router.get('/news/:sport', async (req, res) => {
   try {
     const sport = req.params.sport;
@@ -586,7 +595,14 @@ router.get('/news/:sport', async (req, res) => {
     const key = `news-${sport}`;
     const result = await cached(key, 1800000, async () => {
       const xml = await fetchText(url);
-      return parseRSS(xml).slice(0, 8);
+      const articles = parseRSS(xml).slice(0, 6);
+      // Fetch og:image for articles missing images (parallel, with timeout)
+      await Promise.all(articles.map(async (a) => {
+        if (!a.image && a.link) {
+          a.image = await fetchOgImage(a.link);
+        }
+      }));
+      return articles;
     });
     respond(res, result, cache.has(key));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch news' }); }
