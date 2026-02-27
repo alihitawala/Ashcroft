@@ -169,6 +169,96 @@ function initAppShell(activePage) {
         if (moreEl) moreEl.classList.add('active');
     }
 
+    // ─── Horizontal Swipe Navigation ───
+    // Swipe left/right to switch sub-tabs (garden, sports, events) or neighboring pages
+    const NAV_ORDER = ['dashboard','grocery','gallery','garden','sports','flights','events','notes','kanban','tasks','settings'];
+    const NAV_URLS = {
+        dashboard:'/app/dashboard.html', grocery:'/app/grocery.html', gallery:'/app/gallery.html',
+        garden:'/app/garden.html', sports:'/app/sports.html', flights:'/app/flights.html',
+        events:'/app/events.html', notes:'/app/notes.html', kanban:'/app/kanban.html',
+        tasks:'/app/tasks.html', settings:'/app/settings.html'
+    };
+
+    let _swStartX = 0, _swStartY = 0, _swAxis = null, _swActive = false;
+    const mainContent = document.querySelector('.main-content') || document.querySelector('.main-body') || document.body;
+
+    function getSubTabs() {
+        // Detect sub-tabs on the current page
+        const tabBtns = document.querySelectorAll(
+            '.garden-tab, .sport-tab, .events-tab, .tab-btn, [data-tab], [data-sport]'
+        );
+        if (!tabBtns.length) return null;
+        const tabs = [...tabBtns];
+        const activeIdx = tabs.findIndex(t => t.classList.contains('active'));
+        return { tabs, activeIdx };
+    }
+
+    function switchSubTab(direction) {
+        const info = getSubTabs();
+        if (!info) return false;
+        const nextIdx = info.activeIdx + direction;
+        if (nextIdx >= 0 && nextIdx < info.tabs.length) {
+            info.tabs[nextIdx].click();
+            if (navigator.vibrate) navigator.vibrate(10);
+            return true;
+        }
+        return false; // at edge — allow page navigation
+    }
+
+    function navigateToPage(direction) {
+        const curIdx = NAV_ORDER.indexOf(activePage);
+        if (curIdx === -1) return;
+        const nextIdx = curIdx + direction;
+        if (nextIdx >= 0 && nextIdx < NAV_ORDER.length) {
+            const nextPage = NAV_ORDER[nextIdx];
+            if (NAV_URLS[nextPage]) {
+                // Smooth transition
+                const mc = document.querySelector('.main-content');
+                if (mc) {
+                    mc.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+                    mc.style.transform = `translateX(${direction > 0 ? '-30' : '30'}px)`;
+                    mc.style.opacity = '0';
+                }
+                setTimeout(() => { window.location.href = NAV_URLS[nextPage]; }, 150);
+            }
+        }
+    }
+
+    mainContent.addEventListener('touchstart', e => {
+        _swStartX = e.touches[0].clientX;
+        _swStartY = e.touches[0].clientY;
+        _swAxis = null;
+        _swActive = true;
+    }, {passive: true});
+
+    mainContent.addEventListener('touchmove', e => {
+        if (!_swActive) return;
+        const dx = e.touches[0].clientX - _swStartX;
+        const dy = e.touches[0].clientY - _swStartY;
+        // Lock axis after 10px
+        if (!_swAxis && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+            _swAxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+        }
+        if (_swAxis === 'h') e.preventDefault();
+    }, {passive: false});
+
+    mainContent.addEventListener('touchend', e => {
+        if (!_swActive || _swAxis !== 'h') { _swActive = false; return; }
+        _swActive = false;
+        const dx = e.changedTouches[0].clientX - _swStartX;
+        const threshold = 60;
+        if (Math.abs(dx) < threshold) return;
+
+        const direction = dx < 0 ? 1 : -1; // swipe left = forward(1), right = back(-1)
+
+        // Try sub-tabs first
+        const switched = switchSubTab(direction);
+        if (!switched) {
+            // At edge of sub-tabs or no sub-tabs — navigate to neighboring page
+            navigateToPage(direction);
+        }
+    }, {passive: true});
+
     // Load Lucide icons
     const lucideScript = document.createElement('script');
     lucideScript.src = '/libs/lucide.min.js';
