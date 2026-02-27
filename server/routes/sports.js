@@ -600,8 +600,8 @@ async function generateFootballSummary() {
   const [muData, rmData, plStandings, pdStandings] = await Promise.all([
     cached('fb-raw-66', TTL.results, () => fetchJSON(`${FB_BASE}/teams/66/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])),
     cached('fb-raw-86', TTL.results, () => fetchJSON(`${FB_BASE}/teams/86/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])),
-    cached('fb-standings-PL', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PL/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
-    cached('fb-standings-PD', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PD/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
+    cached('fb-raw-standings-PL', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PL/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
+    cached('fb-raw-standings-PD', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PD/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
   ]);
   const parts = [];
   const plTable = Array.isArray(plStandings) ? plStandings : [];

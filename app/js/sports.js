@@ -326,6 +326,7 @@ async function renderFootball() {
             fetchCached('football-news', () => safeGet('/sports/news/football')),
             fetchCached('football-summary', () => safeGet('/sports/summary/football')),
         ]);
+        console.log('[FB Debug]', {muData:!!muData, rmData:!!rmData, plStandings:!!plStandings, muRecent:muData?.data?.recent?.length, rmRecent:rmData?.data?.recent?.length});
 
         const muRecent = muData?.data?.recent || [];
         const muUpcoming = muData?.data?.upcoming || [];
@@ -501,7 +502,7 @@ async function renderFootball() {
         }
     } catch (e) {
         console.error('Football error:', e);
-        showError('Failed to load football data.');
+        showError(`Failed to load football data: ${e.message}`);
     }
 }
 
