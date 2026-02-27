@@ -122,6 +122,12 @@ function renderAppShell(pageTitle, activePage) {
 
 // ─── App Shell Initialization ───
 function initAppShell(activePage) {
+    // Move bottom-nav to document.body so no parent transform/flex can break position:fixed
+    const bnav = document.querySelector('.bottom-nav');
+    if (bnav && bnav.parentElement !== document.body) {
+        document.body.appendChild(bnav);
+    }
+
     document.querySelector('.sidebar-backdrop')?.addEventListener('click', closeSidebar);
     document.querySelector('.hamburger')?.addEventListener('click', openSidebar);
 
