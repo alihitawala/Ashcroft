@@ -499,7 +499,7 @@ router.get('/next-up', async (req, res) => {
     }
 
     // F1 next session
-    const f1Next = await cached('f1-next', TTL.standings, async () => {
+    const f1Next = await cached('f1-raw-next', TTL.standings, async () => {
       const json = await fetchJSON('https://api.openf1.org/v1/sessions?year=2025');
       if (!Array.isArray(json)) return null;
       const upcoming = json.filter(s => s.date_start > now.toISOString());
@@ -508,7 +508,7 @@ router.get('/next-up', async (req, res) => {
     if (f1Next) events.push({ sport: 'f1', name: `${f1Next.session_name || f1Next.name} - ${f1Next.circuit_short_name || f1Next.circuit}`, date: f1Next.date_start || f1Next.dateStart });
 
     // Tennis
-    const tennisScores = await cached('tennis-scores', TTL.live, async () => {
+    const tennisScores = await cached('tennis-raw-scores', TTL.live, async () => {
       const json = await fetchJSON('https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard');
       return json?.events || [];
     });
@@ -638,7 +638,7 @@ async function generateFootballSummary() {
 }
 
 async function generateCricketSummary() {
-  const upcoming = await cached('cric-upcoming', TTL.standings, async () => {
+  const upcoming = await cached('cric-raw-upcoming', TTL.standings, async () => {
     const json = await fetchJSON(`https://api.cricapi.com/v1/matches?apikey=${cricKey()}&offset=0`);
     return json?.data || [];
   });
@@ -651,7 +651,7 @@ async function generateCricketSummary() {
 }
 
 async function generateTennisSummary() {
-  const rankings = await cached('tennis-rankings', TTL.standings, async () => {
+  const rankings = await cached('tennis-raw-rankings', TTL.standings, async () => {
     const json = await fetchJSON('https://site.api.espn.com/apis/site/v2/sports/tennis/atp/rankings');
     return json?.rankings?.[0]?.ranks?.slice(0, 10).map(r => ({ rank: r.current, name: r.athlete?.displayName, points: r.points })) || [];
   });
@@ -670,7 +670,7 @@ async function generateTennisSummary() {
 }
 
 async function generateF1Summary() {
-  const calendar = await cached('f1-calendar', TTL.calendar, async () => {
+  const calendar = await cached('f1-raw-calendar', TTL.calendar, async () => {
     let json = await fetchJSON(`${JOLPICA}/2026/races.json`);
     let races = json?.MRData?.RaceTable?.Races;
     if (!races || !races.length) { json = await fetchJSON(`${JOLPICA}/2025/races.json`); races = json?.MRData?.RaceTable?.Races || []; }
