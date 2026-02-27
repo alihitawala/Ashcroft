@@ -178,6 +178,19 @@ async function fetchCached(key, fetcher) {
     return data;
 }
 
+function allCached(...keys) {
+    return keys.every(k => cache[k] && Date.now() - cache[k].ts < 120000);
+}
+
+function bustCache(...keys) {
+    keys.forEach(k => delete cache[k]);
+}
+
+function forceRefresh() {
+    Object.keys(cache).forEach(k => delete cache[k]);
+    switchTab(currentSport);
+}
+
 function safeGet(path) { return API.get(path).catch(() => null); }
 
 let lastUpdatedTs = 0;
@@ -188,7 +201,7 @@ function updateFooter() {
     el.insertAdjacentHTML('beforeend', `
         <div class="sports-footer" id="sportsFooter">
             <span class="footer-time" id="footerTime">Updated just now</span>
-            <button class="footer-refresh" onclick="switchTab('${currentSport}')">↻ Refresh</button>
+            <button class="footer-refresh" onclick="forceRefresh()">↻ Refresh</button>
         </div>`);
     // Update relative time every 30s
     if (window._footerInterval) clearInterval(window._footerInterval);
@@ -316,7 +329,7 @@ function renderSummary(summary) {
 
 // ─── FOOTBALL ───
 async function renderFootball() {
-    showSkeletons();
+    if (!allCached('fb-mu','fb-rm','fb-pl','fb-pd','football-news','football-summary')) showSkeletons();
     try {
         const [muData, rmData, plStandings, pdStandings, fbNews, fbSummary] = await Promise.all([
             fetchCached('fb-mu', () => safeGet('/sports/football/matches/66')),
@@ -630,7 +643,7 @@ function renderTitleRace(title, table) {
 
 // ─── CRICKET ───
 async function renderCricket() {
-    showSkeletons();
+    if (!allCached('cr-live','cr-upcoming','cricket-news','cricket-summary')) showSkeletons();
     try {
         const [liveResp, upcomingResp, crNews, crSummary] = await Promise.all([
             fetchCached('cr-live', () => safeGet('/sports/cricket/live')),
@@ -865,7 +878,7 @@ function renderTennisH2H() {
 }
 
 async function renderTennis() {
-    showSkeletons();
+    if (!allCached('tn-rank','tn-scores','tennis-news','tennis-summary')) showSkeletons();
     try {
         const [rankings, scores, tnNews, tnSummary] = await Promise.all([
             fetchCached('tn-rank', () => safeGet('/sports/tennis/rankings')),
@@ -1044,7 +1057,7 @@ async function renderTennis() {
 
 // ─── F1 ───
 async function renderF1() {
-    showSkeletons();
+    if (!allCached('f1-drv','f1-con','f1-cal','f1-news','f1-summary','f1-recap')) showSkeletons();
     try {
         const [drivers, constructors, calendar, f1News, f1Summary, f1Recap] = await Promise.all([
             fetchCached('f1-drv', () => safeGet('/sports/f1/standings/drivers')),
