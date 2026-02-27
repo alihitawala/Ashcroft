@@ -485,7 +485,7 @@ router.get('/next-up', async (req, res) => {
     const events = [];
 
     // Football - next scheduled for Man Utd & Real Madrid
-    const fbMatches = await cached('fb-matches-66', TTL.results, async () => {
+    const fbMatches = await cached('fb-nextup-66', TTL.results, async () => {
       const json = await fetchJSON(`${FB_BASE}/teams/66/matches?limit=5&status=SCHEDULED`, fbHeaders());
       return json?.matches || [];
     });
@@ -598,8 +598,8 @@ router.get('/news/:sport', async (req, res) => {
 
 async function generateFootballSummary() {
   const [muData, rmData, plStandings, pdStandings] = await Promise.all([
-    cached('fb-matches-66', TTL.results, () => fetchJSON(`${FB_BASE}/teams/66/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])).then(d => d?.recent || d),
-    cached('fb-matches-86', TTL.results, () => fetchJSON(`${FB_BASE}/teams/86/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])).then(d => d?.recent || d),
+    cached('fb-raw-66', TTL.results, () => fetchJSON(`${FB_BASE}/teams/66/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])),
+    cached('fb-raw-86', TTL.results, () => fetchJSON(`${FB_BASE}/teams/86/matches?limit=5&status=FINISHED`, fbHeaders()).then(j => j?.matches || [])),
     cached('fb-standings-PL', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PL/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
     cached('fb-standings-PD', TTL.standings, () => fetchJSON(`${FB_BASE}/competitions/PD/standings`, fbHeaders()).then(j => j?.standings?.[0]?.table || [])),
   ]);
