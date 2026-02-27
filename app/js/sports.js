@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="sport-tabs" id="sportTabs"></div>
                     <button class="sound-toggle" id="soundToggle" onclick="this.textContent = sportsSounds.toggle() ? '🔊' : '🔇'" title="Toggle sound effects">🔊</button>
                 </div>
+                <div class="sports-bg-pattern"></div>
                 <div class="sports-content" id="sportsContent"></div>
             </div>
             ${shell.bottomNav}

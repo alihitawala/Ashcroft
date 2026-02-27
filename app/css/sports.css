@@ -47,10 +47,8 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     max-width: 920px;
     width: 100%;
     animation: fadeIn 0.25s ease;
-    position: relative;
 }
-.sports-content::before {
-    content: '';
+.sports-bg-pattern {
     position: fixed;
     inset: 0;
     background-image: var(--sport-pattern);
