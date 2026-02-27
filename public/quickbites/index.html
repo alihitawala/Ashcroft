@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+<title>QuickBites — News in 60 Words</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#ffffff;--card-bg:#ffffff;--text:#1a1a1a;--text-secondary:#6b7280;
+  --border:#e5e7eb;--accent:#ef4444;--pill-bg:#f3f4f6;--pill-active:#1a1a1a;
+  --pill-active-text:#fff;--overlay:rgba(0,0,0,0.45);--shadow:0 2px 16px rgba(0,0,0,0.08);
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0f0f0f;--card-bg:#1a1a1a;--text:#f0f0f0;--text-secondary:#9ca3af;
+    --border:#2a2a2a;--pill-bg:#2a2a2a;--pill-active:#f0f0f0;--pill-active-text:#1a1a1a;
+    --overlay:rgba(0,0,0,0.6);--shadow:0 2px 16px rgba(0,0,0,0.3);
+  }
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;touch-action:pan-y;user-select:none;-webkit-user-select:none;
+  overscroll-behavior-x:none;-webkit-overflow-scrolling:touch;
+}
+#app{height:100%;display:flex;flex-direction:column}
+
+/* Top Bar */
+.top-bar{
+  padding:12px 16px;padding-top:calc(12px + var(--safe-top));
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);z-index:100;position:relative;flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.logo svg{width:28px;height:28px}
+.counter{font-size:13px;color:var(--text-secondary);font-weight:500}
+
+/* Category Tabs */
+.categories{
+  display:flex;gap:8px;padding:4px 16px 12px;overflow-x:auto;flex-shrink:0;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.categories::-webkit-scrollbar{display:none}
+.cat-pill{
+  flex-shrink:0;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;
+  background:var(--pill-bg);color:var(--text-secondary);border:none;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.cat-pill.active{background:var(--pill-active);color:var(--pill-active-text)}
+
+/* Card Container */
+.card-container{flex:1;position:relative;overflow:hidden}
+.card{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  display:flex;flex-direction:column;background:var(--card-bg);
+  will-change:transform,opacity;
+}
+.card.hidden{display:none}
+
+/* Image Section */
+.card-image{
+  position:relative;width:100%;height:48%;flex-shrink:0;overflow:hidden;background:#e5e7eb;
+}
+@media(prefers-color-scheme:dark){.card-image{background:#2a2a2a}}
+.card-image img{width:100%;height:100%;object-fit:cover;display:block}
+.card-image .gradient{
+  position:absolute;bottom:0;left:0;right:0;height:50%;
+  background:linear-gradient(transparent,var(--overlay));
+}
+.category-badge{
+  position:absolute;top:16px;left:16px;padding:4px 12px;border-radius:4px;
+  font-size:11px;font-weight:700;letter-spacing:0.5px;color:#fff;
+}
+
+/* Content Section */
+.card-content{
+  flex:1;display:flex;flex-direction:column;padding:20px 20px;
+  padding-bottom:calc(16px + var(--safe-bottom));overflow:hidden;
+}
+.headline{font-size:19px;font-weight:700;line-height:1.35;letter-spacing:-0.3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:14px;
+}
+.summary{font-size:15px;line-height:1.6;color:var(--text-secondary);flex:1;overflow:hidden}
+.card-meta{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--border);
+}
+.source-info{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)}
+.source-name{font-weight:600;color:var(--text)}
+.read-more{color:var(--accent);font-weight:600;font-size:13px;text-decoration:none}
+.share-btn{
+  width:36px;height:36px;border-radius:50%;background:var(--pill-bg);border:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);
+}
+
+/* Breaking badge */
+.breaking .category-badge{background:var(--accent);animation:pulse-badge 2s infinite}
+@keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* Swipe hint */
+.swipe-hint{
+  position:absolute;bottom:calc(24px + var(--safe-bottom));left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  animation:hint-bounce 2s ease-in-out infinite;opacity:0.5;z-index:10;pointer-events:none;
+}
+.swipe-hint svg{width:24px;height:24px;color:var(--text-secondary)}
+.swipe-hint span{font-size:11px;color:var(--text-secondary);font-weight:500}
+@keyframes hint-bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-8px)}}
+
+/* Caught up card */
+.caught-up{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;text-align:center;padding:40px;gap:16px;
+}
+.caught-up .emoji{font-size:64px}
+.caught-up h2{font-size:22px;font-weight:700}
+.caught-up p{color:var(--text-secondary);font-size:15px;line-height:1.5}
+
+/* Skeleton */
+.skeleton{animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{opacity:.6}50%{opacity:.3}100%{opacity:.6}}
+.skeleton-img{width:100%;height:48%;background:var(--pill-bg)}
+.skeleton-text{margin:20px;display:flex;flex-direction:column;gap:12px}
+.skeleton-line{height:16px;border-radius:4px;background:var(--pill-bg)}
+.skeleton-line.w70{width:70%}.skeleton-line.w100{width:100%}.skeleton-line.w90{width:90%}
+
+/* Refresh indicator */
+.refresh-indicator{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:200;
+  opacity:0;transition:opacity .2s;pointer-events:none;padding-top:calc(8px + var(--safe-top));
+}
+.refresh-spinner{width:28px;height:28px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-bar">
+    <div class="logo">
+      <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#ef4444"/>
+      <path d="M7 8h14M7 14h10M7 20h12" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+      QuickBites
+    </div>
+    <div class="counter" id="counter"></div>
+  </div>
+  <div class="categories" id="categories"></div>
+  <div class="refresh-indicator" id="refresh"><div class="refresh-spinner"></div></div>
+  <div class="card-container" id="cardContainer"></div>
+</div>
+
+<script>
+const NEWS = [
+  {cat:"TECH",color:"#6366f1",headline:"Apple Unveils M5 Chip With Unprecedented AI Performance",
+   summary:"Apple announced its next-generation M5 processor at a special event in Cupertino today. The chip features a dedicated neural engine capable of running large language models locally on device. Benchmarks show a forty percent improvement over the M4 in sustained workloads. The chip will power new MacBook Pro models shipping next month with enhanced battery life.",
+   source:"TechCrunch",time:"2h ago",img:"https://picsum.photos/seed/apple-m5/800/500",url:"#"},
+  {cat:"SPORTS",color:"#10b981",headline:"Champions League Quarter-Finals Draw Produces Dream Matchups",
+   summary:"UEFA completed the Champions League quarter-final draw in Nyon on Thursday morning. Real Madrid will face Manchester City in a rematch of last year's dramatic semifinal. Barcelona draws Bayern Munich while Arsenal meets Inter Milan for the first time since two thousand and eleven. Matches begin April eighth with second legs the following week.",
+   source:"BBC Sport",time:"3h ago",img:"https://picsum.photos/seed/champions-league/800/500",url:"#"},
+  {cat:"BUSINESS",color:"#f59e0b",headline:"Federal Reserve Holds Interest Rates Steady Amid Mixed Signals",
+   summary:"The Federal Reserve kept its benchmark interest rate unchanged at the current range following its two day policy meeting. Chair Powell cited persistent inflation in services alongside cooling labor markets as reasons for caution. Markets had priced in a seventy percent probability of a hold. The next meeting in May could bring the first cut this cycle.",
+   source:"Reuters",time:"5h ago",img:"https://picsum.photos/seed/fed-rates/800/500",url:"#"},
+  {cat:"WORLD",color:"#8b5cf6",headline:"Historic Climate Agreement Reached at Emergency UN Summit",
+   summary:"One hundred ninety three nations signed a landmark climate accord at the emergency United Nations summit in Geneva today. The agreement commits signatories to halving emissions by twenty thirty five with binding enforcement mechanisms. Developing nations secured a two hundred billion dollar annual adaptation fund. Environmental groups cautiously praised the deal while noting implementation challenges remain significant.",
+   source:"AP News",time:"1h ago",img:"https://picsum.photos/seed/un-climate/800/500",url:"#",breaking:true},
+  {cat:"ENTERTAINMENT",color:"#ec4899",headline:"Beyoncé Announces Surprise World Tour Starting This Summer",
+   summary:"Beyoncé revealed plans for a massive world tour kicking off in June across five continents. The Renaissance World Tour sequel will feature an entirely new stage design with holographic elements and a rotating platform. Presale tickets sold out within minutes on all major platforms. The North American leg includes thirty dates spanning from New York to Los Angeles.",
+   source:"Billboard",time:"4h ago",img:"https://picsum.photos/seed/beyonce-tour/800/500",url:"#"},
+  {cat:"SCIENCE",color:"#06b6d4",headline:"NASA Confirms Water Ice Deposits Discovered in Lunar Craters",
+   summary:"NASA scientists confirmed substantial water ice deposits in permanently shadowed craters near the Moon's south pole using data from the Lunar Reconnaissance Orbiter. The deposits contain an estimated six hundred million metric tons of usable ice. This discovery dramatically improves prospects for sustained lunar habitation and could serve as rocket fuel for deeper space missions.",
+   source:"NASA",time:"6h ago",img:"https://picsum.photos/seed/nasa-moon/800/500",url:"#"},
+  {cat:"TECH",color:"#6366f1",headline:"OpenAI Launches GPT-5 With Real-Time Video Understanding",
+   summary:"OpenAI released GPT-5 today featuring native real time video comprehension and generation capabilities. The model can analyze live camera feeds, understand spatial relationships, and generate photorealistic video clips up to sixty seconds long. Enterprise pricing starts at five cents per minute of video processed. Competitors Google and Anthropic are expected to announce similar capabilities soon.",
+   source:"The Verge",time:"1h ago",img:"https://picsum.photos/seed/gpt5-launch/800/500",url:"#",breaking:true},
+  {cat:"US",color:"#3b82f6",headline:"Senate Passes Bipartisan Infrastructure Bill Worth Two Trillion",
+   summary:"The United States Senate passed a sweeping two trillion dollar infrastructure package with bipartisan support late Wednesday night. The bill allocates funds for bridges roads broadband expansion and electric vehicle charging networks nationwide. Sixty eight senators voted in favor including twelve Republicans crossing party lines. The House is expected to take up the measure within two weeks.",
+   source:"CNN",time:"8h ago",img:"https://picsum.photos/seed/senate-infra/800/500",url:"#"},
+  {cat:"SPORTS",color:"#10b981",headline:"Shohei Ohtani Hits Three Home Runs in Historic Opening Day",
+   summary:"Los Angeles Dodgers star Shohei Ohtani launched three home runs on opening day becoming only the fourth player in modern baseball history to accomplish the feat. His third blast a towering four hundred fifty foot shot cleared the center field pavilion. Ohtani finished five for five with seven runs batted in as the Dodgers won twelve to three.",
+   source:"ESPN",time:"3h ago",img:"https://picsum.photos/seed/ohtani-hr/800/500",url:"#"},
+  {cat:"BUSINESS",color:"#f59e0b",headline:"Tesla Stock Surges Fifteen Percent on Record Delivery Numbers",
+   summary:"Tesla shares jumped fifteen percent in early trading after the company reported record quarterly deliveries of five hundred twenty thousand vehicles. The figure exceeded analyst expectations by nearly ten percent driven by strong demand in China and Europe. The new affordable Model Q contributed significantly with over one hundred thousand units delivered in its first full quarter of production.",
+   source:"Bloomberg",time:"7h ago",img:"https://picsum.photos/seed/tesla-stock/800/500",url:"#"},
+  {cat:"WORLD",color:"#8b5cf6",headline:"Japan Launches World's First Commercial Fusion Power Plant",
+   summary:"Japan officially inaugurated the world's first commercial fusion power plant in Ibaraki Prefecture today marking a historic milestone in clean energy. The facility generates five hundred megawatts enough to power three hundred thousand homes using deuterium fuel extracted from seawater. Construction took eight years and cost twelve billion dollars. Several nations have already expressed interest in licensing the technology.",
+   source:"Reuters",time:"4h ago",img:"https://picsum.photos/seed/japan-fusion/800/500",url:"#"},
+  {cat:"ENTERTAINMENT",color:"#ec4899",headline:"Marvel Reveals Phase Seven Lineup at Special Fan Event",
+   summary:"Marvel Studios president Kevin Feige unveiled the complete Phase Seven slate at a packed fan event in Los Angeles. The lineup includes a new Avengers film directed by the Russo Brothers and standalone movies for three newly introduced characters. A live action X-Men reboot will anchor the phase launching in twenty twenty seven. Fans responded with overwhelming enthusiasm online.",
+   source:"Variety",time:"5h ago",img:"https://picsum.photos/seed/marvel-phase7/800/500",url:"#"},
+  {cat:"SCIENCE",color:"#06b6d4",headline:"CRISPR Gene Therapy Cures Sickle Cell Disease in Clinical Trial",
+   summary:"A groundbreaking clinical trial using CRISPR gene editing has successfully cured sickle cell disease in all forty five participants over a two year follow up period. Patients showed complete elimination of pain crises and normalized hemoglobin levels without significant side effects. The FDA is expected to grant full approval within six months. The therapy could help millions worldwide.",
+   source:"Nature",time:"9h ago",img:"https://picsum.photos/seed/crispr-cure/800/500",url:"#"},
+  {cat:"US",color:"#3b82f6",headline:"California Breaks Record With Ninety Percent Renewable Energy",
+   summary:"California achieved a historic milestone by generating ninety percent of its electricity from renewable sources for a full twenty four hour period last Tuesday. Solar and wind farms produced the bulk of the power supplemented by geothermal and hydroelectric facilities. Governor Newsom called it proof that clean energy transition is both possible and economically viable for large economies.",
+   source:"LA Times",time:"6h ago",img:"https://picsum.photos/seed/california-solar/800/500",url:"#"},
+  {cat:"TECH",color:"#6366f1",headline:"Samsung Unveils Foldable Laptop With Seamless Creaseless Display",
+   summary:"Samsung displayed its first foldable laptop featuring a seventeen inch screen that folds completely flat without any visible crease. The device uses a new ultra thin glass technology developed over five years weighing just one point two kilograms when folded. It runs Windows with a custom dual screen mode for multitasking. Preorders begin next month starting at twenty four hundred dollars.",
+   source:"Wired",time:"2h ago",img:"https://picsum.photos/seed/samsung-fold-laptop/800/500",url:"#"},
+  {cat:"SPORTS",color:"#10b981",headline:"Coco Gauff Wins Third Consecutive Grand Slam Title in Melbourne",
+   summary:"American tennis star Coco Gauff captured her third straight Grand Slam title defeating Iga Swiatek in a thrilling three set Australian Open final. Gauff rallied from a set down winning seven five in the decider with a spectacular passing shot on match point. At twenty one she becomes the youngest woman to hold three consecutive major titles since Steffi Graf.",
+   source:"Tennis Channel",time:"10h ago",img:"https://picsum.photos/seed/gauff-tennis/800/500",url:"#"},
+  {cat:"BUSINESS",color:"#f59e0b",headline:"Global Chip Shortage Officially Ends as Production Hits Record",
+   summary:"The global semiconductor shortage that disrupted industries for over three years has officially ended according to a new report from the Semiconductor Industry Association. Worldwide chip production reached record levels in the fourth quarter driven by massive factory expansions in the United States Taiwan and Germany. Auto manufacturers and consumer electronics companies confirmed supply chains have fully normalized across all categories.",
+   source:"Financial Times",time:"11h ago",img:"https://picsum.photos/seed/chip-shortage/800/500",url:"#"},
+  {cat:"WORLD",color:"#8b5cf6",headline:"India Becomes Third Country to Successfully Land on Mars",
+   summary:"India's space agency ISRO successfully landed its Mangalyaan Three rover on the Martian surface early Thursday morning becoming only the third country to achieve the feat. The rover will spend ninety days analyzing soil samples and searching for signs of microbial life in the Jezero crater region. Prime Minister Modi called it a proud moment for the nation's scientific community.",
+   source:"BBC News",time:"1h ago",img:"https://picsum.photos/seed/india-mars/800/500",url:"#",breaking:true},
+];
+
+const CATS = ["All","US","World","Tech","Business","Sports","Entertainment","Science"];
+let currentIndex = 0, filtered = [...NEWS], startY = 0, startX = 0, currentY = 0, currentX = 0, isDragging = false, swipeAxis = null;
+let cardEl = null, nextCardEl = null, hintShown = false, isRefreshing = false;
+
+// Init categories
+const catContainer = document.getElementById('categories');
+CATS.forEach((c,i) => {
+  const btn = document.createElement('button');
+  btn.className = 'cat-pill' + (i===0?' active':'');
+  btn.textContent = c;
+  btn.onclick = () => {
+    document.querySelectorAll('.cat-pill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filtered = c==='All' ? [...NEWS] : NEWS.filter(n=>n.cat.toUpperCase()===c.toUpperCase());
+    currentIndex = 0;
+    renderCards();
+  };
+  catContainer.appendChild(btn);
+});
+
+function createCardHTML(item, index) {
+  if (!item) {
+    return `<div class="caught-up"><div class="emoji">🎉</div><h2>You're all caught up!</h2><p>You've read all the stories. Pull down to refresh or check back later for more news.</p></div>`;
+  }
+  return `
+    <div class="card-image" style="will-change:transform">
+      <img src="${item.img}" alt="" loading="eager" onerror="this.style.display='none'">
+      <div class="gradient"></div>
+      <div class="category-badge" style="background:${item.color}">${item.cat}</div>
+    </div>
+    <div class="card-content">
+      <div class="headline">${item.headline}</div>
+      <div class="summary">${item.summary}</div>
+      <div class="card-meta">
+        <div class="source-info">
+          <span class="source-name">${item.source}</span>
+          <span>·</span><span>${item.time}</span>
+          <span>·</span><a href="${item.url}" class="read-more">Read More →</a>
+        </div>
+        <button class="share-btn" onclick="shareCard(${index})" aria-label="Share">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2.5"/><circle cx="5" cy="9" r="2.5"/><circle cx="13" cy="14" r="2.5"/><line x1="7.2" y1="10" x2="10.8" y2="12.8"/><line x1="10.8" y1="5.2" x2="7.2" y2="8"/></svg>
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderCards() {
+  const container = document.getElementById('cardContainer');
+  container.innerHTML = '';
+  
+  // Current card
+  cardEl = document.createElement('div');
+  cardEl.className = 'card' + (filtered[currentIndex]?.breaking ? ' breaking' : '');
+  cardEl.innerHTML = createCardHTML(filtered[currentIndex], currentIndex);
+  cardEl.style.transform = 'scale(0.96)';
+  cardEl.style.opacity = '0';
+  container.appendChild(cardEl);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    cardEl.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease';
+    cardEl.style.transform = 'scale(1)';
+    cardEl.style.opacity = '1';
+  });
+
+  // Swipe hint on first card
+  if (currentIndex === 0 && !hintShown) {
+    hintShown = true;
+    const hint = document.createElement('div');
+    hint.className = 'swipe-hint';
+    hint.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span>Swipe up</span>`;
+    container.appendChild(hint);
+    setTimeout(() => hint.style.display = 'none', 4000);
+  }
+
+  updateCounter();
+}
+
+function updateCounter() {
+  document.getElementById('counter').textContent = filtered.length ? `${currentIndex+1} of ${filtered.length}` : '';
+}
+
+function navigateCard(dir) {
+  const next = currentIndex + dir;
+  if (next < 0) { showRefresh(); return; }
+  if (next > filtered.length) return; // already at caught-up
+  
+  const container = document.getElementById('cardContainer');
+  const oldCard = cardEl;
+  
+  // Create new card
+  const newCard = document.createElement('div');
+  const item = next >= filtered.length ? null : filtered[next];
+  newCard.className = 'card' + (item?.breaking ? ' breaking' : '');
+  newCard.innerHTML = createCardHTML(item, next);
+  newCard.style.transform = `translateY(${dir > 0 ? '100' : '-100'}%)`;
+  container.appendChild(newCard);
+
+  requestAnimationFrame(() => {
+    const t = 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)';
+    oldCard.style.transition = t;
+    newCard.style.transition = t;
+    oldCard.style.transform = `translateY(${dir > 0 ? '-30' : '30'}%)`;
+    oldCard.style.opacity = '0.3';
+    newCard.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    oldCard.remove();
+    cardEl = newCard;
+    currentIndex = next;
+    updateCounter();
+  }, 420);
+
+  try { navigator.vibrate?.(10); } catch(e) {}
+}
+
+function showRefresh() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  const ref = document.getElementById('refresh');
+  ref.style.opacity = '1';
+  setTimeout(() => {
+    ref.style.opacity = '0';
+    isRefreshing = false;
+    currentIndex = 0;
+    renderCards();
+  }, 1200);
+}
+
+function shareCard(i) {
+  const item = filtered[i];
+  if (!item) return;
+  if (navigator.share) {
+    navigator.share({title: item.headline, text: item.summary, url: location.href});
+  }
+}
+
+// Touch handling
+const container = document.getElementById('cardContainer');
+// Helper: switch to adjacent category
+function switchCategory(direction) {
+  const pills = [...document.querySelectorAll('.cat-pill')];
+  const activeIdx = pills.findIndex(p => p.classList.contains('active'));
+  const nextIdx = activeIdx + direction;
+  if (nextIdx >= 0 && nextIdx < pills.length) {
+    pills[nextIdx].click();
+    // Scroll the pill into view
+    pills[nextIdx].scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+    // Haptic
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+}
+
+container.addEventListener('touchstart', e => {
+  if (isRefreshing) return;
+  startY = e.touches[0].clientY;
+  startX = e.touches[0].clientX;
+  currentY = 0;
+  currentX = 0;
+  swipeAxis = null;
+  isDragging = true;
+  if (cardEl) cardEl.style.transition = 'none';
+}, {passive: true});
+
+container.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  currentY = e.touches[0].clientY - startY;
+  currentX = e.touches[0].clientX - startX;
+
+  // Lock axis after 10px of movement
+  if (!swipeAxis && (Math.abs(currentX) > 10 || Math.abs(currentY) > 10)) {
+    swipeAxis = Math.abs(currentX) > Math.abs(currentY) ? 'horizontal' : 'vertical';
+  }
+
+  if (swipeAxis === 'horizontal') {
+    e.preventDefault();
+    // Slight visual feedback — tilt card in swipe direction
+    if (cardEl) {
+      const rotate = Math.max(-8, Math.min(8, currentX * 0.05));
+      const translateX = Math.max(-60, Math.min(60, currentX * 0.3));
+      cardEl.style.transform = `translateX(${translateX}px) rotate(${rotate}deg)`;
+      cardEl.style.opacity = 1 - Math.abs(currentX) / 800;
+    }
+  } else if (swipeAxis === 'vertical') {
+    e.preventDefault();
+    if (cardEl) {
+      cardEl.style.transform = `translateY(${currentY}px)`;
+      const imgEl = cardEl.querySelector('.card-image');
+      if (imgEl) imgEl.style.transform = `translateY(${currentY * 0.15}px)`;
+    }
+    if (currentIndex === 0 && currentY > 60) {
+      document.getElementById('refresh').style.opacity = Math.min((currentY - 60) / 80, 1);
+    }
+  }
+}, {passive: false});
+
+container.addEventListener('touchend', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  const h = container.clientHeight;
+
+  if (swipeAxis === 'horizontal') {
+    const threshold = 80;
+    if (currentX < -threshold) {
+      // Swiped left → next category
+      if (cardEl) {
+        cardEl.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+        cardEl.style.transform = 'translateX(-100px) rotate(-5deg)';
+        cardEl.style.opacity = '0';
+      }
+      setTimeout(() => switchCategory(1), 150);
+    } else if (currentX > threshold) {
+      // Swiped right → previous category
+      if (cardEl) {
+        cardEl.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+        cardEl.style.transform = 'translateX(100px) rotate(5deg)';
+        cardEl.style.opacity = '0';
+      }
+      setTimeout(() => switchCategory(-1), 150);
+    } else {
+      // Spring back
+      if (cardEl) {
+        cardEl.style.transition = 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease';
+        cardEl.style.transform = 'translateY(0) rotate(0deg)';
+        cardEl.style.opacity = '1';
+      }
+    }
+  } else {
+    // Vertical swipe (existing behavior)
+    const threshold = h * 0.15;
+    const imgEl = cardEl?.querySelector('.card-image');
+    if (imgEl) { imgEl.style.transition = 'transform 0.3s ease'; imgEl.style.transform = ''; }
+
+    if (currentY < -threshold) {
+      navigateCard(1);
+    } else if (currentY > threshold) {
+      if (currentIndex === 0 && currentY > 80) { showRefresh(); springBack(); }
+      else navigateCard(-1);
+    } else {
+      springBack();
+    }
+    document.getElementById('refresh').style.opacity = '0';
+  }
+  swipeAxis = null;
+}, {passive: true});
+
+function springBack() {
+  if (!cardEl) return;
+  cardEl.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+  cardEl.style.transform = 'translateY(0)';
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); navigateCard(1); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); navigateCard(-1); }
+});
+
+// Mouse wheel
+let wheelTimeout;
+container.addEventListener('wheel', e => {
+  e.preventDefault();
+  clearTimeout(wheelTimeout);
+  wheelTimeout = setTimeout(() => {
+    if (e.deltaY > 30) navigateCard(1);
+    else if (e.deltaY < -30) navigateCard(-1);
+  }, 50);
+}, {passive: false});
+
+// Show skeleton then render
+document.getElementById('cardContainer').innerHTML = `<div class="card skeleton"><div class="skeleton-img"></div><div class="skeleton-text"><div class="skeleton-line w70"></div><div class="skeleton-line w100"></div><div class="skeleton-line w100"></div><div class="skeleton-line w90"></div></div></div>`;
+setTimeout(renderCards, 800);
+</script>
+</body>
+</html>
