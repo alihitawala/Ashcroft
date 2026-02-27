@@ -11,6 +11,11 @@ function cached(key, ttlMs, fetchFn) {
   const entry = cache.get(key);
   if (entry && Date.now() < entry.expires) return entry.data;
   const promise = fetchFn().then(data => {
+    // Don't cache null/undefined results — they indicate a transient API failure
+    if (data === null || data === undefined) {
+      console.warn(`Cache skip null result [${key}]`);
+      return entry?.data || data;
+    }
     cache.set(key, { data, expires: Date.now() + ttlMs });
     return data;
   }).catch(err => {

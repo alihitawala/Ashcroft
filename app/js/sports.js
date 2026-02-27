@@ -18,6 +18,26 @@ const F1_TEAM_COLORS = {
     'Sauber':'#52E252','Haas':'#B6BABD'
 };
 
+const F1_TEAM_LOGOS = {
+    'Red Bull':'https://media.formula1.com/content/dam/fom-website/teams/2025/red-bull-racing-logo.png',
+    'Ferrari':'https://media.formula1.com/content/dam/fom-website/teams/2025/ferrari-logo.png',
+    'McLaren':'https://media.formula1.com/content/dam/fom-website/teams/2025/mclaren-logo.png',
+    'Mercedes':'https://media.formula1.com/content/dam/fom-website/teams/2025/mercedes-logo.png',
+    'Aston Martin':'https://media.formula1.com/content/dam/fom-website/teams/2025/aston-martin-logo.png',
+    'Alpine':'https://media.formula1.com/content/dam/fom-website/teams/2025/alpine-logo.png',
+    'Williams':'https://media.formula1.com/content/dam/fom-website/teams/2025/williams-logo.png',
+    'RB':'https://media.formula1.com/content/dam/fom-website/teams/2025/rb-logo.png',
+    'Kick Sauber':'https://media.formula1.com/content/dam/fom-website/teams/2025/kick-sauber-logo.png',
+    'Sauber':'https://media.formula1.com/content/dam/fom-website/teams/2025/kick-sauber-logo.png',
+    'Haas':'https://media.formula1.com/content/dam/fom-website/teams/2025/haas-logo.png',
+};
+
+function f1Logo(team, size = 20) {
+    const url = F1_TEAM_LOGOS[team] || Object.entries(F1_TEAM_LOGOS).find(([k]) => team?.includes(k))?.[1];
+    if (!url) return '';
+    return `<img class="f1-team-logo" src="${url}" alt="${team}" width="${size}" height="${size}" loading="lazy" onerror="this.style.display='none'" style="object-fit:contain;vertical-align:middle;margin-right:4px;">`;
+}
+
 const COUNTRY_FLAGS = {
     'Australia':'🇦🇺','China':'🇨🇳','Japan':'🇯🇵','Bahrain':'🇧🇭',
     'Saudi Arabia':'🇸🇦','USA':'🇺🇸','United States':'🇺🇸',
@@ -252,21 +272,35 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+const SPORT_PLACEHOLDERS = {
+  football: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="12" fill="#1a472a"/><circle cx="40" cy="40" r="22" fill="none" stroke="#fff" stroke-width="2" opacity="0.3"/><polygon points="40,22 47,32 44,42 36,42 33,32" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.4"/><text x="40" y="46" text-anchor="middle" font-size="28">⚽</text></svg>`,
+  cricket: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="12" fill="#2d1810"/><text x="40" y="48" text-anchor="middle" font-size="32">🏏</text></svg>`,
+  tennis: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="12" fill="#1a3a1a"/><text x="40" y="48" text-anchor="middle" font-size="32">🎾</text></svg>`,
+  f1: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" rx="12" fill="#1a1a2e"/><text x="40" y="48" text-anchor="middle" font-size="32">🏎️</text></svg>`,
+};
+
+function newsPlaceholder(sport) {
+  const svg = SPORT_PLACEHOLDERS[sport || currentSport] || SPORT_PLACEHOLDERS.football;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 function renderNews(articles) {
   if (!articles || !articles.length) return '';
   return `
     <div class="news-section">
       <div class="news-header">📰 Latest News</div>
-      ${articles.slice(0, 6).map((a, i) => `
-        <div class="news-card ${a.image ? 'has-img' : ''}" style="--i:${i}">
-          ${a.image ? `<div class="news-img"><img src="${a.image}" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>` : ''}
+      ${articles.slice(0, 6).map((a, i) => {
+        const img = a.image || newsPlaceholder();
+        return `
+        <div class="news-card has-img" style="--i:${i}">
+          <div class="news-img"><img src="${img}" alt="" loading="lazy" onerror="this.src='${newsPlaceholder()}'"></div>
           <div class="news-body">
             <div class="news-title"><a href="${a.link}" target="_blank" rel="noopener">${a.title}</a></div>
             ${a.description ? `<div class="news-desc">${a.description}</div>` : ''}
             <div class="news-meta">${a.author ? a.author + ' · ' : ''}${timeAgo(a.pubDate)}</div>
           </div>
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -1060,7 +1094,7 @@ async function renderF1() {
                         <span class="recap-pos${d.pos === 1 ? ' champion' : ''}">${d.pos}</span>
                         <div class="recap-team-dot" style="background:${color}"></div>
                         <div class="recap-driver-name">${d.name.split(' ').map((n,i) => i===0 ? n[0]+'.' : n).join(' ')}${d.pos === 1 ? ' 🏆' : ''}</div>
-                        <div class="recap-driver-team">${d.team}</div>
+                        <div class="recap-driver-team">${f1Logo(d.team, 16)}${d.team}</div>
                         <span class="recap-driver-pts">${d.pts}</span>
                         ${d.wins ? `<span class="recap-driver-wins">${d.wins}W</span>` : ''}
                     </div>`;
@@ -1069,7 +1103,7 @@ async function renderF1() {
                 ${fs.constructors.map(c => {
                     const pct = Math.round((c.pts / maxConsPts) * 100);
                     return `<div class="recap-constructor-row">
-                        <span class="recap-constructor-name">${c.name}</span>
+                        <span class="recap-constructor-name">${f1Logo(c.name, 18)}${c.name}</span>
                         <div style="flex:1"><div class="recap-constructor-bar" style="width:${pct}%;background:${c.color};--bar-w:${pct}%"></div></div>
                         <span class="recap-constructor-pts">${c.pts}</span>
                     </div>`;
@@ -1083,7 +1117,7 @@ async function renderF1() {
                     <div class="champ-color" style="background:#FF8000"></div>
                     <div class="champ-info">
                         <div class="champ-name">Lando Norris</div>
-                        <div class="champ-detail">McLaren · First World Championship</div>
+                        <div class="champ-detail">${f1Logo('McLaren', 14)}McLaren · First World Championship</div>
                     </div>
                     <span class="champ-pts" style="color:#FF8000">423 pts</span>
                 </div>
@@ -1092,7 +1126,7 @@ async function renderF1() {
                     <div class="champ-color" style="background:#3671C6"></div>
                     <div class="champ-info">
                         <div class="champ-name">Max Verstappen</div>
-                        <div class="champ-detail">Red Bull · Just 2 points behind!</div>
+                        <div class="champ-detail">${f1Logo('Red Bull', 14)}Red Bull · Just 2 points behind!</div>
                     </div>
                     <span class="champ-pts" style="color:#3671C6">421 pts</span>
                 </div>
@@ -1101,7 +1135,7 @@ async function renderF1() {
                     <div class="champ-color" style="background:#FF8000"></div>
                     <div class="champ-info">
                         <div class="champ-name">Oscar Piastri</div>
-                        <div class="champ-detail">McLaren</div>
+                        <div class="champ-detail">${f1Logo('McLaren', 14)}McLaren</div>
                     </div>
                     <span class="champ-pts" style="color:#FF8000">410 pts</span>
                 </div>
@@ -1137,7 +1171,7 @@ async function renderF1() {
                 html += `<div class="st-row">
                     <span class="st-pos">${d.position || i + 1}</span>
                     <div class="st-color" style="background:${color}"></div>
-                    <div class="st-info"><div class="st-dname">${name}</div><div class="st-team">${team}</div></div>
+                    <div class="st-info"><div class="st-dname">${name}</div><div class="st-team">${f1Logo(team, 14)}${team}</div></div>
                     <span class="st-pts">${d.points || 0}</span>
                 </div>`;
             });
@@ -1155,7 +1189,7 @@ async function renderF1() {
                 html += `<div class="st-row">
                     <span class="st-pos">${c.position || i + 1}</span>
                     <div class="st-color" style="background:${color}"></div>
-                    <div class="st-info" style="flex:1"><div class="st-dname">${name}</div></div>
+                    <div class="st-info" style="flex:1"><div class="st-dname">${f1Logo(name, 18)}${name}</div></div>
                     <div style="flex:2"><div class="rr-bar"><div class="rr-bar-fill" style="--bar-w:${pct}%;--i:${i};background:${color}"></div></div></div>
                     <span class="st-pts">${pts}</span>
                 </div>`;
