@@ -8,20 +8,24 @@ const CapturesCalendar = {
     selectedDay: null,
     monthCache: {},
     touchStartX: 0,
+    _swipeBound: false,
 
     init() {
         const container = document.getElementById('capturesCalendarView');
         if (!container) return;
         container.innerHTML = '<div id="calendarWidget"></div><div id="calendarDayDetail" class="calendar-day-detail"></div>';
         this.render();
-        // Swipe support
-        container.addEventListener('touchstart', e => { this.touchStartX = e.touches[0].clientX; }, { passive: true });
-        container.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - this.touchStartX;
-            if (Math.abs(dx) > 60) {
-                dx > 0 ? this.prevMonth() : this.nextMonth();
-            }
-        }, { passive: true });
+        // Swipe support — bind only once to prevent double-firing
+        if (!this._swipeBound) {
+            this._swipeBound = true;
+            container.addEventListener('touchstart', e => { this.touchStartX = e.touches[0].clientX; }, { passive: true });
+            container.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - this.touchStartX;
+                if (Math.abs(dx) > 60) {
+                    dx > 0 ? this.prevMonth() : this.nextMonth();
+                }
+            }, { passive: true });
+        }
     },
 
     render() {
@@ -69,38 +73,47 @@ const CapturesCalendar = {
         this.loadMonth(year, month);
     },
 
+    // Get local YYYY-MM-DD for a capture timestamp
+    _localDate(ts) {
+        const d = new Date(ts);
+        return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+    },
+
     async loadMonth(year, month) {
         const key = year + '-' + (month + 1);
         if (this.monthCache[key]) {
-            this.applyDots(this.monthCache[key]);
+            this.applyDots(this.monthCache[key], year, month);
             if (this.selectedDay) this.showDayDetail(this.selectedDay);
             return;
         }
         try {
-            const mm = String(month + 1).padStart(2, '0');
+            // Build local start/end as ISO strings so the server query covers
+            // the full local month (accounting for UTC offset)
+            const localStart = new Date(year, month, 1);
             const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const localEnd = new Date(year, month, daysInMonth, 23, 59, 59);
             const data = await CapturesService.getCaptures({
-                from: year + '-' + mm + '-01',
-                to: year + '-' + mm + '-' + String(daysInMonth).padStart(2, '0') + 'T23:59:59',
+                from: localStart.toISOString(),
+                to: localEnd.toISOString(),
                 limit: 1000
             });
             const captures = data.captures || [];
             this.monthCache[key] = captures;
-            this.applyDots(captures);
+            this.applyDots(captures, year, month);
             if (this.selectedDay) this.showDayDetail(this.selectedDay);
         } catch(e) {
             console.error('Calendar load failed', e);
         }
     },
 
-    applyDots(captures) {
-        // Group by day
+    applyDots(captures, viewYear, viewMonth) {
+        // Group by LOCAL day, only include captures whose local date matches the viewed month
         const byDay = {};
         captures.forEach(c => {
-            const d = new Date(c.captured_at || c.created_at || c.date);
-            const day = d.getDate();
-            if (!byDay[day]) byDay[day] = [];
-            byDay[day].push(c);
+            const loc = this._localDate(c.captured_at || c.created_at);
+            if (loc.year !== viewYear || loc.month !== viewMonth) return;
+            if (!byDay[loc.day]) byDay[loc.day] = [];
+            byDay[loc.day].push(c);
         });
 
         const typeColors = {
@@ -154,9 +167,11 @@ const CapturesCalendar = {
         if (!detail) return;
         const key = this.currentYear + '-' + (this.currentMonth + 1);
         const captures = this.monthCache[key] || [];
+        const viewYear = this.currentYear;
+        const viewMonth = this.currentMonth;
         const dayCaps = captures.filter(c => {
-            const d = new Date(c.captured_at || c.created_at || c.date);
-            return d.getDate() === day;
+            const loc = this._localDate(c.captured_at || c.created_at);
+            return loc.year === viewYear && loc.month === viewMonth && loc.day === day;
         });
 
         if (!dayCaps.length) {
@@ -182,9 +197,12 @@ const CapturesCalendar = {
         dayCaps.forEach(c => {
             const icon = typeIcons[c.type] || 'file-text';
             const color = typeColors[c.type] || '#6366f1';
-            const time = new Date(c.captured_at || c.created_at || c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            html += '<div class="cal-detail-item" onclick="CapturesCalendar.goToCapture(\'' + c.id + '\')">' +
-                '<i data-lucide="' + icon + '" style="width:15px;height:15px;color:' + color + '" class="cal-detail-icon"></i>' +
+            const time = new Date(c.captured_at || c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const thumb = c.thumbnail_url || c.photo_url;
+            const hasPhoto = thumb ? true : false;
+            html += '<div class="cal-detail-item" onclick="CapturesCalendar.openCapture(\'' + c.id + '\')">' +
+                (hasPhoto ? '<img src="' + thumb + '" class="cal-detail-thumb" alt="">' :
+                '<i data-lucide="' + icon + '" style="width:15px;height:15px;color:' + color + '" class="cal-detail-icon"></i>') +
                 '<div class="cal-detail-info">' +
                     '<span class="cal-detail-title">' + (c.title || c.text || 'Untitled').substring(0, 60) + '</span>' +
                     '<span class="cal-detail-time">' + time + '</span>' +
@@ -197,6 +215,59 @@ const CapturesCalendar = {
 
         // Render lucide icons in detail
         if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: 'cal-detail-icon' } });
+    },
+
+    openCapture(id) {
+        // Open capture in a modal/detail view instead of switching to timeline
+        const key = this.currentYear + '-' + (this.currentMonth + 1);
+        const captures = this.monthCache[key] || [];
+        const cap = captures.find(c => String(c.id) === String(id));
+        if (!cap) return;
+
+        // Build modal
+        const typeColors = {
+            note: '#6366f1', link: '#3b82f6', task: '#22c55e',
+            photo: '#f59e0b', checklist: '#8b5cf6', quote: '#ec4899'
+        };
+        const color = typeColors[cap.type] || '#6366f1';
+        const time = new Date(cap.captured_at || cap.created_at).toLocaleString([], {
+            weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        let body = '';
+        if (cap.photo_url) {
+            body += '<img src="' + cap.photo_url + '" class="cal-modal-photo" onclick="event.stopPropagation()">';
+        }
+        if (cap.body || cap.text) {
+            body += '<p class="cal-modal-body">' + (cap.body || cap.text || '') + '</p>';
+        }
+        if (cap.checklist_items && cap.checklist_items.length) {
+            body += '<ul class="cal-modal-checklist">';
+            cap.checklist_items.forEach(item => {
+                body += '<li class="' + (item.checked ? 'done' : '') + '">' + (item.text || item) + '</li>';
+            });
+            body += '</ul>';
+        }
+        if (cap.url) {
+            body += '<a href="' + cap.url + '" target="_blank" rel="noopener" class="cal-modal-link">' + cap.url + '</a>';
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'cal-modal-overlay';
+        overlay.onclick = () => overlay.remove();
+        overlay.innerHTML = '<div class="cal-modal" onclick="event.stopPropagation()">' +
+            '<div class="cal-modal-header">' +
+                '<span class="cal-modal-type" style="color:' + color + '">' + (cap.type || 'note') + '</span>' +
+                '<button class="cal-modal-close" onclick="this.closest(\'.cal-modal-overlay\').remove()">✕</button>' +
+            '</div>' +
+            '<h3 class="cal-modal-title">' + (cap.title || 'Untitled') + '</h3>' +
+            '<span class="cal-modal-time">' + time + '</span>' +
+            (cap.place_name ? '<span class="cal-modal-location">📍 ' + cap.place_name + '</span>' : '') +
+            body +
+            '</div>';
+        document.body.appendChild(overlay);
+        // Animate in
+        requestAnimationFrame(() => overlay.classList.add('open'));
     },
 
     goToCapture(id) {
