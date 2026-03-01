@@ -546,11 +546,24 @@ const Travel = {
             bodyHTML: `
                 <div class="form-group">
                     <label>Destination</label>
-                    <input class="form-input" name="destination" placeholder="e.g. Tokyo, Paris, Bali..." required>
+                    <div style="position:relative">
+                        <input class="form-input" name="destination" id="tripDestInput" placeholder="e.g. Tokyo, Paris, Bali..." autocomplete="off" required>
+                        <div id="tripDestSuggestions" style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface2);border:1px solid var(--border);border-radius:8px;display:none;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.2)"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Country</label>
-                    <input class="form-input" name="country" placeholder="e.g. Japan, France, Indonesia...">
+                    <input class="form-input" name="country" id="tripCountryInput" placeholder="Auto-filled from selection">
+                </div>
+                <div style="display:flex;gap:12px">
+                    <div class="form-group" style="flex:1">
+                        <label>Start Date</label>
+                        <input class="form-input" name="start_date" type="date">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Days</label>
+                        <input class="form-input" name="num_days" type="number" min="1" max="14" value="5" placeholder="5">
+                    </div>
                 </div>
             `,
             submitLabel: 'Create Trip',
@@ -558,11 +571,58 @@ const Travel = {
                 const destination = modal.querySelector('[name="destination"]').value.trim();
                 if (!destination) throw new Error('Destination is required');
                 const country = modal.querySelector('[name="country"]').value.trim();
-                const trip = await API.post('/travel/trips', { destination, country: country || null });
+                const start_date = modal.querySelector('[name="start_date"]').value || null;
+                const num_days = parseInt(modal.querySelector('[name="num_days"]').value) || 5;
+                const trip = await API.post('/travel/trips', { destination, country: country || null, start_date, num_days });
                 showToast('Trip created ✓');
                 Travel.loadTrip(trip.id);
             }
         });
+
+        // Nominatim autocomplete
+        setTimeout(() => {
+            const input = document.getElementById('tripDestInput');
+            const suggestions = document.getElementById('tripDestSuggestions');
+            const countryInput = document.getElementById('tripCountryInput');
+            if (!input || !suggestions) return;
+
+            let debounceTimer = null;
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const q = input.value.trim();
+                if (q.length < 2) { suggestions.style.display = 'none'; return; }
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&featuretype=city`, {
+                            headers: { 'User-Agent': 'ashcroft-cloud/1.0' }
+                        });
+                        const results = await resp.json();
+                        if (!results.length) { suggestions.style.display = 'none'; return; }
+                        suggestions.innerHTML = results.map(r => {
+                            const city = r.address?.city || r.address?.town || r.address?.village || r.name || '';
+                            const country = r.address?.country || '';
+                            const display = city + (country ? ', ' + country : '');
+                            return `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px;color:var(--text)" data-city="${esc(city)}" data-country="${esc(country)}" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">${esc(display)}</div>`;
+                        }).join('');
+                        suggestions.style.display = 'block';
+                        suggestions.querySelectorAll('div').forEach(div => {
+                            div.addEventListener('click', () => {
+                                input.value = div.dataset.city;
+                                if (countryInput) countryInput.value = div.dataset.country;
+                                suggestions.style.display = 'none';
+                            });
+                        });
+                    } catch (e) { suggestions.style.display = 'none'; }
+                }, 300);
+            });
+
+            // Close suggestions on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#tripDestInput') && !e.target.closest('#tripDestSuggestions')) {
+                    suggestions.style.display = 'none';
+                }
+            });
+        }, 100);
     },
 
     // ─── Delete Trip ───

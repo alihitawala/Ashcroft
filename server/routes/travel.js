@@ -32,17 +32,18 @@ router.get('/trips', async (req, res) => {
 // ─── Create Trip ───
 router.post('/trips', async (req, res) => {
     try {
-        const { destination, country } = req.body;
+        const { destination, country, start_date, end_date, num_days } = req.body;
         if (!destination || typeof destination !== 'string' || destination.trim().length === 0) {
             return res.status(400).json({ error: 'Destination is required' });
         }
         if (destination.length > 200) {
             return res.status(400).json({ error: 'Destination too long (max 200 chars)' });
         }
+        const days = num_days ? Math.min(Math.max(parseInt(num_days), 1), 14) : 5;
         const { rows } = await pool.query(
-            `INSERT INTO travel_trips (user_id, destination, country)
-             VALUES ($1, $2, $3) RETURNING *`,
-            [req.user.id, destination.trim(), country ? country.trim() : null]
+            `INSERT INTO travel_trips (user_id, destination, country, start_date, end_date, num_days)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [req.user.id, destination.trim(), country ? country.trim() : null, start_date || null, end_date || null, days]
         );
         res.json(rows[0]);
     } catch (err) {
@@ -207,7 +208,8 @@ router.post('/trips/:id/generate', async (req, res) => {
         );
         if (!trip.rows[0]) return res.status(404).json({ error: 'Trip not found' });
 
-        const { destination, country } = trip.rows[0];
+        const { destination, country, num_days: tripDays } = trip.rows[0];
+        const numDays = tripDays || 5;
         if (!destination || destination.trim().length === 0) {
             return res.status(400).json({ error: 'Trip has no destination set' });
         }
@@ -268,7 +270,7 @@ router.post('/trips/:id/generate', async (req, res) => {
             return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
         }
 
-        const prompt = `You are an expert travel planner creating a detailed 5-day itinerary for ${dest}.
+        const prompt = `You are an expert travel planner creating a detailed ${numDays}-day itinerary for ${dest}.
 ${researchBlock}
 
 Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching this exact structure:
@@ -335,6 +337,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching th
 }
 
 IMPORTANT RULES:
+- Generate EXACTLY ${numDays} days in the "days" array
 - Each day MUST have exactly 3 activities: morning, afternoon, evening
 - Include 8 restaurants: mix of street food ($), casual ($$), upscale ($$$), and fine dining ($$$$)
 - Include 3 stays: one budget/hostel, one mid-range, one luxury
