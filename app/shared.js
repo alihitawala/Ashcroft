@@ -492,6 +492,8 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/grocery.html" data-page="grocery"><i data-lucide="shopping-cart" class="nav-icon"></i> Grocery</a>
                     <a href="/app/gallery.html" data-page="gallery"><i data-lucide="camera" class="nav-icon"></i> Gallery</a>
                     <a href="/app/garden.html" data-page="garden"><i data-lucide="flower-2" class="nav-icon"></i> Garden</a>
+                    <a href="/app/captures.html" data-page="captures"><i data-lucide="aperture" class="nav-icon"></i> Captures</a>
+                    <a href="/app/travel.html" data-page="travel"><i data-lucide="map" class="nav-icon"></i> Travel</a>
                     <a href="/app/flights.html" data-page="flights"><i data-lucide="plane" class="nav-icon"></i> Flights</a>
                     <a href="/app/events.html" data-page="events"><i data-lucide="calendar" class="nav-icon"></i> Events</a>
                     <a href="/app/notes.html" data-page="notes"><i data-lucide="file-text" class="nav-icon"></i> Notes</a>
@@ -541,6 +543,8 @@ function renderAppShell(pageTitle, activePage) {
                     <i data-lucide="more-horizontal" class="bottom-nav-icon"></i><span class="bottom-nav-label">More</span>
                 </a>
                 <div class="bottom-nav-menu">
+                    <a href="/app/captures.html" class="bottom-nav-menu-item${activePage==='captures'?' active':''}"><i data-lucide="aperture" class="menu-icon"></i> Captures</a>
+                    <a href="/app/travel.html" class="bottom-nav-menu-item${activePage==='travel'?' active':''}"><i data-lucide="map" class="menu-icon"></i> Travel</a>
                     <a href="/app/events.html" class="bottom-nav-menu-item${activePage==='events'?' active':''}"><i data-lucide="calendar" class="menu-icon"></i> Events</a>
                     <a href="/app/notes.html" class="bottom-nav-menu-item${activePage==='notes'?' active':''}"><i data-lucide="file-text" class="menu-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? `<a href="/app/kanban.html" class="bottom-nav-menu-item${activePage==='kanban'?' active':''}"><i data-lucide="kanban" class="menu-icon"></i> Kanban</a>` : ''}
