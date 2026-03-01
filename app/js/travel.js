@@ -552,15 +552,13 @@ const Travel = {
                     <input class="form-input" name="destination" id="tripDestInput" placeholder="Start typing a city..." autocomplete="off" required>
                     <div id="tripDestDropdown" class="autocomplete-dropdown" style="display:none"></div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="form-group">
-                        <label>Start Date</label>
-                        <input class="form-input" name="start_date" type="date">
-                    </div>
-                    <div class="form-group">
-                        <label>Days</label>
-                        <input class="form-input" name="num_days" type="number" min="1" max="14" value="5">
-                    </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input class="form-input" name="start_date" type="date">
+                </div>
+                <div class="form-group">
+                    <label>Number of Days</label>
+                    <input class="form-input" name="num_days" type="number" min="1" max="14" value="5">
                 </div>
             `,
             submitLabel: 'Create Trip',
