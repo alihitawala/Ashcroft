@@ -540,18 +540,17 @@ const Travel = {
     },
 
     // ─── Create Trip ───
+    _selectedCountry: null,
+
     openCreateModal() {
+        this._selectedCountry = null;
         createModal({
             title: '✈️ Plan a Trip',
             bodyHTML: `
                 <div class="form-group" style="position:relative">
-                    <label>Destination</label>
-                    <input class="form-input" name="destination" id="tripDestInput" placeholder="e.g. Tokyo, Paris, Bali..." autocomplete="off" required>
-                    <div class="autocomplete-dropdown" id="tripDestSuggestions" style="display:none"></div>
-                </div>
-                <div class="form-group">
-                    <label>Country</label>
-                    <input class="form-input" name="country" id="tripCountryInput" placeholder="Auto-filled from selection" readonly>
+                    <label>Where to?</label>
+                    <input class="form-input" name="destination" id="tripDestInput" placeholder="Start typing a city..." autocomplete="off" required>
+                    <div id="tripDestDropdown" class="autocomplete-dropdown" style="display:none"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                     <div class="form-group">
@@ -559,7 +558,7 @@ const Travel = {
                         <input class="form-input" name="start_date" type="date">
                     </div>
                     <div class="form-group">
-                        <label>Number of Days</label>
+                        <label>Days</label>
                         <input class="form-input" name="num_days" type="number" min="1" max="14" value="5">
                     </div>
                 </div>
@@ -567,58 +566,72 @@ const Travel = {
             submitLabel: 'Create Trip',
             async onSubmit(modal) {
                 const destination = modal.querySelector('[name="destination"]').value.trim();
-                if (!destination) throw new Error('Destination is required');
-                const country = modal.querySelector('[name="country"]').value.trim();
+                if (!destination) throw new Error('Please pick a destination');
                 const start_date = modal.querySelector('[name="start_date"]').value || null;
                 const num_days = parseInt(modal.querySelector('[name="num_days"]').value) || 5;
-                const trip = await API.post('/travel/trips', { destination, country: country || null, start_date, num_days });
+                const trip = await API.post('/travel/trips', {
+                    destination,
+                    country: Travel._selectedCountry || null,
+                    start_date,
+                    num_days
+                });
                 showToast('Trip created ✓');
                 Travel.loadTrip(trip.id);
             }
         });
 
-        // Nominatim autocomplete
-        setTimeout(() => {
-            const input = document.getElementById('tripDestInput');
-            const dropdown = document.getElementById('tripDestSuggestions');
-            const countryInput = document.getElementById('tripCountryInput');
-            if (!input || !dropdown) return;
+        // Autocomplete setup
+        setTimeout(() => this._initAutocomplete(), 50);
+    },
 
-            let timer = null;
-            input.addEventListener('input', () => {
-                clearTimeout(timer);
-                const q = input.value.trim();
-                if (q.length < 2) { dropdown.style.display = 'none'; return; }
-                timer = setTimeout(async () => {
-                    try {
-                        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&featuretype=city`, {
-                            headers: { 'User-Agent': 'ashcroft-cloud/1.0' }
-                        });
-                        const results = await resp.json();
-                        if (!results.length) { dropdown.style.display = 'none'; return; }
-                        dropdown.innerHTML = results.map(r => {
-                            const city = r.address?.city || r.address?.town || r.address?.village || r.name || '';
-                            const ctry = r.address?.country || '';
-                            return `<div class="autocomplete-item" data-city="${esc(city)}" data-country="${esc(ctry)}">${esc(city)}${ctry ? ` <span class="ac-country">${esc(ctry)}</span>` : ''}</div>`;
-                        }).join('');
-                        dropdown.style.display = 'block';
-                        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-                            item.addEventListener('click', () => {
-                                input.value = item.dataset.city;
-                                if (countryInput) countryInput.value = item.dataset.country;
-                                dropdown.style.display = 'none';
-                            });
-                        });
-                    } catch (e) { dropdown.style.display = 'none'; }
-                }, 300);
-            });
+    _initAutocomplete() {
+        const input = document.getElementById('tripDestInput');
+        const dropdown = document.getElementById('tripDestDropdown');
+        if (!input || !dropdown) return;
 
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#tripDestInput') && !e.target.closest('#tripDestSuggestions')) {
+        let timer = null;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            Travel._selectedCountry = null;
+            const q = input.value.trim();
+            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+            timer = setTimeout(() => this._fetchSuggestions(q, input, dropdown), 300);
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#tripDestInput') && !e.target.closest('#tripDestDropdown')) {
+                dropdown.style.display = 'none';
+            }
+        });
+    },
+
+    async _fetchSuggestions(query, input, dropdown) {
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1&accept-language=en`;
+            const resp = await fetch(url, { headers: { 'User-Agent': 'ashcroft-cloud/1.0' } });
+            const results = await resp.json();
+            if (!results.length) { dropdown.style.display = 'none'; return; }
+
+            dropdown.innerHTML = results.map((r, i) => {
+                const addr = r.address || {};
+                const place = addr.city || addr.town || addr.village || addr.state || r.name || '';
+                const country = addr.country || '';
+                const label = place + (country ? ', ' + country : '');
+                return `<div class="autocomplete-item" data-idx="${i}" data-place="${esc(place)}" data-country="${esc(country)}">${esc(label)}</div>`;
+            }).join('');
+
+            dropdown.style.display = 'block';
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    input.value = item.dataset.place;
+                    Travel._selectedCountry = item.dataset.country;
                     dropdown.style.display = 'none';
-                }
+                });
             });
-        }, 100);
+        } catch (e) {
+            dropdown.style.display = 'none';
+        }
     },
 
     // ─── Delete Trip ───
