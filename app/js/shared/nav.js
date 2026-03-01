@@ -61,6 +61,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/flights.html" data-page="flights"><i data-lucide="plane" class="nav-icon"></i> Flights</a>
                     <a href="/app/events.html" data-page="events"><i data-lucide="calendar" class="nav-icon"></i> Events</a>
                     <a href="/app/captures.html" data-page="captures"><i data-lucide="sparkles" class="nav-icon"></i> Captures</a>
+                    <a href="/app/travel.html" data-page="travel"><i data-lucide="map-pin" class="nav-icon"></i> Travel</a>
                     <a href="/app/notes.html" data-page="notes"><i data-lucide="file-text" class="nav-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? '<a href="/app/kanban.html" data-page="kanban"><i data-lucide="kanban" class="nav-icon"></i> Kanban</a>' : ''}
                     <a href="/app/tasks.html" data-page="tasks"><i data-lucide="check-square" class="nav-icon"></i> Tasks</a>
@@ -111,6 +112,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/flights.html" class="bottom-nav-menu-item${activePage==='flights'?' active':''}"><i data-lucide="plane" class="menu-icon"></i> Flights</a>
                     <a href="/app/events.html" class="bottom-nav-menu-item${activePage==='events'?' active':''}"><i data-lucide="calendar" class="menu-icon"></i> Events</a>
                     <a href="/app/captures.html" class="bottom-nav-menu-item${activePage==='captures'?' active':''}"><i data-lucide="sparkles" class="menu-icon"></i> Captures</a>
+                    <a href="/app/travel.html" class="bottom-nav-menu-item${activePage==='travel'?' active':''}"><i data-lucide="map-pin" class="menu-icon"></i> Travel</a>
                     <a href="/app/notes.html" class="bottom-nav-menu-item${activePage==='notes'?' active':''}"><i data-lucide="file-text" class="menu-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? `<a href="/app/kanban.html" class="bottom-nav-menu-item${activePage==='kanban'?' active':''}"><i data-lucide="kanban" class="menu-icon"></i> Kanban</a>` : ''}
                     <a href="/app/tasks.html" class="bottom-nav-menu-item${activePage==='tasks'?' active':''}"><i data-lucide="check-square" class="menu-icon"></i> Tasks</a>
@@ -173,11 +175,11 @@ function initAppShell(activePage) {
 
     // ─── Horizontal Swipe Navigation ───
     // Swipe left/right to switch sub-tabs (garden, sports, events) or neighboring pages
-    const NAV_ORDER = ['dashboard','grocery','gallery','garden','sports','flights','events','captures','notes','kanban','tasks','settings'];
+    const NAV_ORDER = ['dashboard','grocery','gallery','garden','sports','flights','events','captures','travel','notes','kanban','tasks','settings'];
     const NAV_URLS = {
         dashboard:'/app/dashboard.html', grocery:'/app/grocery.html', gallery:'/app/gallery.html',
         garden:'/app/garden.html', sports:'/app/sports.html', flights:'/app/flights.html',
-        events:'/app/events.html', captures:'/app/captures.html', notes:'/app/notes.html', kanban:'/app/kanban.html',
+        events:'/app/events.html', captures:'/app/captures.html', travel:'/app/travel.html', notes:'/app/notes.html', kanban:'/app/kanban.html',
         tasks:'/app/tasks.html', settings:'/app/settings.html'
     };
 

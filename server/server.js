@@ -16,6 +16,7 @@ const flightRoutes = require('./routes/flights');
 const galleryRoutes = require('./routes/gallery');
 const sportsRoutes = require('./routes/sports');
 const capturesRoutes = require('./routes/captures');
+const travelRoutes = require('./routes/travel');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -72,6 +73,7 @@ app.use('/api/gallery', authenticate, galleryRoutes);
 
 app.use('/api/sports', authenticate, sportsRoutes);
 app.use('/api/captures', authenticate, capturesRoutes);
+app.use('/api/travel', authenticate, travelRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

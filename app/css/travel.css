@@ -1,0 +1,409 @@
+/* ═══════════════════════════════════════════════════════════
+   Travel Planner Styles
+   ═══════════════════════════════════════════════════════════ */
+
+.travel-subtitle { color: var(--text-secondary); font-size: 13px; }
+
+/* ─── Trip Cards Grid ─── */
+.trip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.trip-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.trip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.trip-card-hero {
+    height: 140px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+    position: relative;
+}
+.trip-card-hero-text {
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.trip-card-hero h3 { font-size: 20px; font-weight: 700; }
+.trip-card-hero .trip-country { font-size: 13px; opacity: 0.9; }
+
+.trip-card-body { padding: 14px 16px; }
+.trip-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.trip-status {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.trip-status.planning { background: var(--amber-bg); color: var(--amber); }
+.trip-status.ready { background: var(--green-bg); color: var(--green); }
+.trip-status.archived { background: var(--surface2); color: var(--text-secondary); }
+
+/* ─── FAB ─── */
+.travel-fab {
+    position: fixed;
+    bottom: 88px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(99,91,255,0.4);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+}
+.travel-fab:hover { transform: scale(1.08); }
+
+/* ─── Empty State ─── */
+.travel-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+.travel-empty-icon { font-size: 48px; margin-bottom: 12px; }
+.travel-empty h3 { font-size: 18px; color: var(--text); margin-bottom: 6px; }
+
+/* ─── Trip Detail ─── */
+.trip-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 16px;
+    background: none;
+    border: none;
+}
+
+.trip-detail-header {
+    margin-bottom: 20px;
+}
+.trip-detail-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.trip-detail-header .trip-country-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.trip-detail-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+/* ─── Day Tabs ─── */
+.day-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+}
+.day-tab {
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.day-tab:hover { border-color: var(--accent); color: var(--text); }
+.day-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+/* ─── Section Tabs (Info/Map/Restaurants/Stays) ─── */
+.section-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow-x: auto;
+}
+.section-tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+.section-tab:hover { color: var(--text); }
+.section-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* ─── Activity Cards ─── */
+.time-slot-group { margin-bottom: 20px; }
+.time-slot-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.time-slot-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.activity-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+}
+.activity-card:hover { border-color: var(--accent-border); }
+.activity-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.activity-card .activity-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+.activity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.activity-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.activity-tips {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--accent-bg);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--accent-light);
+}
+
+/* ─── Day Summary ─── */
+.day-summary {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ─── Restaurant Cards ─── */
+.restaurant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+.restaurant-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.restaurant-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.restaurant-card .cuisine-tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--accent-bg);
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+.restaurant-card .rest-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.restaurant-card .rest-meta { font-size: 12px; color: var(--text-secondary); }
+.must-try { font-size: 12px; color: var(--green); margin-top: 4px; }
+
+/* ─── Stay Cards ─── */
+.stays-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+.stay-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.stay-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.stay-tier {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stay-tier.budget { background: var(--green-bg); color: var(--green); }
+.stay-tier.mid { background: var(--blue-bg); color: var(--blue); }
+.stay-tier.luxury { background: var(--amber-bg); color: var(--amber); }
+.stay-price { font-size: 18px; font-weight: 700; color: var(--text); }
+.stay-price small { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.stay-notes { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
+/* ─── Info Sections ─── */
+.info-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+.info-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.info-section p, .info-section li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.info-section ul { padding-left: 18px; }
+.info-section li { margin-bottom: 4px; }
+
+.budget-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+}
+.budget-item {
+    text-align: center;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+}
+.budget-item .budget-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.budget-item .budget-amount { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
+
+/* ─── Map ─── */
+.travel-map {
+    height: 350px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+}
+
+/* ─── Loading State ─── */
+.generating-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+.generating-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 360px;
+    box-shadow: var(--shadow-md);
+}
+.generating-card .gen-icon { font-size: 48px; margin-bottom: 16px; animation: pulse 2s infinite; }
+.generating-card h3 { font-size: 18px; margin-bottom: 8px; }
+.generating-card p { font-size: 13px; color: var(--text-secondary); }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+.gen-progress {
+    margin-top: 16px;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.gen-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    animation: genProgress 30s ease-out forwards;
+}
+@keyframes genProgress {
+    0% { width: 0%; }
+    30% { width: 40%; }
+    60% { width: 65%; }
+    80% { width: 80%; }
+    100% { width: 92%; }
+}
+
+/* ─── Delete Button ─── */
+.btn-danger {
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1px solid transparent;
+}
+.btn-danger:hover { border-color: var(--red); }
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+    .trip-grid { grid-template-columns: 1fr; }
+    .restaurant-grid { grid-template-columns: 1fr; }
+    .stays-grid { grid-template-columns: 1fr; }
+    .budget-grid { grid-template-columns: 1fr; }
+    .trip-detail-header h1 { font-size: 22px; }
+    .travel-map { height: 260px; }
+}
