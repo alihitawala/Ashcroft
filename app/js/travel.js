@@ -544,25 +544,23 @@ const Travel = {
         createModal({
             title: '✈️ Plan a Trip',
             bodyHTML: `
-                <div class="form-group">
+                <div class="form-group" style="position:relative">
                     <label>Destination</label>
-                    <div style="position:relative">
-                        <input class="form-input" name="destination" id="tripDestInput" placeholder="e.g. Tokyo, Paris, Bali..." autocomplete="off" required>
-                        <div id="tripDestSuggestions" style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface2);border:1px solid var(--border);border-radius:8px;display:none;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.2)"></div>
-                    </div>
+                    <input class="form-input" name="destination" id="tripDestInput" placeholder="e.g. Tokyo, Paris, Bali..." autocomplete="off" required>
+                    <div class="autocomplete-dropdown" id="tripDestSuggestions" style="display:none"></div>
                 </div>
                 <div class="form-group">
                     <label>Country</label>
-                    <input class="form-input" name="country" id="tripCountryInput" placeholder="Auto-filled from selection">
+                    <input class="form-input" name="country" id="tripCountryInput" placeholder="Auto-filled from selection" readonly>
                 </div>
-                <div style="display:flex;gap:12px">
-                    <div class="form-group" style="flex:1">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
                         <label>Start Date</label>
                         <input class="form-input" name="start_date" type="date">
                     </div>
-                    <div class="form-group" style="flex:1">
-                        <label>Days</label>
-                        <input class="form-input" name="num_days" type="number" min="1" max="14" value="5" placeholder="5">
+                    <div class="form-group">
+                        <label>Number of Days</label>
+                        <input class="form-input" name="num_days" type="number" min="1" max="14" value="5">
                     </div>
                 </div>
             `,
@@ -582,44 +580,42 @@ const Travel = {
         // Nominatim autocomplete
         setTimeout(() => {
             const input = document.getElementById('tripDestInput');
-            const suggestions = document.getElementById('tripDestSuggestions');
+            const dropdown = document.getElementById('tripDestSuggestions');
             const countryInput = document.getElementById('tripCountryInput');
-            if (!input || !suggestions) return;
+            if (!input || !dropdown) return;
 
-            let debounceTimer = null;
+            let timer = null;
             input.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
+                clearTimeout(timer);
                 const q = input.value.trim();
-                if (q.length < 2) { suggestions.style.display = 'none'; return; }
-                debounceTimer = setTimeout(async () => {
+                if (q.length < 2) { dropdown.style.display = 'none'; return; }
+                timer = setTimeout(async () => {
                     try {
                         const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&featuretype=city`, {
                             headers: { 'User-Agent': 'ashcroft-cloud/1.0' }
                         });
                         const results = await resp.json();
-                        if (!results.length) { suggestions.style.display = 'none'; return; }
-                        suggestions.innerHTML = results.map(r => {
+                        if (!results.length) { dropdown.style.display = 'none'; return; }
+                        dropdown.innerHTML = results.map(r => {
                             const city = r.address?.city || r.address?.town || r.address?.village || r.name || '';
-                            const country = r.address?.country || '';
-                            const display = city + (country ? ', ' + country : '');
-                            return `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px;color:var(--text)" data-city="${esc(city)}" data-country="${esc(country)}" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">${esc(display)}</div>`;
+                            const ctry = r.address?.country || '';
+                            return `<div class="autocomplete-item" data-city="${esc(city)}" data-country="${esc(ctry)}">${esc(city)}${ctry ? ` <span class="ac-country">${esc(ctry)}</span>` : ''}</div>`;
                         }).join('');
-                        suggestions.style.display = 'block';
-                        suggestions.querySelectorAll('div').forEach(div => {
-                            div.addEventListener('click', () => {
-                                input.value = div.dataset.city;
-                                if (countryInput) countryInput.value = div.dataset.country;
-                                suggestions.style.display = 'none';
+                        dropdown.style.display = 'block';
+                        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                input.value = item.dataset.city;
+                                if (countryInput) countryInput.value = item.dataset.country;
+                                dropdown.style.display = 'none';
                             });
                         });
-                    } catch (e) { suggestions.style.display = 'none'; }
+                    } catch (e) { dropdown.style.display = 'none'; }
                 }, 300);
             });
 
-            // Close suggestions on outside click
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('#tripDestInput') && !e.target.closest('#tripDestSuggestions')) {
-                    suggestions.style.display = 'none';
+                    dropdown.style.display = 'none';
                 }
             });
         }, 100);
