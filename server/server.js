@@ -73,6 +73,30 @@ app.use('/api/gallery', authenticate, galleryRoutes);
 
 app.use('/api/sports', authenticate, sportsRoutes);
 app.use('/api/captures', authenticate, capturesRoutes);
+// Public travel share (no auth)
+app.get('/api/travel/public/:token', async (req, res) => {
+    try {
+        const { pool } = require('./db');
+        const trip = await pool.query('SELECT * FROM travel_trips WHERE share_token = $1', [req.params.token]);
+        if (!trip.rows[0]) return res.status(404).json({ error: 'Trip not found' });
+        const t = trip.rows[0];
+        const days = await pool.query('SELECT * FROM travel_days WHERE trip_id = $1 ORDER BY day_number', [t.id]);
+        const dayIds = days.rows.map(d => d.id);
+        let activities = [];
+        if (dayIds.length) {
+            const act = await pool.query('SELECT * FROM travel_activities WHERE day_id = ANY($1) ORDER BY sort_order', [dayIds]);
+            activities = act.rows;
+        }
+        const restaurants = await pool.query('SELECT * FROM travel_restaurants WHERE trip_id = $1', [t.id]);
+        const stays = await pool.query('SELECT * FROM travel_stays WHERE trip_id = $1', [t.id]);
+        const daysWithActivities = days.rows.map(day => ({ ...day, activities: activities.filter(a => a.day_id === day.id) }));
+        // Strip sensitive fields
+        delete t.user_id; delete t.share_token;
+        res.json({ ...t, days: daysWithActivities, restaurants: restaurants.rows, stays: stays.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.use('/api/travel', authenticate, travelRoutes);
 
 // Health check

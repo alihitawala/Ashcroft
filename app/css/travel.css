@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Travel Planner Styles
+   Travel Planner Styles (Phase 2)
    ═══════════════════════════════════════════════════════════ */
 
 .travel-subtitle { color: var(--text-secondary); font-size: 13px; }
@@ -28,14 +28,23 @@
 .trip-card-hero {
     height: 140px;
     background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    background-size: cover;
+    background-position: center;
     display: flex;
     align-items: flex-end;
     padding: 16px;
     position: relative;
 }
+.trip-card-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 60%);
+}
 .trip-card-hero-text {
     color: #fff;
     text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    position: relative;
+    z-index: 1;
 }
 .trip-card-hero h3 { font-size: 20px; font-weight: 700; }
 .trip-card-hero .trip-country { font-size: 13px; opacity: 0.9; }
@@ -62,6 +71,52 @@
 .trip-status.ready { background: var(--green-bg); color: var(--green); }
 .trip-status.archived { background: var(--surface2); color: var(--text-secondary); }
 
+/* ─── Hero Banner (Detail View) ─── */
+.trip-hero-banner {
+    position: relative;
+    height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+}
+.trip-hero-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.trip-hero-banner.hero-fallback {
+    background: linear-gradient(135deg, var(--accent), #a855f7, var(--accent-light));
+}
+.trip-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0) 100%);
+}
+.trip-hero-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: 1;
+}
+.trip-hero-content h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    margin-bottom: 2px;
+}
+.trip-hero-content .trip-detail-back {
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 8px;
+}
+.trip-hero-content .trip-country-label {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+}
+
 /* ─── FAB ─── */
 .travel-fab {
     position: fixed;
@@ -81,6 +136,8 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.15s;
+    min-width: 56px;
+    min-height: 56px;
 }
 .travel-fab:hover { transform: scale(1.08); }
 
@@ -105,19 +162,7 @@
     margin-bottom: 16px;
     background: none;
     border: none;
-}
-
-.trip-detail-header {
-    margin-bottom: 20px;
-}
-.trip-detail-header h1 {
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-.trip-detail-header .trip-country-label {
-    color: var(--text-secondary);
-    font-size: 14px;
+    min-height: 44px;
 }
 
 .trip-detail-actions {
@@ -125,6 +170,9 @@
     gap: 10px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+}
+.trip-detail-actions .btn {
+    min-height: 44px;
 }
 
 /* ─── Day Tabs ─── */
@@ -135,9 +183,10 @@
     padding-bottom: 8px;
     margin-bottom: 16px;
     -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
 }
 .day-tab {
-    padding: 8px 18px;
+    padding: 10px 18px;
     border-radius: 20px;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -147,6 +196,10 @@
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.15s;
+    scroll-snap-align: start;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
 }
 .day-tab:hover { border-color: var(--accent); color: var(--text); }
 .day-tab.active {
@@ -155,16 +208,17 @@
     border-color: var(--accent);
 }
 
-/* ─── Section Tabs (Info/Map/Restaurants/Stays) ─── */
+/* ─── Section Tabs ─── */
 .section-tabs {
     display: flex;
     gap: 0;
     border-bottom: 1px solid var(--border);
     margin-bottom: 16px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 .section-tab {
-    padding: 10px 18px;
+    padding: 10px 16px;
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
@@ -174,6 +228,7 @@
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s;
+    min-height: 44px;
 }
 .section-tab:hover { color: var(--text); }
 .section-tab.active {
@@ -220,6 +275,14 @@
     color: var(--text-secondary);
 }
 .activity-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.activity-category-tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    background: var(--surface2);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
 .activity-tips {
     margin-top: 8px;
     padding: 8px 12px;
@@ -296,6 +359,97 @@
 .stay-price small { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
 .stay-notes { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
 
+/* ─── Budget Section ─── */
+.budget-overview { }
+
+.budget-tier-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.budget-tier-card {
+    text-align: center;
+    padding: 16px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+.budget-tier-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.budget-tier-amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+}
+.budget-tier-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+.budget-tier-budget { border-top: 3px solid var(--green); }
+.budget-tier-mid { border-top: 3px solid var(--blue); }
+.budget-tier-luxury { border-top: 3px solid var(--amber); }
+
+.budget-breakdown {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+.budget-breakdown h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.budget-total {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+.budget-total strong {
+    color: var(--text);
+    font-size: 20px;
+}
+.budget-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.budget-bar-label {
+    width: 140px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+.budget-bar-track {
+    flex: 1;
+    height: 10px;
+    background: var(--surface2);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.budget-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.6s ease;
+}
+.budget-bar-amount {
+    width: 70px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
 /* ─── Info Sections ─── */
 .info-section {
     background: var(--surface);
@@ -320,31 +474,91 @@
 .info-section ul { padding-left: 18px; }
 .info-section li { margin-bottom: 4px; }
 
-.budget-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-top: 8px;
-}
-.budget-item {
-    text-align: center;
-    padding: 10px;
-    background: var(--surface2);
-    border-radius: 8px;
-}
-.budget-item .budget-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-.budget-item .budget-amount { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
-
 /* ─── Map ─── */
 .travel-map {
-    height: 350px;
+    height: 400px;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+.fit-markers-btn {
     margin-bottom: 16px;
 }
 
-/* ─── Loading State ─── */
+/* Map legend */
+.map-legend {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Restaurant marker */
+.restaurant-marker-icon {
+    background: none !important;
+    border: none !important;
+}
+.restaurant-pin {
+    width: 28px;
+    height: 28px;
+    background: var(--amber);
+    border: 2px solid #fff;
+    border-radius: 6px;
+    transform: rotate(45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.restaurant-pin { transform: rotate(0deg); border-radius: 50%; }
+
+/* ─── Autocomplete Dropdown ─── */
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 4px;
+    z-index: 1100;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+}
+.autocomplete-item {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.autocomplete-item:first-child { border-radius: 10px 10px 0 0; }
+.autocomplete-item:last-child { border-radius: 0 0 10px 10px; }
+.autocomplete-item:hover { background: var(--surface3); }
+.autocomplete-item .ac-country {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* ─── Loading State (Phase 2) ─── */
 .generating-overlay {
     position: fixed;
     inset: 0;
@@ -361,15 +575,43 @@
     padding: 40px;
     text-align: center;
     max-width: 360px;
+    width: 90%;
     box-shadow: var(--shadow-md);
 }
-.generating-card .gen-icon { font-size: 48px; margin-bottom: 16px; animation: pulse 2s infinite; }
-.generating-card h3 { font-size: 18px; margin-bottom: 8px; }
-.generating-card p { font-size: 13px; color: var(--text-secondary); }
-@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.generating-card .gen-icon { font-size: 48px; margin-bottom: 16px; animation: genBounce 2s infinite; }
+.generating-card h3 { font-size: 18px; margin-bottom: 12px; }
+
+@keyframes genBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.gen-steps { text-align: left; margin-bottom: 16px; }
+.gen-step {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    border-radius: 8px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.gen-step.active {
+    color: var(--accent);
+    background: var(--accent-bg);
+    font-weight: 500;
+}
+.gen-step.done {
+    color: var(--green);
+}
+.gen-step.done::after {
+    content: '✓';
+    margin-left: auto;
+    font-weight: 700;
+}
 
 .gen-progress {
-    margin-top: 16px;
     height: 4px;
     background: var(--surface2);
     border-radius: 2px;
@@ -380,12 +622,13 @@
     background: var(--accent);
     border-radius: 2px;
     width: 0%;
-    animation: genProgress 30s ease-out forwards;
+    animation: genProgress 25s ease-out forwards;
 }
 @keyframes genProgress {
     0% { width: 0%; }
-    30% { width: 40%; }
-    60% { width: 65%; }
+    20% { width: 20%; }
+    40% { width: 40%; }
+    60% { width: 60%; }
     80% { width: 80%; }
     100% { width: 92%; }
 }
@@ -395,6 +638,7 @@
     background: var(--red-bg);
     color: var(--red);
     border: 1px solid transparent;
+    min-height: 44px;
 }
 .btn-danger:hover { border-color: var(--red); }
 
@@ -403,7 +647,15 @@
     .trip-grid { grid-template-columns: 1fr; }
     .restaurant-grid { grid-template-columns: 1fr; }
     .stays-grid { grid-template-columns: 1fr; }
-    .budget-grid { grid-template-columns: 1fr; }
-    .trip-detail-header h1 { font-size: 22px; }
-    .travel-map { height: 260px; }
+    .budget-tier-cards { grid-template-columns: 1fr; }
+    .trip-hero-banner { height: 160px; }
+    .trip-hero-content h1 { font-size: 22px; }
+    .travel-map { height: 280px; }
+    .budget-bar-label { width: 100px; font-size: 12px; }
+    .budget-bar-amount { width: 60px; font-size: 12px; }
+    .section-tab { padding: 10px 12px; font-size: 12px; }
+
+    /* Day tabs horizontal scroll */
+    .day-tabs { scroll-snap-type: x mandatory; }
+    .day-tab { scroll-snap-align: start; flex-shrink: 0; }
 }
