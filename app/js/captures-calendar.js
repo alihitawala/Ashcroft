@@ -81,7 +81,7 @@ const CapturesCalendar = {
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const data = await CapturesService.getCaptures({
                 from: year + '-' + mm + '-01',
-                to: year + '-' + mm + '-' + String(daysInMonth).padStart(2, '0'),
+                to: year + '-' + mm + '-' + String(daysInMonth).padStart(2, '0') + 'T23:59:59',
                 limit: 1000
             });
             const captures = data.captures || [];
@@ -97,7 +97,7 @@ const CapturesCalendar = {
         // Group by day
         const byDay = {};
         captures.forEach(c => {
-            const d = new Date(c.created_at || c.date);
+            const d = new Date(c.captured_at || c.created_at || c.date);
             const day = d.getDate();
             if (!byDay[day]) byDay[day] = [];
             byDay[day].push(c);
@@ -155,7 +155,7 @@ const CapturesCalendar = {
         const key = this.currentYear + '-' + (this.currentMonth + 1);
         const captures = this.monthCache[key] || [];
         const dayCaps = captures.filter(c => {
-            const d = new Date(c.created_at || c.date);
+            const d = new Date(c.captured_at || c.created_at || c.date);
             return d.getDate() === day;
         });
 
@@ -182,17 +182,13 @@ const CapturesCalendar = {
         dayCaps.forEach(c => {
             const icon = typeIcons[c.type] || 'file-text';
             const color = typeColors[c.type] || '#6366f1';
-            const time = new Date(c.created_at || c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const tags = (c.tags || []).map(t =>
-                '<span class="cal-detail-tag" style="background:' + (t.color || '#6366f1') + '20;color:' + (t.color || '#6366f1') + '">' + (t.name || t) + '</span>'
-            ).join('');
+            const time = new Date(c.captured_at || c.created_at || c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             html += '<div class="cal-detail-item" onclick="CapturesCalendar.goToCapture(\'' + c.id + '\')">' +
                 '<i data-lucide="' + icon + '" style="width:15px;height:15px;color:' + color + '" class="cal-detail-icon"></i>' +
                 '<div class="cal-detail-info">' +
                     '<span class="cal-detail-title">' + (c.title || c.text || 'Untitled').substring(0, 60) + '</span>' +
                     '<span class="cal-detail-time">' + time + '</span>' +
                 '</div>' +
-                (tags ? '<div class="cal-detail-tags">' + tags + '</div>' : '') +
                 '</div>';
         });
         html += '</div>';
