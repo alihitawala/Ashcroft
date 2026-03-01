@@ -188,3 +188,18 @@
   transition: background 0.2s;
 }
 .sports-next-item:hover { background: rgba(128,128,128,0.1); }
+
+/* Captures widget */
+.capture-widget-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+.capture-widget-item:last-child { border-bottom: none; }
+.capture-icon { background: var(--accent-bg); color: var(--accent); }
+.capture-widget-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capture-widget-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.capture-tag-chip { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 500; }

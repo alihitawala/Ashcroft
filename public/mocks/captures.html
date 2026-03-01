@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captures — Mock</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* ═══════════════ THEME SYSTEM ═══════════════ */
+        [data-theme="dark"] {
+            --bg: #0b0e11;
+            --surface: #13171c;
+            --surface2: #1a1f26;
+            --surface3: #222830;
+            --border: #2a313a;
+            --border-hover: #3a4250;
+            --text: #f0f2f5;
+            --text-secondary: #8a94a0;
+            --text-tertiary: #5a6370;
+            --accent: #635bff;
+            --accent-light: #7a73ff;
+            --accent-bg: rgba(99, 91, 255, 0.1);
+            --accent-border: rgba(99, 91, 255, 0.25);
+            --green: #3ecf8e;
+            --green-bg: rgba(62, 207, 142, 0.1);
+            --red: #f45b69;
+            --red-bg: rgba(244, 91, 105, 0.1);
+            --amber: #f5a623;
+            --amber-bg: rgba(245, 166, 35, 0.1);
+            --blue: #5b9cf6;
+            --blue-bg: rgba(91, 156, 246, 0.1);
+            --purple: #a78bfa;
+            --purple-bg: rgba(167, 139, 250, 0.1);
+            --pink: #f472b6;
+            --pink-bg: rgba(244, 114, 182, 0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
+            --map-filter: brightness(0.7) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+        }
+        [data-theme="light"] {
+            --bg: #f6f8fa;
+            --surface: #ffffff;
+            --surface2: #f0f2f5;
+            --surface3: #e8ecf0;
+            --border: #e0e4e8;
+            --border-hover: #c8cdd3;
+            --text: #1a1f36;
+            --text-secondary: #596577;
+            --text-tertiary: #8792a2;
+            --accent: #635bff;
+            --accent-light: #7a73ff;
+            --accent-bg: rgba(99, 91, 255, 0.06);
+            --accent-border: rgba(99, 91, 255, 0.2);
+            --green: #0e9f6e;
+            --green-bg: rgba(14, 159, 110, 0.08);
+            --red: #e03e4e;
+            --red-bg: rgba(224, 62, 78, 0.08);
+            --amber: #d97706;
+            --amber-bg: rgba(217, 119, 6, 0.08);
+            --blue: #3b82f6;
+            --blue-bg: rgba(59, 130, 246, 0.08);
+            --purple: #7c3aed;
+            --purple-bg: rgba(124, 58, 237, 0.08);
+            --pink: #ec4899;
+            --pink-bg: rgba(236, 72, 153, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+            --map-filter: none;
+        }
+
+        /* ═══════════════ BASE ═══════════════ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s; }
+        .layout { display: flex; min-height: 100vh; }
+
+        /* ═══════════════ SIDEBAR ═══════════════ */
+        .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; transition: background 0.3s; }
+        .sidebar-top { padding: 18px 18px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .sidebar .logo { font-size: 15px; font-weight: 700; }
+        .sidebar .logo .dot { color: var(--accent); }
+        .theme-toggle { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .theme-toggle:hover { border-color: var(--accent); }
+        .sidebar-section { padding: 18px 18px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); font-weight: 600; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 18px; color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.1s; position: relative; }
+        .sidebar-nav a:hover { color: var(--text); background: var(--surface2); }
+        .sidebar-nav a.active { color: var(--accent); background: var(--accent-bg); }
+        .sidebar-nav a.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--accent); border-radius: 0 2px 2px 0; }
+        .sidebar-nav .icon { font-size: 15px; width: 20px; text-align: center; }
+        .sidebar-nav .count { margin-left: auto; font-size: 11px; font-weight: 600; background: var(--accent-bg); color: var(--accent); padding: 1px 7px; border-radius: 10px; }
+        .sidebar-bottom { margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; }
+        .user-name { font-size: 13px; font-weight: 600; }
+        .user-role { font-size: 11px; color: var(--text-tertiary); }
+
+        /* ═══════════════ MAIN ═══════════════ */
+        .main { flex: 1; padding: 28px 32px; overflow-y: auto; max-width: 900px; }
+        .main-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .main-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+        .main-subtitle { color: var(--text-tertiary); font-size: 13px; margin-top: 4px; }
+
+        /* ═══════════════ SEARCH BAR ═══════════════ */
+        .search-bar { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; transition: border-color 0.2s; }
+        .search-bar:focus-within { border-color: var(--accent); }
+        .search-bar input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 13px; font-family: inherit; }
+        .search-bar input::placeholder { color: var(--text-tertiary); }
+        .search-icon { color: var(--text-tertiary); font-size: 14px; }
+
+        /* ═══════════════ VIEW TABS ═══════════════ */
+        .view-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+        .view-tab { flex: 1; padding: 8px 12px; border-radius: 7px; border: none; background: none; color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .view-tab:hover { color: var(--text); background: var(--surface2); }
+        .view-tab.active { background: var(--accent); color: white; }
+
+        /* ═══════════════ TAG FILTERS ═══════════════ */
+        .tag-filters { display: flex; gap: 6px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+        .tag-filters::-webkit-scrollbar { display: none; }
+        .tag-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-family: inherit; }
+        .tag-chip:hover { border-color: var(--accent); color: var(--accent); }
+        .tag-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .tag-chip .tag-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+        /* ═══════════════ DATE SEPARATOR ═══════════════ */
+        .date-sep { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 0 8px; }
+
+        /* ═══════════════ CAPTURE CARDS ═══════════════ */
+        .capture-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm); transition: all 0.2s; cursor: pointer; }
+        .capture-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-hover); }
+        .capture-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .capture-body { padding: 14px 16px; }
+        .capture-type-icon { font-size: 13px; margin-right: 6px; }
+        .capture-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; line-height: 1.4; }
+        .capture-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .capture-link-preview { display: flex; gap: 12px; align-items: center; background: var(--surface2); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .capture-link-thumb { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .capture-link-info { flex: 1; min-width: 0; }
+        .capture-link-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .capture-link-domain { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+        .capture-link-desc { font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .capture-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .capture-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+        .capture-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+        .capture-location { font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 3px; }
+        .capture-time { font-size: 11px; color: var(--text-tertiary); margin-left: auto; }
+        .capture-shared { font-size: 10px; color: var(--accent); background: var(--accent-bg); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .capture-checklist { list-style: none; margin-bottom: 10px; }
+        .capture-checklist li { font-size: 13px; padding: 3px 0; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+        .capture-checklist li.checked { text-decoration: line-through; color: var(--text-tertiary); }
+        .check-box { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border); flex-shrink: 0; }
+        .check-box.done { background: var(--green); border-color: var(--green); position: relative; }
+        .check-box.done::after { content: '✓'; color: white; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-weight: 700; }
+
+        /* ═══════════════ GRID VIEW ═══════════════ */
+        .grid-view { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .grid-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm); transition: all 0.2s; cursor: pointer; }
+        .grid-card:hover { box-shadow: var(--shadow-md); }
+        .grid-card-img { width: 100%; height: 140px; object-fit: cover; display: block; background: var(--surface2); }
+        .grid-card-body { padding: 10px 12px; }
+        .grid-card-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .grid-card-meta { font-size: 10px; color: var(--text-tertiary); }
+        .grid-card-text { height: 140px; display: flex; align-items: center; justify-content: center; padding: 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; text-align: center; background: var(--surface2); }
+
+        /* ═══════════════ MAP VIEW ═══════════════ */
+        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); height: 500px; margin-bottom: 16px; }
+        .map-container .leaflet-container { height: 100%; }
+        [data-theme="dark"] .leaflet-tile { filter: var(--map-filter); }
+        .leaflet-popup-content-wrapper { background: var(--surface) !important; color: var(--text) !important; border-radius: 10px !important; box-shadow: var(--shadow-lg) !important; border: 1px solid var(--border) !important; }
+        .leaflet-popup-tip { background: var(--surface) !important; }
+        .leaflet-popup-content { margin: 10px 12px !important; font-family: inherit !important; font-size: 13px !important; }
+        .popup-title { font-weight: 600; margin-bottom: 4px; }
+        .popup-text { color: var(--text-secondary); font-size: 12px; }
+        .popup-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; }
+
+        /* ═══════════════ FAB ═══════════════ */
+        .fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 16px; background: var(--accent); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 20px rgba(99, 91, 255, 0.4); display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 100; }
+        .fab:hover { transform: scale(1.05); box-shadow: 0 6px 28px rgba(99, 91, 255, 0.5); }
+        .fab.open { transform: rotate(45deg); border-radius: 50%; }
+
+        /* ═══════════════ CAPTURE MODAL ═══════════════ */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: flex-end; justify-content: center; }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal { background: var(--surface); border-radius: 16px 16px 0 0; width: 100%; max-width: 600px; max-height: 80vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s; padding: 20px; }
+        .modal-overlay.open .modal { transform: translateY(0); }
+        .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+        .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+        .modal-type-row { display: flex; gap: 8px; margin-bottom: 16px; }
+        .modal-type-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; }
+        .modal-type-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .modal-type-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+        .modal-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; font-family: inherit; resize: vertical; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+        .modal-input:focus { border-color: var(--accent); }
+        .modal-input::placeholder { color: var(--text-tertiary); }
+        .modal-tags-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; min-height: 40px; }
+        .modal-tags-input input { flex: 1; min-width: 80px; background: none; border: none; outline: none; color: var(--text); font-size: 13px; font-family: inherit; }
+        .modal-tags-input input::placeholder { color: var(--text-tertiary); }
+        .modal-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; background: var(--accent-bg); color: var(--accent); display: flex; align-items: center; gap: 4px; }
+        .modal-tag .remove { cursor: pointer; font-size: 13px; line-height: 1; }
+        .modal-toggles { display: flex; gap: 12px; margin-bottom: 16px; }
+        .modal-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); transition: all 0.15s; }
+        .modal-toggle:hover { border-color: var(--accent); }
+        .modal-toggle.on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+        .modal-submit { width: 100%; padding: 12px; border-radius: 10px; background: var(--accent); color: white; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .modal-submit:hover { background: var(--accent-light); }
+
+        /* ═══════════════ VIEW CONTAINERS ═══════════════ */
+        .view-container { display: none; }
+        .view-container.active { display: block; }
+
+        /* ═══════════════ RESPONSIVE ═══════════════ */
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { padding: 16px; max-width: 100%; }
+            .grid-view { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .map-container { height: 400px; }
+            .fab { bottom: 20px; right: 20px; }
+        }
+        @media (max-width: 500px) {
+            .main-header { flex-direction: column; gap: 8px; }
+            .modal { max-height: 90vh; border-radius: 12px 12px 0 0; }
+        }
+
+        .back { display: inline-block; padding: 6px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); text-decoration: none; font-size: 12px; position: fixed; top: 12px; right: 12px; z-index: 10; }
+        .back:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* ═══════════════ CALENDAR VIEW ═══════════════ */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 16px; }
+        .cal-header { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-tertiary); text-align: center; padding: 8px 0; letter-spacing: 0.06em; }
+        .cal-day { aspect-ratio: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; position: relative; }
+        .cal-day:hover { border-color: var(--accent); }
+        .cal-day.today { border-color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+        .cal-day.empty { background: none; border: none; cursor: default; }
+        .cal-day.empty:hover { border: none; }
+        .cal-dots { display: flex; gap: 3px; margin-top: 4px; }
+        .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .cal-month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .cal-month-nav h3 { font-size: 15px; font-weight: 700; }
+        .cal-nav-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.15s; }
+        .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .cal-day-captures { margin-top: 12px; }
+        .cal-day-captures h4 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <a class="back" href="index.html">← All Mocks</a>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="logo">ashcroft<span class="dot">.</span>cloud</div>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            </div>
+            <div class="sidebar-section">Main</div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+                <a href="tasks.html"><span class="icon">✅</span> Tasks</a>
+                <a href="events.html"><span class="icon">📅</span> Events</a>
+                <a href="grocery.html"><span class="icon">🛒</span> Grocery</a>
+                <a href="garden.html"><span class="icon">🌳</span> Garden</a>
+                <a href="#"><span class="icon">📝</span> Notes</a>
+                <a href="#" class="active"><span class="icon">📷</span> Captures <span class="count">24</span></a>
+                <a href="kanban.html"><span class="icon">📋</span> Kanban</a>
+            </nav>
+            <div class="sidebar-section">System</div>
+            <nav class="sidebar-nav">
+                <a href="settings.html"><span class="icon">⚙️</span> Settings</a>
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="user-info">
+                    <div class="avatar">A</div>
+                    <div><div class="user-name">Ali Hussin</div><div class="user-role">Admin</div></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="main-header">
+                <div>
+                    <h1>Captures 📷</h1>
+                    <div class="main-subtitle">24 captures · 8 tags · 12 locations</div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search captures..." id="searchInput">
+            </div>
+
+            <!-- View Tabs -->
+            <div class="view-tabs">
+                <button class="view-tab active" data-view="timeline">📋 Timeline</button>
+                <button class="view-tab" data-view="map">🗺️ Map</button>
+                <button class="view-tab" data-view="grid">⊞ Grid</button>
+                <button class="view-tab" data-view="calendar">📅 Calendar</button>
+            </div>
+
+            <!-- Tag Filters -->
+            <div class="tag-filters">
+                <button class="tag-chip active">All</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#3ecf8e"></span>garden</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#f5a623"></span>food</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#5b9cf6"></span>tech</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#f472b6"></span>travel</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#a78bfa"></span>ideas</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#f45b69"></span>home</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#635bff"></span>personal</button>
+                <button class="tag-chip"><span class="tag-dot" style="background:#3ecf8e"></span>recipes</button>
+            </div>
+
+            <!-- ═══════════════ TIMELINE VIEW ═══════════════ -->
+            <div class="view-container active" id="view-timeline">
+                <div class="date-sep">Today — Feb 28, 2026</div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📝</span>Mango tree is finally flowering!</div>
+                        <div class="capture-text">After three years of waiting, the Alphonso mango tree has put out its first set of flowers. About 6 panicles visible on the south-facing branches. Need to watch out for anthracnose — might spray copper fungicide this weekend.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--green-bg);color:var(--green)">garden</span>
+                            </div>
+                            <span class="capture-location">📍 Backyard, Sunnyvale</span>
+                            <span class="capture-shared">👨‍👩 Shared</span>
+                            <span class="capture-time">2h ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-link-preview">
+                            <div class="capture-link-thumb">🦀</div>
+                            <div class="capture-link-info">
+                                <div class="capture-link-title">Rust for JavaScript Developers — A Practical Guide</div>
+                                <div class="capture-link-domain">blog.logrocket.com</div>
+                                <div class="capture-link-desc">An approachable guide to Rust concepts mapped to JS equivalents. Covers ownership, borrowing, and async.</div>
+                            </div>
+                        </div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--blue-bg);color:var(--blue)">tech</span>
+                            </div>
+                            <span class="capture-time">5h ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="date-sep">Yesterday — Feb 27</div>
+
+                <div class="capture-card">
+                    <div style="height:200px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);display:flex;align-items:center;justify-content:center;font-size:48px;">🍕</div>
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📸</span>Pizza night at Doppio Zero</div>
+                        <div class="capture-text">Incredible Neapolitan-style margherita. The dough was perfectly charred and chewy. Definitely coming back — they also have a great tiramisu.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--amber-bg);color:var(--amber)">food</span>
+                            </div>
+                            <span class="capture-location">📍 Mountain View, CA</span>
+                            <span class="capture-shared">👨‍👩 Shared</span>
+                            <span class="capture-time">Yesterday 8:30 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">☑️</span>Weekend garden tasks</div>
+                        <ul class="capture-checklist">
+                            <li class="checked"><span class="check-box done"></span>Prune lemon tree</li>
+                            <li class="checked"><span class="check-box done"></span>Fertilize avocado</li>
+                            <li><span class="check-box"></span>Spray mango for anthracnose</li>
+                            <li><span class="check-box"></span>Transplant basil seedlings</li>
+                            <li><span class="check-box"></span>Fix drip irrigation line #3</li>
+                        </ul>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--green-bg);color:var(--green)">garden</span>
+                                <span class="capture-tag" style="background:var(--red-bg);color:var(--red)">home</span>
+                            </div>
+                            <span class="capture-time">Yesterday 3:15 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="date-sep">Feb 25</div>
+
+                <div class="capture-card">
+                    <div style="height:200px;background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);display:flex;align-items:center;justify-content:center;font-size:48px;">🎂</div>
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📸</span>Akash's birthday party</div>
+                        <div class="capture-text">Great evening with friends. The kids loved the bounce house. Saba made an amazing chocolate cake. Note to self: book venue earlier next time, this one was almost fully booked.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--purple-bg);color:var(--purple)">personal</span>
+                            </div>
+                            <span class="capture-location">📍 Sunnyvale, CA</span>
+                            <span class="capture-shared">👨‍👩 Shared</span>
+                            <span class="capture-time">Feb 25, 7:00 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📝</span>Idea: Telegram bot for quick captures</div>
+                        <div class="capture-text">What if I could just send a message to a Telegram bot and it automatically creates a capture? Text → text capture, photo → photo capture, URL → link capture. Would make mobile capturing even faster. Bittu could handle the parsing.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--purple-bg);color:var(--purple)">ideas</span>
+                                <span class="capture-tag" style="background:var(--blue-bg);color:var(--blue)">tech</span>
+                            </div>
+                            <span class="capture-time">Feb 25, 11:20 AM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="date-sep">Feb 22</div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-link-preview">
+                            <div class="capture-link-thumb">📰</div>
+                            <div class="capture-link-info">
+                                <div class="capture-link-title">The Case for Self-Hosting in 2026</div>
+                                <div class="capture-link-domain">selfhosted.show</div>
+                                <div class="capture-link-desc">Why more developers are moving away from cloud services back to dedicated hardware. Privacy, control, and surprisingly — cost.</div>
+                            </div>
+                        </div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--blue-bg);color:var(--blue)">tech</span>
+                            </div>
+                            <span class="capture-time">Feb 22, 9:45 AM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-card">
+                    <div style="height:200px;background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);display:flex;align-items:center;justify-content:center;font-size:48px;">🌊</div>
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📸</span>Half Moon Bay sunset</div>
+                        <div class="capture-text">Spontaneous drive to the coast. The light was incredible — golden hour hit different today. Got some great shots with the 35mm.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--pink-bg);color:var(--pink)">travel</span>
+                            </div>
+                            <span class="capture-location">📍 Half Moon Bay, CA</span>
+                            <span class="capture-time">Feb 22, 5:50 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="date-sep">Feb 20</div>
+
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📝</span>Saba's dal recipe — the one everyone loves</div>
+                        <div class="capture-text">1 cup toor dal, 1/2 tsp turmeric, salt. Pressure cook 3 whistles. Tadka: ghee, cumin seeds, hing, curry leaves, dried red chili, garlic (4 cloves), onion (1 chopped), tomato (1 chopped). Add tadka to dal, simmer 5 min. Finish with cilantro and lemon juice.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--amber-bg);color:var(--amber)">food</span>
+                                <span class="capture-tag" style="background:var(--green-bg);color:var(--green)">recipes</span>
+                            </div>
+                            <span class="capture-shared">👨‍👩 Shared</span>
+                            <span class="capture-time">Feb 20, 7:10 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capture-card">
+                    <div style="height:200px;background:linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);display:flex;align-items:center;justify-content:center;font-size:48px;">🌸</div>
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📸</span>Cherry blossoms at Saratoga park</div>
+                        <div class="capture-text">First blooms of the season. The whole path was covered in petals. Spring is coming early this year.</div>
+                        <div class="capture-meta">
+                            <div class="capture-tags">
+                                <span class="capture-tag" style="background:var(--pink-bg);color:var(--pink)">travel</span>
+                                <span class="capture-tag" style="background:var(--green-bg);color:var(--green)">garden</span>
+                            </div>
+                            <span class="capture-location">📍 Saratoga, CA</span>
+                            <span class="capture-time">Feb 20, 2:30 PM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ MAP VIEW ═══════════════ -->
+            <div class="view-container" id="view-map">
+                <div class="map-container" id="map"></div>
+                <div class="date-sep">Captures near this area</div>
+                <div class="capture-card">
+                    <div class="capture-body">
+                        <div class="capture-title"><span class="capture-type-icon">📝</span>Mango tree is finally flowering!</div>
+                        <div class="capture-meta">
+                            <span class="capture-location">📍 Backyard, Sunnyvale</span>
+                            <span class="capture-time">2h ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ GRID VIEW ═══════════════ -->
+            <div class="view-container" id="view-grid">
+                <div class="grid-view">
+                    <div class="grid-card">
+                        <div class="grid-card-img" style="background:linear-gradient(135deg, #667eea, #764ba2);display:flex;align-items:center;justify-content:center;font-size:36px;">🍕</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Pizza night at Doppio Zero</div>
+                            <div class="grid-card-meta">📍 Mountain View · Yesterday</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-img" style="background:linear-gradient(135deg, #f093fb, #f5576c);display:flex;align-items:center;justify-content:center;font-size:36px;">🎂</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Akash's birthday party</div>
+                            <div class="grid-card-meta">📍 Sunnyvale · Feb 25</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-text">Mango tree is finally flowering! After three years...</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Mango tree flowering 🥭</div>
+                            <div class="grid-card-meta">📍 Backyard · Today</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-img" style="background:linear-gradient(135deg, #4facfe, #00f2fe);display:flex;align-items:center;justify-content:center;font-size:36px;">🌊</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Half Moon Bay sunset</div>
+                            <div class="grid-card-meta">📍 Half Moon Bay · Feb 22</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-text">Saba's dal recipe — 1 cup toor dal, turmeric...</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Saba's dal recipe</div>
+                            <div class="grid-card-meta">🏷 food, recipes · Feb 20</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-img" style="background:linear-gradient(135deg, #a8edea, #fed6e3);display:flex;align-items:center;justify-content:center;font-size:36px;">🌸</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Cherry blossoms</div>
+                            <div class="grid-card-meta">📍 Saratoga · Feb 20</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-text">Telegram bot for quick captures — just send a message...</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Idea: Telegram capture bot</div>
+                            <div class="grid-card-meta">🏷 ideas, tech · Feb 25</div>
+                        </div>
+                    </div>
+                    <div class="grid-card">
+                        <div class="grid-card-text">🦀 Rust for JavaScript Developers — A Practical Guide</div>
+                        <div class="grid-card-body">
+                            <div class="grid-card-title">Rust for JS devs</div>
+                            <div class="grid-card-meta">🏷 tech · Feb 22</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ CALENDAR VIEW ═══════════════ -->
+            <div class="view-container" id="view-calendar">
+                <div class="cal-month-nav">
+                    <button class="cal-nav-btn">‹</button>
+                    <h3>February 2026</h3>
+                    <button class="cal-nav-btn">›</button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div><div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div><div class="cal-header">Sat</div>
+                    <div class="cal-day">1</div>
+                    <div class="cal-day">2</div>
+                    <div class="cal-day">3</div>
+                    <div class="cal-day">4</div>
+                    <div class="cal-day">5</div>
+                    <div class="cal-day">6</div>
+                    <div class="cal-day">7</div>
+                    <div class="cal-day">8</div>
+                    <div class="cal-day">9</div>
+                    <div class="cal-day">10</div>
+                    <div class="cal-day">11</div>
+                    <div class="cal-day">12</div>
+                    <div class="cal-day">13</div>
+                    <div class="cal-day">14</div>
+                    <div class="cal-day">15</div>
+                    <div class="cal-day">16</div>
+                    <div class="cal-day">17</div>
+                    <div class="cal-day">18</div>
+                    <div class="cal-day">19</div>
+                    <div class="cal-day">20<div class="cal-dots"><span class="cal-dot" style="background:var(--amber)"></span><span class="cal-dot" style="background:var(--pink)"></span><span class="cal-dot" style="background:var(--green)"></span></div></div>
+                    <div class="cal-day">21</div>
+                    <div class="cal-day">22<div class="cal-dots"><span class="cal-dot" style="background:var(--blue)"></span><span class="cal-dot" style="background:var(--pink)"></span></div></div>
+                    <div class="cal-day">23</div>
+                    <div class="cal-day">24</div>
+                    <div class="cal-day">25<div class="cal-dots"><span class="cal-dot" style="background:var(--purple)"></span><span class="cal-dot" style="background:var(--purple)"></span></div></div>
+                    <div class="cal-day">26</div>
+                    <div class="cal-day">27<div class="cal-dots"><span class="cal-dot" style="background:var(--amber)"></span><span class="cal-dot" style="background:var(--green)"></span></div></div>
+                    <div class="cal-day today">28<div class="cal-dots"><span class="cal-dot" style="background:var(--green)"></span><span class="cal-dot" style="background:var(--blue)"></span></div></div>
+                </div>
+                <div class="cal-day-captures">
+                    <h4>📅 Today — Feb 28, 2026</h4>
+                    <div class="capture-card">
+                        <div class="capture-body">
+                            <div class="capture-title"><span class="capture-type-icon">📝</span>Mango tree is finally flowering!</div>
+                            <div class="capture-meta">
+                                <div class="capture-tags"><span class="capture-tag" style="background:var(--green-bg);color:var(--green)">garden</span></div>
+                                <span class="capture-location">📍 Backyard, Sunnyvale</span>
+                                <span class="capture-time">2h ago</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="capture-card">
+                        <div class="capture-body">
+                            <div class="capture-title"><span class="capture-type-icon">🔗</span>Rust for JavaScript Developers</div>
+                            <div class="capture-meta">
+                                <div class="capture-tags"><span class="capture-tag" style="background:var(--blue-bg);color:var(--blue)">tech</span></div>
+                                <span class="capture-time">5h ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" id="fab" onclick="toggleModal()">+</button>
+
+    <!-- Capture Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
+            <div class="modal-title">New Capture</div>
+            <div class="modal-type-row">
+                <button class="modal-type-btn active" data-type="text">📝 Text</button>
+                <button class="modal-type-btn" data-type="photo">📸 Photo</button>
+                <button class="modal-type-btn" data-type="link">🔗 Link</button>
+                <button class="modal-type-btn" data-type="checklist">☑️ List</button>
+            </div>
+            <input class="modal-input" type="text" placeholder="Title (optional)" />
+            <textarea class="modal-input" rows="4" placeholder="What's on your mind?"></textarea>
+            <div class="modal-tags-input">
+                <span class="modal-tag">garden <span class="remove" onclick="this.parentElement.remove()">×</span></span>
+                <input type="text" placeholder="Add tags..." />
+            </div>
+            <div class="modal-toggles">
+                <div class="modal-toggle on" onclick="this.classList.toggle('on')">📍 Location</div>
+                <div class="modal-toggle" onclick="this.classList.toggle('on')">👨‍👩 Share with Saba</div>
+            </div>
+            <button class="modal-submit">Save Capture</button>
+        </div>
+    </div>
+
+    <script>
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            if (html.getAttribute('data-theme') === 'dark') {
+                html.setAttribute('data-theme', 'light');
+                btn.textContent = '☀️';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+            }
+            // Re-render map tiles if map is visible
+            if (map) { map.invalidateSize(); }
+        }
+
+        // View switching
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('view-' + tab.dataset.view).classList.add('active');
+                if (tab.dataset.view === 'map') {
+                    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+                }
+            });
+        });
+
+        // Tag filter
+        document.querySelectorAll('.tag-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+        });
+
+        // Modal type buttons
+        document.querySelectorAll('.modal-type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.modal-type-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // FAB / Modal
+        function toggleModal() {
+            const overlay = document.getElementById('modalOverlay');
+            const fab = document.getElementById('fab');
+            overlay.classList.toggle('open');
+            fab.classList.toggle('open');
+        }
+        function closeModal(e) {
+            if (e.target === e.currentTarget) toggleModal();
+        }
+
+        // Map
+        let map;
+        function initMap() {
+            map = L.map('map').setView([37.38, -122.03], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            const captures = [
+                { lat: 37.3688, lng: -122.0363, title: '🥭 Mango tree flowering', text: 'Backyard, Sunnyvale', time: '2h ago' },
+                { lat: 37.3861, lng: -122.0839, title: '🍕 Pizza at Doppio Zero', text: 'Mountain View, CA', time: 'Yesterday' },
+                { lat: 37.3688, lng: -122.0363, title: '🎂 Akash\'s birthday', text: 'Sunnyvale, CA', time: 'Feb 25' },
+                { lat: 37.4734, lng: -122.4286, title: '🌊 Half Moon Bay sunset', text: 'Half Moon Bay, CA', time: 'Feb 22' },
+                { lat: 37.2642, lng: -122.0231, title: '🌸 Cherry blossoms', text: 'Saratoga, CA', time: 'Feb 20' },
+            ];
+
+            const icon = L.divIcon({
+                className: '',
+                html: '<div style="width:32px;height:32px;background:var(--accent);border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
+            });
+
+            captures.forEach(c => {
+                L.marker([c.lat, c.lng], { icon }).addTo(map)
+                    .bindPopup(`<div class="popup-title">${c.title}</div><div class="popup-text">${c.text}</div><div class="popup-meta">${c.time}</div>`);
+            });
+        }
+
+        // Init map lazily when map tab is shown
+        const mapObserver = new MutationObserver(() => {
+            const mapView = document.getElementById('view-map');
+            if (mapView.classList.contains('active') && !map) {
+                setTimeout(initMap, 50);
+            }
+        });
+        mapObserver.observe(document.getElementById('view-map'), { attributes: true, attributeFilter: ['class'] });
+    </script>
+</body>
+</html>

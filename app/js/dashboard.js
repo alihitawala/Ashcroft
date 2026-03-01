@@ -27,7 +27,7 @@ let todayTasks = [];
 
 // ─── Load All Data ───
 async function loadDashboard() {
-    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext] = await Promise.all([
+    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures] = await Promise.all([
         API.get('/tasks').catch(() => []),
         API.get('/tasks?due=today').catch(() => []),
         API.get('/events?upcoming=5').catch(() => []),
@@ -35,6 +35,7 @@ async function loadDashboard() {
         API.get('/garden/watering-schedule').catch(() => ({ overdue: [], today: [], soon: [], upcoming: [] })),
         API.get('/garden/plants/dashboard').catch(() => ({ needs_attention_count: 0, recommendations: [] })),
         API.get('/sports/next-up').catch(() => null),
+        API.get('/captures/recent').catch(() => []),
     ]);
 
     const norm = v => Array.isArray(v) ? v : (v?.items || []);
@@ -48,7 +49,7 @@ async function loadDashboard() {
     const needsAttention = gardenDash.needs_attention_count || 0;
 
     renderSummary(incompleteTasks, evts.length, uncheckedGrocery, needsAttention);
-    renderWidgets(evts, watering, gardenDash, tasks, sportsNext);
+    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -102,7 +103,7 @@ function renderSummary(taskCount, eventCount, groceryCount, gardenCount) {
 }
 
 // ─── Widgets ───
-function renderWidgets(events, watering, gardenDash, allTasks, sportsNext) {
+function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures) {
     document.getElementById('widgets').innerHTML = `
         ${renderSportsNextUp(sportsNext)}
         <div class="card">
@@ -112,6 +113,10 @@ function renderWidgets(events, watering, gardenDash, allTasks, sportsNext) {
         <div class="card">
             <div class="card-header"><h3>Upcoming Events</h3><a href="/app/events.html" class="link">View All →</a></div>
             <div class="card-body">${renderEvents(events)}</div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Recent Captures</h3><a href="/app/captures.html" class="link">View All →</a></div>
+            <div class="card-body">${renderRecentCaptures(recentCaptures)}</div>
         </div>
         <div class="card">
             <div class="card-header"><h3>Garden Overview</h3><a href="/app/garden.html" class="link">View All →</a></div>
@@ -223,6 +228,29 @@ function renderGarden(watering, dashboard) {
     }
 
     return html;
+}
+
+// ─── Recent Captures ───
+function renderRecentCaptures(captures) {
+    if (!captures || !captures.length) {
+        return `<div class="empty-state"><div class="emoji"><i data-lucide="zap"></i></div><p>No captures yet — <a href="/app/captures.html">start capturing!</a></p></div>`;
+    }
+    const typeIcons = { text: 'file-text', link: 'link', checklist: 'list-checks', photo: 'image' };
+    return captures.slice(0, 5).map(c => {
+        const icon = typeIcons[c.type] || 'file-text';
+        const title = c.title || c.raw_input?.slice(0, 60) || 'Untitled';
+        const ago = timeAgo(new Date(c.captured_at));
+        const tagHtml = (c.tags || []).slice(0, 2).map(t =>
+            `<span class="capture-tag-chip" style="background:${t.color}22;color:${t.color}">${esc(t.name)}</span>`
+        ).join('');
+        return `<div class="capture-widget-item">
+            <div class="activity-icon capture-icon"><i data-lucide="${icon}"></i></div>
+            <div style="flex:1;min-width:0">
+                <div class="capture-widget-title">${esc(title)}</div>
+                <div class="capture-widget-meta">${ago}${tagHtml ? ' · ' + tagHtml : ''}</div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // ─── Recent Activity ───

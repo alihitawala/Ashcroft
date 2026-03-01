@@ -15,6 +15,7 @@ const gardenRoutes = require('./routes/garden');
 const flightRoutes = require('./routes/flights');
 const galleryRoutes = require('./routes/gallery');
 const sportsRoutes = require('./routes/sports');
+const capturesRoutes = require('./routes/captures');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
@@ -30,6 +31,7 @@ app.use(cookieParser());
 
 // Static file serving for uploads
 app.use('/uploads', express.static('/home/ashcroft/www/public/uploads'));
+app.use('/app/uploads', express.static('/home/ashcroft/www/app/uploads'));
 
 // Public gallery share (before authenticated routes)
 app.use('/api/gallery/shared', (req, res) => {
@@ -69,6 +71,7 @@ app.get('/api/public/gallery', galleryRoutes.getPublicPhoto);
 app.use('/api/gallery', authenticate, galleryRoutes);
 
 app.use('/api/sports', authenticate, sportsRoutes);
+app.use('/api/captures', authenticate, capturesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
