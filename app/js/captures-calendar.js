@@ -260,11 +260,11 @@ const CapturesCalendar = {
 
         const overlay = document.createElement('div');
         overlay.className = 'cal-modal-overlay';
-        overlay.onclick = () => overlay.remove();
+        overlay.onclick = () => { overlay.remove(); document.body.classList.remove('modal-open'); };
         overlay.innerHTML = '<div class="cal-modal" onclick="event.stopPropagation()">' +
             '<div class="cal-modal-header">' +
                 '<span class="cal-modal-type" style="color:' + color + '">' + (cap.type || 'note') + '</span>' +
-                '<button class="cal-modal-close" onclick="this.closest(\'.cal-modal-overlay\').remove()">✕</button>' +
+                '<button class="cal-modal-close" onclick="this.closest(\'.cal-modal-overlay\').remove();document.body.classList.remove(\'modal-open\')">✕</button>' +
             '</div>' +
             '<h3 class="cal-modal-title">' + this._esc(cap.title || 'Untitled') + '</h3>' +
             '<span class="cal-modal-time">' + time + '</span>' +
@@ -272,6 +272,7 @@ const CapturesCalendar = {
             body +
             '</div>';
         document.body.appendChild(overlay);
+        document.body.classList.add('modal-open');
         // Animate in
         requestAnimationFrame(() => overlay.classList.add('open'));
     },
