@@ -47,5 +47,6 @@ const API = {
     get(path) { return this.request('GET', path); },
     post(path, body) { return this.request('POST', path, body); },
     put(path, body) { return this.request('PUT', path, body); },
+    patch(path, data) { return this.request('PATCH', path, data); },
     delete(path) { return this.request('DELETE', path); },
 };

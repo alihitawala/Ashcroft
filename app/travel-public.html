@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Shared Trip — ashcroft.cloud</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="stylesheet" href="/app/css/shared.css">
+    <link rel="stylesheet" href="/app/css/travel.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { background: var(--bg); color: var(--text); }
+        .public-wrap { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .public-header { text-align: center; margin-bottom: 24px; padding: 24px 0; }
+        .public-header h1 { font-size: 28px; font-weight: 700; }
+        .public-header .country { color: var(--text-secondary); font-size: 15px; }
+        .public-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; background: var(--accent-bg); color: var(--accent); margin-top: 8px; }
+        .public-footer { text-align: center; padding: 32px 0; color: var(--text-tertiary); font-size: 12px; }
+        .public-footer a { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="public-wrap" id="app">
+        <div style="text-align:center;padding:60px 20px;color:var(--text-secondary)">Loading trip...</div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    const DAY_COLORS = ['#635bff', '#3ecf8e', '#f5a623', '#f45b69', '#5b9cf6'];
+    let activeDay = 1;
+    let trip = null;
+    let map = null;
+
+    async function load() {
+        const token = new URLSearchParams(window.location.search).get('token');
+        if (!token) { document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px"><h2>Invalid link</h2></div>'; return; }
+
+        try {
+            const res = await fetch(`/api/travel/public/${token}`);
+            if (!res.ok) throw new Error('Trip not found');
+            trip = await res.json();
+            document.title = `${trip.destination} Trip — ashcroft.cloud`;
+            render();
+        } catch (e) {
+            document.getElementById('app').innerHTML = `<div style="text-align:center;padding:60px"><h2>Trip not found</h2><p>This link may have expired or been removed.</p></div>`;
+        }
+    }
+
+    function render() {
+        const days = trip.days || [];
+        const app = document.getElementById('app');
+
+        app.innerHTML = `
+            <div class="public-header">
+                <h1>✈️ ${esc(trip.destination)}</h1>
+                ${trip.country ? `<div class="country">${esc(trip.country)}</div>` : ''}
+                <div class="public-badge">Shared Itinerary</div>
+            </div>
+            ${days.length ? renderSectionTabs() : ''}
+            <div id="tripContent">${days.length ? renderItinerary() : '<p style="text-align:center">No itinerary yet</p>'}</div>
+            <div class="public-footer">Powered by <a href="https://ashcroft.cloud">ashcroft.cloud</a></div>
+        `;
+    }
+
+    let activeSection = 'itinerary';
+    function renderSectionTabs() {
+        const tabs = [
+            { id: 'itinerary', label: '📋 Itinerary' },
+            { id: 'map', label: '🗺️ Map' },
+            { id: 'restaurants', label: '🍴 Restaurants' },
+            { id: 'stays', label: '🏨 Stays' },
+            { id: 'info', label: 'ℹ️ Info' },
+        ];
+        return `<div class="section-tabs">${tabs.map(t =>
+            `<button class="section-tab${activeSection===t.id?' active':''}" onclick="switchSection('${t.id}')">${t.label}</button>`
+        ).join('')}</div>`;
+    }
+
+    function switchSection(s) {
+        activeSection = s;
+        document.querySelectorAll('.section-tab').forEach(t => {
+            t.className = 'section-tab'+(t.getAttribute('onclick')?.includes(`'${s}'`)?' active':'');
+        });
+        const c = document.getElementById('tripContent');
+        if (s==='itinerary') c.innerHTML = renderItinerary();
+        else if (s==='map') { c.innerHTML = '<div id="travelMap" class="travel-map"></div>'; initMap(); }
+        else if (s==='restaurants') c.innerHTML = renderRestaurants();
+        else if (s==='stays') c.innerHTML = renderStays();
+        else if (s==='info') c.innerHTML = renderInfo();
+    }
+
+    function renderItinerary() {
+        const days = trip.days || [];
+        const day = days.find(d => d.day_number === activeDay) || days[0];
+        if (!day) return '';
+        const dayTabs = days.map(d => `<button class="day-tab${d.day_number===activeDay?' active':''}" onclick="activeDay=${d.day_number};document.getElementById('tripContent').innerHTML=renderItinerary()">${esc(d.title||'Day '+d.day_number)}</button>`).join('');
+        const slots = ['morning','afternoon','evening'];
+        const icons = {morning:'🌅',afternoon:'☀️',evening:'🌙'};
+        let html = `<div class="day-tabs">${dayTabs}</div>`;
+        if (day.summary) html += `<div class="day-summary">${esc(day.summary)}</div>`;
+        for (const slot of slots) {
+            const acts = (day.activities||[]).filter(a=>a.time_slot===slot);
+            if (!acts.length) continue;
+            html += `<div class="time-slot-group"><div class="time-slot-label">${icons[slot]} ${slot}</div>`;
+            for (const a of acts) {
+                html += `<div class="activity-card">
+                    <h4>${esc(a.title)}</h4>
+                    ${a.description?`<div class="activity-desc">${esc(a.description)}</div>`:''}
+                    <div class="activity-meta">
+                        ${a.location_name?`<span>📍 ${esc(a.location_name)}</span>`:''}
+                        ${a.duration_hours?`<span>⏱ ${a.duration_hours}h</span>`:''}
+                        ${a.estimated_cost?`<span>💰 ${a.currency||'$'}${Number(a.estimated_cost).toFixed(0)}</span>`:''}
+                    </div>
+                    ${a.tips?`<div class="activity-tips">💡 ${esc(a.tips)}</div>`:''}
+                </div>`;
+            }
+            html += '</div>';
+        }
+        return html;
+    }
+
+    function renderRestaurants() {
+        const r = trip.restaurants||[];
+        if (!r.length) return '<p style="text-align:center;color:var(--text-secondary)">No restaurants</p>';
+        return `<div class="restaurant-grid">${r.map(r=>`<div class="restaurant-card"><h4>${esc(r.name)}</h4><span class="cuisine-tag">${esc(r.cuisine||'Local')} · ${esc(r.price_range||'$$')}</span>${r.description?`<div class="rest-desc">${esc(r.description)}</div>`:''}${r.must_try_dishes?`<div class="must-try">🍽️ ${esc(r.must_try_dishes)}</div>`:''}</div>`).join('')}</div>`;
+    }
+
+    function renderStays() {
+        const s = trip.stays||[];
+        if (!s.length) return '<p style="text-align:center;color:var(--text-secondary)">No stays</p>';
+        return `<div class="stays-grid">${s.map(s=>`<div class="stay-card"><span class="stay-tier ${s.tier}">${s.tier}</span><h4>${esc(s.name)}</h4><div class="stay-price">${s.currency||'$'}${Number(s.price_per_night).toFixed(0)} <small>/night</small></div>${s.notes?`<div class="stay-notes">${esc(s.notes)}</div>`:''}</div>`).join('')}</div>`;
+    }
+
+    function renderInfo() {
+        let html = '';
+        if (trip.weather_summary) html += `<div class="info-section"><h3>🌤️ Weather</h3><p>${esc(trip.weather_summary)}</p></div>`;
+        if (trip.transport_notes) html += `<div class="info-section"><h3>🚌 Transport</h3><p>${esc(trip.transport_notes)}</p></div>`;
+        if (trip.visa_info) html += `<div class="info-section"><h3>🛂 Visa Info</h3><p>${esc(trip.visa_info)}</p></div>`;
+        if (trip.budget_estimate) {
+            const b = typeof trip.budget_estimate==='string'?JSON.parse(trip.budget_estimate):trip.budget_estimate;
+            html += `<div class="info-section"><h3>💰 Budget</h3><div class="budget-grid"><div class="budget-item"><div class="budget-label">Budget</div><div class="budget-amount">$${b.budget_per_day_usd||'?'}</div></div><div class="budget-item"><div class="budget-label">Mid</div><div class="budget-amount">$${b.mid_per_day_usd||'?'}</div></div><div class="budget-item"><div class="budget-label">Luxury</div><div class="budget-amount">$${b.luxury_per_day_usd||'?'}</div></div></div></div>`;
+        }
+        return html || '<p style="text-align:center">No info available</p>';
+    }
+
+    function initMap() {
+        setTimeout(() => {
+            const el = document.getElementById('travelMap');
+            if (!el) return;
+            if (map) { map.remove(); map = null; }
+            map = L.map('travelMap').setView([20,0],2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
+            const bounds = [];
+            (trip.days||[]).forEach((day,di)=>{
+                const color = DAY_COLORS[di%DAY_COLORS.length];
+                (day.activities||[]).forEach(a=>{
+                    if(!a.latitude||!a.longitude)return;
+                    L.circleMarker([a.latitude,a.longitude],{radius:8,fillColor:color,color:'#fff',weight:2,fillOpacity:0.9}).addTo(map).bindPopup(`<strong>Day ${day.day_number}: ${esc(a.title)}</strong>`);
+                    bounds.push([a.latitude,a.longitude]);
+                });
+            });
+            if(bounds.length) map.fitBounds(bounds,{padding:[30,30]});
+        },100);
+    }
+
+    load();
+    </script>
+</body>
+</html>

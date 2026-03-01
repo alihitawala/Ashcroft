@@ -27,7 +27,7 @@ let todayTasks = [];
 
 // ─── Load All Data ───
 async function loadDashboard() {
-    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures] = await Promise.all([
+    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures, travelTrips] = await Promise.all([
         API.get('/tasks').catch(() => []),
         API.get('/tasks?due=today').catch(() => []),
         API.get('/events?upcoming=5').catch(() => []),
@@ -36,6 +36,7 @@ async function loadDashboard() {
         API.get('/garden/plants/dashboard').catch(() => ({ needs_attention_count: 0, recommendations: [] })),
         API.get('/sports/next-up').catch(() => null),
         API.get('/captures/recent').catch(() => []),
+        API.get('/travel/trips').catch(() => []),
     ]);
 
     const norm = v => Array.isArray(v) ? v : (v?.items || []);
@@ -49,7 +50,7 @@ async function loadDashboard() {
     const needsAttention = gardenDash.needs_attention_count || 0;
 
     renderSummary(incompleteTasks, evts.length, uncheckedGrocery, needsAttention);
-    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures);
+    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures, travelTrips);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -103,9 +104,10 @@ function renderSummary(taskCount, eventCount, groceryCount, gardenCount) {
 }
 
 // ─── Widgets ───
-function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures) {
+function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips) {
     document.getElementById('widgets').innerHTML = `
         ${renderSportsNextUp(sportsNext)}
+        ${renderTravelWidget(travelTrips)}
         <div class="card">
             <div class="card-header"><h3>Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
             <div class="card-body" id="tasksList">${renderTodayTasks()}</div>
@@ -319,6 +321,32 @@ function renderSportsNextUp(data) {
     }).join('');
     return `<div class="card">
         <div class="card-header"><h3>⚡ Sports Next Up</h3><a href="/app/sports.html" class="link">View All →</a></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
+    </div>`;
+}
+
+// ─── Travel Widget ───
+function renderTravelWidget(trips) {
+    if (!trips || !trips.length) return '';
+    // Show non-archived trips, most recent first
+    const active = trips.filter(t => t.status !== 'archived').slice(0, 2);
+    if (!active.length) return '';
+    const items = active.map(t => {
+        const statusColors = { planning: 'var(--amber)', ready: 'var(--green)' };
+        const statusColor = statusColors[t.status] || 'var(--text-secondary)';
+        return `<div class="travel-widget-item" onclick="window.location='/app/travel.html'" style="cursor:pointer">
+            <div style="font-size:24px">✈️</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:14px">${esc(t.destination)}</div>
+                <div style="font-size:11px;color:var(--text-secondary)">${t.country || ''} · ${t.activity_count || 0} activities</div>
+            </div>
+            <div style="text-align:right">
+                <span style="font-size:11px;font-weight:600;color:${statusColor};text-transform:uppercase">${t.status}</span>
+            </div>
+        </div>`;
+    }).join('');
+    return `<div class="card">
+        <div class="card-header"><h3>✈️ Trips</h3><a href="/app/travel.html" class="link">View All →</a></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
     </div>`;
 }

@@ -57,23 +57,7 @@ app.use('/api/gallery/shared', (req, res) => {
     })();
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-const iftarRoutes = require('./routes/iftar');
-app.use('/api/iftar', iftarRoutes);  // Public routes handle their own auth — must be before taskRoutes
-app.use('/api', taskRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api', groceryRoutes);
-app.use('/api/notes', noteRoutes);
-app.use('/api/kanban', kanbanRoutes);
-app.use('/api/garden', authenticate, gardenRoutes);
-app.use('/api/flights', flightRoutes);
-app.get('/api/public/gallery', galleryRoutes.getPublicPhoto);
-app.use('/api/gallery', authenticate, galleryRoutes);
-
-app.use('/api/sports', authenticate, sportsRoutes);
-app.use('/api/captures', authenticate, capturesRoutes);
-// Public travel share (no auth)
+// Public travel share (no auth) — must be before task routes which catch /api/*
 app.get('/api/travel/public/:token', async (req, res) => {
     try {
         const { pool } = require('./db');
@@ -90,13 +74,29 @@ app.get('/api/travel/public/:token', async (req, res) => {
         const restaurants = await pool.query('SELECT * FROM travel_restaurants WHERE trip_id = $1', [t.id]);
         const stays = await pool.query('SELECT * FROM travel_stays WHERE trip_id = $1', [t.id]);
         const daysWithActivities = days.rows.map(day => ({ ...day, activities: activities.filter(a => a.day_id === day.id) }));
-        // Strip sensitive fields
         delete t.user_id; delete t.share_token;
         res.json({ ...t, days: daysWithActivities, restaurants: restaurants.rows, stays: stays.rows });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
+// Routes
+app.use('/api/auth', authRoutes);
+const iftarRoutes = require('./routes/iftar');
+app.use('/api/iftar', iftarRoutes);  // Public routes handle their own auth — must be before taskRoutes
+app.use('/api', taskRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api', groceryRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/kanban', kanbanRoutes);
+app.use('/api/garden', authenticate, gardenRoutes);
+app.use('/api/flights', flightRoutes);
+app.get('/api/public/gallery', galleryRoutes.getPublicPhoto);
+app.use('/api/gallery', authenticate, galleryRoutes);
+
+app.use('/api/sports', authenticate, sportsRoutes);
+app.use('/api/captures', authenticate, capturesRoutes);
 app.use('/api/travel', authenticate, travelRoutes);
 
 // Health check
