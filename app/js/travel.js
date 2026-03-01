@@ -178,12 +178,11 @@ const Travel = {
         const hasDays = days.length > 0;
         const body = document.getElementById('travelBody');
         const dateStr = t.start_date ? this.formatDateRange(t.start_date, t.num_days) : '';
-        const heroStyle = t.hero_image ? `background-image:url('${esc(t.hero_image)}');background-size:cover;background-position:center;` : '';
         const dayCount = t.num_days || days.length || 5;
 
         body.innerHTML = `
-            <div class="trip-hero-banner ${!t.hero_image ? 'hero-fallback' : ''}" style="${heroStyle}">
-                ${!t.hero_image ? `<div class="trip-hero-fallback-text">${esc(t.destination)}</div>` : ''}
+            <div class="trip-hero-banner ${!t.hero_image ? 'hero-fallback' : ''}">
+                ${t.hero_image ? `<img class="trip-hero-img" src="${t.hero_image}" alt="${esc(t.destination)}" onerror="this.parentElement.classList.add('hero-fallback');this.remove()">` : ''}
                 <div class="trip-hero-overlay"></div>
                 <div class="trip-hero-top">
                     <button class="trip-detail-back" onclick="Travel.showList()">← Back</button>
@@ -609,15 +608,23 @@ const Travel = {
 
         // Flights
         if (t.flights_info || t.source_city) {
-            const fi = t.flights_info ? (typeof t.flights_info === 'string' ? JSON.parse(t.flights_info) : t.flights_info) : null;
+            let flightText = '';
+            if (t.flights_info) {
+                try {
+                    const parsed = typeof t.flights_info === 'string' ? JSON.parse(t.flights_info) : t.flights_info;
+                    flightText = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
+                } catch(e) {
+                    flightText = t.flights_info; // it's just a plain string
+                }
+            }
             cards += `<div class="info-section">
                 <h3>✈️ Flights</h3>
                 ${t.source_city ? `<div class="flight-route">
-                    <div class="flight-city">${esc(t.source_city)}<small>From</small></div>
+                    <div class="flight-city"><small>From</small>${esc(t.source_city)}</div>
                     <div class="flight-arrow">✈️ →</div>
-                    <div class="flight-city">${esc(t.destination)}<small>To</small></div>
+                    <div class="flight-city"><small>To</small>${esc(t.destination)}</div>
                 </div>` : ''}
-                ${fi ? `<p>${esc(typeof fi === 'string' ? fi : JSON.stringify(fi))}</p>` : '<p style="color:var(--text-secondary)">No flight info available</p>'}
+                ${flightText ? `<p>${esc(flightText)}</p>` : '<p style="color:var(--text2)">No flight info available</p>'}
             </div>`;
         }
 
