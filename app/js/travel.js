@@ -278,7 +278,7 @@ const Travel = {
             const shortTitle = (d.title || '').length > 18 ? (d.title || '').substring(0, 18) + '…' : (d.title || `Day ${d.day_number}`);
             return `<button class="day-tab${d.day_number === this.activeDay ? ' active' : ''}${isToday ? ' today' : ''}" onclick="Travel.switchDay(${d.day_number})">
                 <span class="day-tab-num">Day ${d.day_number}</span>
-                ${shortTitle}
+                <span class="day-tab-title">${esc(shortTitle)}</span>
             </button>`;
         }).join('');
 
@@ -287,7 +287,11 @@ const Travel = {
         const slots = ['morning', 'afternoon', 'evening'];
         const slotIcons = { morning: '🌅', afternoon: '🌞', evening: '🌙' };
 
-        let itineraryHtml = `<div class="day-tabs">${dayTabs}</div>`;
+        let itineraryHtml = `<div class="day-tabs-wrapper">
+            <div class="day-tabs-fade-left"></div>
+            <div class="day-tabs" id="dayTabsScroll">${dayTabs}</div>
+            <div class="day-tabs-fade-right"></div>
+        </div>`;
         if (day.summary) {
             itineraryHtml += `<div class="day-summary">${esc(day.summary)}</div>`;
         }
@@ -468,7 +472,11 @@ const Travel = {
     initMap(containerId) {
         setTimeout(() => {
             const el = document.getElementById(containerId);
-            if (!el) return;
+            if (!el || el.offsetHeight === 0) {
+                // Retry if container not visible yet
+                setTimeout(() => this.initMap(containerId), 300);
+                return;
+            }
 
             if (this.map) { this.map.remove(); this.map = null; }
             this.markerMap = {};
@@ -545,7 +553,9 @@ const Travel = {
             if (bounds.length) {
                 this.map.fitBounds(bounds, { padding: [40, 40] });
             }
-        }, 100);
+            // Force map to recalculate size
+            setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 200);
+        }, 150);
     },
 
     // ─── Restaurants ───

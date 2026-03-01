@@ -49,10 +49,36 @@ function extractJSON(text) {
     return JSON.parse(cleaned);
 }
 
-// ─── Helper: Generate Unsplash URL ───
-function unsplashUrl(query, width = 800, height = 600) {
-    const q = encodeURIComponent(query.replace(/[^\w\s]/g, '').trim());
-    return `https://source.unsplash.com/featured/${width}x${height}/?${q}`;
+// ─── Helper: Fetch Wikipedia Image ───
+const WIKI_HEADERS = { 'User-Agent': 'ashcroft-cloud/1.0 (ali@ashcroft.cloud)', 'Accept': 'application/json' };
+
+async function wikiImage(query) {
+    try {
+        const title = query.replace(/ /g, '_');
+        const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`;
+        const resp = await fetch(url, { headers: WIKI_HEADERS });
+        const text = await resp.text();
+        const data = JSON.parse(text);
+        const pages = data.query?.pages || {};
+        for (const pid of Object.keys(pages)) {
+            const src = pages[pid]?.thumbnail?.source;
+            if (src) return src;
+        }
+        // Fallback: search
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=1&prop=pageimages&pithumbsize=800&format=json&origin=*`;
+        const resp2 = await fetch(searchUrl, { headers: WIKI_HEADERS });
+        const text2 = await resp2.text();
+        const data2 = JSON.parse(text2);
+        const pages2 = data2.query?.pages || {};
+        for (const pid of Object.keys(pages2)) {
+            const src = pages2[pid]?.thumbnail?.source;
+            if (src) return src;
+        }
+        return null;
+    } catch (e) {
+        console.log('[Travel] wikiImage error for:', query, e.message);
+        return null;
+    }
 }
 
 // ─── List Trips ───
@@ -475,19 +501,25 @@ IMPORTANT RULES:
             return res.status(502).json({ error: err.message || 'Generation failed. Please try again.' });
         }
 
-        // ─── Generate Image URLs ───
-        const heroImage = unsplashUrl(`${destination} travel city skyline`, 1200, 600);
+        // ─── Fetch Real Images from Wikipedia ───
+        console.log('[Travel] Fetching images from Wikipedia...');
+        const heroImage = await wikiImage(destination);
 
-        // Add image URLs to activities
+        // Fetch activity images in parallel (max 5 concurrent)
+        const imagePromises = [];
         for (const day of (itinerary.days || [])) {
             for (const act of (day.activities || [])) {
-                if (act.image_search_query) {
-                    act.image_url = unsplashUrl(act.image_search_query);
-                } else if (act.title) {
-                    act.image_url = unsplashUrl(`${act.title} ${destination}`);
-                }
+                const query = act.image_search_query || act.location_name || act.title;
+                imagePromises.push(
+                    wikiImage(query).then(url => { act.image_url = url; })
+                );
             }
         }
+        // Process in batches of 5 to be nice to Wikipedia
+        for (let i = 0; i < imagePromises.length; i += 5) {
+            await Promise.all(imagePromises.slice(i, i + 5));
+        }
+        console.log('[Travel] Images fetched');
 
         // ─── Save to Database ───
         // Clear existing data
@@ -644,3 +676,15 @@ router.delete('/trips/:id/share', async (req, res) => {
 });
 
 module.exports = router;
+
+// ─── Wikipedia Image Proxy ───
+router.get('/image-search', async (req, res) => {
+    const q = req.query.q;
+    if (!q) return res.json({ url: null });
+    try {
+        const result = await wikiImage(q);
+        res.json({ url: result || null });
+    } catch (e) {
+        res.json({ url: null });
+    }
+});

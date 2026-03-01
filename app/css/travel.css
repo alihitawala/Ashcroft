@@ -1116,11 +1116,7 @@
         grid-template-columns: 1fr;
     }
     .split-map {
-        position: relative;
-        height: 300px;
-        top: 0;
-        order: -1;
-        margin-bottom: 16px;
+        display: none;
     }
     .split-itinerary { max-height: none; padding-right: 0; }
     .stays-grid { grid-template-columns: 1fr; }
@@ -1149,4 +1145,67 @@
 /* Fix modal body clipping autocomplete dropdown */
 .modal-body:has(.autocomplete-dropdown) {
     overflow: visible;
+}
+
+/* ─── Day Tabs Scroll Indicators ─── */
+.day-tabs-wrapper {
+    position: relative;
+    margin-bottom: 16px;
+}
+.day-tabs-fade-left, .day-tabs-fade-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    z-index: 2;
+    pointer-events: none;
+}
+.day-tabs-fade-left {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.day-tabs-fade-right {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
+}
+.day-tabs {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.day-tabs::-webkit-scrollbar { display: none; }
+.day-tab {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+}
+.day-tab-title {
+    display: block;
+    font-size: 11px;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+/* ─── Hero fixes ─── */
+.trip-hero-content h1 {
+    font-size: 28px;
+    margin: 0 0 4px;
+    line-height: 1.2;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+@media (max-width: 768px) {
+    .trip-hero-content h1 { font-size: 22px; }
+    .trip-hero-content { padding: 16px !important; }
+    .trip-hero-top { padding: 12px 16px !important; }
+}
+
+/* ─── Map standalone fix ─── */
+.travel-map-standalone {
+    min-height: 400px;
+    border-radius: 12px;
+    overflow: hidden;
 }
