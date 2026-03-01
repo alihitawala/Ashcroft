@@ -35,11 +35,31 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
     }
 }
 
+// ─── Helper: Extract JSON from potentially messy AI response ───
+function extractJSON(text) {
+    // Strip markdown code blocks
+    let cleaned = text.replace(/```json?\s*/gi, '').replace(/```/g, '').trim();
+    // Find first { to last }
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+        throw new Error('No JSON object found in response');
+    }
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    return JSON.parse(cleaned);
+}
+
+// ─── Helper: Generate Unsplash URL ───
+function unsplashUrl(query, width = 800, height = 600) {
+    const q = encodeURIComponent(query.replace(/[^\w\s]/g, '').trim());
+    return `https://source.unsplash.com/featured/${width}x${height}/?${q}`;
+}
+
 // ─── List Trips ───
 router.get('/trips', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT id, destination, country, hero_image, status, created_at, updated_at
+            `SELECT id, destination, country, source_city, hero_image, status, created_at, updated_at
              FROM travel_trips WHERE user_id = $1 ORDER BY updated_at DESC`,
             [req.user.id]
         );
@@ -52,7 +72,7 @@ router.get('/trips', async (req, res) => {
 // ─── Create Trip ───
 router.post('/trips', async (req, res) => {
     try {
-        const { destination, country, start_date, end_date, num_days } = req.body;
+        const { destination, country, start_date, end_date, num_days, source_city } = req.body;
         if (!destination || typeof destination !== 'string' || destination.trim().length === 0) {
             return res.status(400).json({ error: 'Destination is required' });
         }
@@ -61,9 +81,9 @@ router.post('/trips', async (req, res) => {
         }
         const days = num_days ? Math.min(Math.max(parseInt(num_days), 1), 14) : 5;
         const { rows } = await pool.query(
-            `INSERT INTO travel_trips (user_id, destination, country, start_date, end_date, num_days)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [req.user.id, destination.trim(), country ? country.trim() : null, start_date || null, end_date || null, days]
+            `INSERT INTO travel_trips (user_id, destination, country, start_date, end_date, num_days, source_city)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [req.user.id, destination.trim(), country ? country.trim() : null, start_date || null, end_date || null, days, source_city ? source_city.trim() : null]
         );
         res.json(rows[0]);
     } catch (err) {
@@ -123,7 +143,7 @@ router.get('/trips/:id', async (req, res) => {
 router.put('/trips/:id', async (req, res) => {
     try {
         const tripId = req.params.id;
-        const { destination, country, status, hero_image, weather_summary, transport_notes, visa_info, packing_list, budget_estimate } = req.body;
+        const { destination, country, status, hero_image, weather_summary, transport_notes, visa_info, packing_list, budget_estimate, source_city, flights_info } = req.body;
         const { rows } = await pool.query(
             `UPDATE travel_trips SET
                 destination = COALESCE($3, destination),
@@ -135,11 +155,14 @@ router.put('/trips/:id', async (req, res) => {
                 visa_info = COALESCE($9, visa_info),
                 packing_list = COALESCE($10, packing_list),
                 budget_estimate = COALESCE($11, budget_estimate),
+                source_city = COALESCE($12, source_city),
+                flights_info = COALESCE($13, flights_info),
                 updated_at = NOW()
              WHERE id = $1 AND user_id = $2 RETURNING *`,
             [tripId, req.user.id, destination, country, status, hero_image, weather_summary, transport_notes, visa_info,
              packing_list ? JSON.stringify(packing_list) : null,
-             budget_estimate ? JSON.stringify(budget_estimate) : null]
+             budget_estimate ? JSON.stringify(budget_estimate) : null,
+             source_city, flights_info]
         );
         if (!rows[0]) return res.status(404).json({ error: 'Trip not found' });
         res.json(rows[0]);
@@ -228,13 +251,27 @@ router.post('/trips/:id/generate', async (req, res) => {
         );
         if (!trip.rows[0]) return res.status(404).json({ error: 'Trip not found' });
 
-        const { destination, country, num_days: tripDays } = trip.rows[0];
+        const { destination, country, num_days: tripDays, source_city, start_date, end_date } = trip.rows[0];
         const numDays = tripDays || 5;
         if (!destination || destination.trim().length === 0) {
             return res.status(400).json({ error: 'Trip has no destination set' });
         }
 
         const dest = country ? `${destination}, ${country}` : destination;
+
+        // Build date context
+        let dateContext = '';
+        if (start_date) {
+            const startStr = new Date(start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const endStr = end_date ? new Date(end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : null;
+            dateContext = endStr ? `Travel dates: ${startStr} to ${endStr}.` : `Starting: ${startStr}.`;
+        }
+
+        // Source city / flight context
+        let flightContext = '';
+        if (source_city) {
+            flightContext = `Traveler is flying from ${source_city}. Include specific airport codes for departure and arrival, recommended airlines, typical flight duration, and approximate ticket prices in flights_info.`;
+        }
 
         // Update status to planning
         await pool.query("UPDATE travel_trips SET status = 'planning', updated_at = NOW() WHERE id = $1", [tripId]);
@@ -250,7 +287,8 @@ router.post('/trips/:id/generate', async (req, res) => {
             `weather ${dest} what to pack clothing`,
             `travel budget ${dest} daily cost accommodation food`,
             `visa requirements ${dest} for US citizens entry`,
-            `best hotels ${dest} budget mid-range luxury recommendations`
+            `best hotels ${dest} budget mid-range luxury recommendations`,
+            `hidden gems ${dest} off the beaten path local secrets`
         ];
 
         if (BRAVE_API_KEY) {
@@ -290,31 +328,39 @@ router.post('/trips/:id/generate', async (req, res) => {
             return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
         }
 
-        const prompt = `You are an expert travel planner creating a detailed ${numDays}-day itinerary for ${dest}.
-${researchBlock}
+        const prompt = `You are an elite travel planner and travel blogger creating a stunning ${numDays}-day itinerary for ${dest}.
+${dateContext ? dateContext + '\n' : ''}${flightContext ? flightContext + '\n' : ''}${researchBlock}
 
 Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching this exact structure:
 {
-  "weather_summary": "Detailed weather overview including temperature ranges, rainy/dry season, humidity, and best months to visit",
-  "transport_notes": "Specific transport info: airport name and distance to city, metro/bus lines, ride-hailing apps (Uber/Grab/etc), taxi costs, day passes, tips for getting around cheaply",
-  "visa_info": "Visa requirements for US, EU, UK, and Australian citizens. Include visa-on-arrival info, costs, and duration",
+  "weather_summary": "Detailed weather for the trip dates including temperature ranges (highs/lows in °F and °C), humidity, rain likelihood, sunrise/sunset times, and what to expect each day",
+  "transport_notes": "Specific transport info: airport name and code, distance to city center, metro/bus lines with costs, ride-hailing apps (Uber/Grab/etc), taxi fare estimates, day passes, tips for getting around cheaply and safely",
+  "visa_info": "Visa requirements for US, EU, UK, and Australian citizens. Include visa-on-arrival info, costs, duration, and any gotchas",
+  ${source_city ? '"flights_info": "Detailed flight info from ' + source_city + ': departure airport code, arrival airport code, recommended airlines (budget and premium), typical flight duration (direct and with stops), approximate round-trip ticket prices (economy and business), best booking tips, and layover city options if no direct flights",' : ''}
   "budget_estimate": {
     "budget_per_day_usd": 50,
     "mid_per_day_usd": 120,
     "luxury_per_day_usd": 300,
-    "breakdown": "budget: $X accommodation + $X food + $X transport + $X activities; mid-range: ..."
+    "breakdown": "Detailed breakdown: budget ($X hotel + $X food + $X transport + $X activities = $X/day); mid-range ($X hotel + ...); luxury ($X hotel + ...)"
   },
-  "packing_list": ["item1 - why", "item2 - why"],
+  "packing_list": {
+    "clothing": [{"name": "item", "reason": "why needed for this specific trip", "essential": true}],
+    "electronics": [{"name": "item", "reason": "why", "essential": true}],
+    "documents": [{"name": "item", "reason": "why", "essential": true}],
+    "toiletries": [{"name": "item", "reason": "why", "essential": false}],
+    "misc": [{"name": "item", "reason": "why", "essential": false}]
+  },
   "days": [
     {
       "day_number": 1,
-      "title": "Descriptive day theme title",
-      "summary": "2-3 sentence overview of what makes this day special",
+      "title": "Catchy theme title like 'Temple Hopping & Street Food Paradise' or 'Island Vibes & Sunset Magic'",
+      "summary": "2-3 vivid sentences setting the scene for this day, written like a travel blog intro",
+      "playlist": "Suggested playlist mood and 2-3 song suggestions that match the day's vibe",
       "activities": [
         {
           "time_slot": "morning",
           "title": "Specific place/activity name",
-          "description": "What you'll do, why it's worth visiting, what to look for. 2-3 sentences.",
+          "description": "Vivid 2-3 sentence description written like a travel blog. Paint a picture of the experience — sights, sounds, smells. Make the reader feel like they're there.",
           "location_name": "Exact venue/landmark name",
           "address": "Full street address",
           "latitude": 35.6762,
@@ -323,7 +369,8 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching th
           "estimated_cost": 15.00,
           "currency": "USD",
           "category": "sightseeing",
-          "tips": "Practical tip: best time to visit, how to skip lines, what to wear, photo spots, etc.",
+          "tips": "INSIDER TIP: Be specific — 'arrive before 7am to see monks chanting and avoid tour buses' or 'ask for the off-menu special yakitori set'. Include: best photo spot, what to wear/bring, booking requirements (advance booking needed? walk-in? tickets?), transit time from previous activity.",
+          "image_search_query": "Senso-ji Temple Tokyo sunrise",
           "sort_order": 1
         }
       ]
@@ -337,9 +384,11 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching th
       "address": "Full address",
       "latitude": 35.6762,
       "longitude": 139.6503,
-      "description": "Why this place is special, atmosphere, what locals say about it",
-      "must_try_dishes": "Dish Name 1 ($X), Dish Name 2 ($X)",
-      "reservation_needed": false
+      "description": "Atmosphere, vibe, what makes it special. Written engagingly.",
+      "must_try_dishes": "Signature Dish 1 ($X) — why it's amazing, Signature Dish 2 ($X) — what makes it unique",
+      "reservation_needed": false,
+      "best_time": "Best time to visit and expected wait",
+      "dress_code": "Casual / Smart casual / etc"
     }
   ],
   "stays": [
@@ -351,7 +400,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching th
       "address": "Full address",
       "latitude": 35.6762,
       "longitude": 139.6503,
-      "notes": "What makes this stay good: location, amenities, neighborhood vibe, walkability"
+      "notes": "Neighborhood description and vibe, walkability score (X/10), nearby attractions within walking distance, breakfast included?, unique amenities, what makes this the best pick in its tier"
     }
   ]
 }
@@ -359,20 +408,22 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) matching th
 IMPORTANT RULES:
 - Generate EXACTLY ${numDays} days in the "days" array
 - Each day MUST have exactly 3 activities: morning, afternoon, evening
-- Include 8 restaurants: mix of street food ($), casual ($$), upscale ($$$), and fine dining ($$$$)
+- Each activity MUST have an "image_search_query" — a concise search phrase for finding a photo of that specific place (e.g. "Fushimi Inari Shrine Kyoto torii gates")
+- Include 8-10 restaurants: mix of street food ($), casual ($$), upscale ($$$), and fine dining ($$$$)
 - Include 3 stays: one budget/hostel, one mid-range, one luxury
 - ALL coordinates must be realistic lat/lng for ${dest} (not 0,0!)
 - ALL prices must be realistic for the local economy in USD equivalent
-- Restaurant must_try_dishes should include approximate prices
-- Packing list should be 8-12 items, each with a reason why
+- Each day needs a catchy, unique theme title and a playlist suggestion
+- Packing list should be grouped by category with 3-5 items each, tailored to this specific destination and weather
 - Categories must be one of: sightseeing, culture, food, nature, shopping, nightlife, adventure
-- Tips should be genuinely useful insider knowledge, not generic advice
-- Addresses should be as specific as possible
+- Tips should be genuinely useful INSIDER knowledge — specific times, secret spots, local hacks. NOT generic advice.
+- Each tip should mention: best photo spot, what to wear/bring, and whether advance booking is needed
 - sort_order within each day: morning=1, afternoon=2, evening=3
-- Budget breakdown should explain what the money goes to`;
+- Descriptions should be vivid and blog-like — make the reader excited to visit
+- Budget breakdown should be granular with specific examples`;
 
-        let groqData;
-        try {
+        async function callGroq(attempt = 1) {
+            console.log(`[Travel] Groq generation attempt ${attempt} for trip ${tripId} (${dest})`);
             const groqRes = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -382,46 +433,60 @@ IMPORTANT RULES:
                 body: JSON.stringify({
                     model: 'llama-3.3-70b-versatile',
                     messages: [
-                        { role: 'system', content: 'You are a world-class travel expert. Return ONLY valid JSON. No markdown, no code blocks, no explanation text before or after the JSON. The response must start with { and end with }.' },
+                        { role: 'system', content: 'You are a world-class travel expert and blogger. Return ONLY valid JSON. No markdown, no code blocks, no explanation text before or after the JSON. The response must start with { and end with }.' },
                         { role: 'user', content: prompt }
                     ],
-                    temperature: 0.4,
+                    temperature: 0.5,
                     max_tokens: 8000,
                 }),
-            }, 60000); // 60s timeout for generation
+            }, 90000);
 
             if (!groqRes.ok) {
                 const errBody = await groqRes.text();
-                console.error('Groq API error:', groqRes.status, errBody);
-                await pool.query("UPDATE travel_trips SET status = 'draft', updated_at = NOW() WHERE id = $1", [tripId]);
-                return res.status(502).json({ error: `AI service error (${groqRes.status}). Please try again.` });
+                console.error(`[Travel] Groq API error (attempt ${attempt}):`, groqRes.status, errBody);
+                throw new Error(`AI service error (${groqRes.status})`);
             }
 
-            groqData = await groqRes.json();
+            const groqData = await groqRes.json();
+            const content = groqData.choices?.[0]?.message?.content;
+            if (!content) throw new Error('AI returned empty response');
+
+            try {
+                return extractJSON(content);
+            } catch (parseErr) {
+                console.error(`[Travel] JSON parse error (attempt ${attempt}):`, parseErr.message, '\nFirst 500 chars:', content.substring(0, 500));
+                if (attempt < 2) {
+                    console.log('[Travel] Retrying generation...');
+                    return callGroq(attempt + 1);
+                }
+                throw new Error('AI returned invalid format after 2 attempts');
+            }
+        }
+
+        let itinerary;
+        try {
+            itinerary = await callGroq();
         } catch (err) {
-            console.error('Groq fetch error:', err.message);
+            console.error('[Travel] Generation failed:', err.message);
             await pool.query("UPDATE travel_trips SET status = 'draft', updated_at = NOW() WHERE id = $1", [tripId]);
             if (err.name === 'AbortError') {
                 return res.status(504).json({ error: 'AI generation timed out. Please try again.' });
             }
-            return res.status(502).json({ error: 'Failed to reach AI service. Please try again.' });
+            return res.status(502).json({ error: err.message || 'Generation failed. Please try again.' });
         }
 
-        const content = groqData.choices?.[0]?.message?.content;
-        if (!content) {
-            await pool.query("UPDATE travel_trips SET status = 'draft', updated_at = NOW() WHERE id = $1", [tripId]);
-            return res.status(502).json({ error: 'AI returned empty response. Please try again.' });
-        }
+        // ─── Generate Image URLs ───
+        const heroImage = unsplashUrl(`${destination} travel city skyline`, 1200, 600);
 
-        // Parse JSON - strip markdown if present
-        const jsonStr = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-        let itinerary;
-        try {
-            itinerary = JSON.parse(jsonStr);
-        } catch (e) {
-            console.error('JSON parse error:', e.message, '\nContent:', jsonStr.substring(0, 500));
-            await pool.query("UPDATE travel_trips SET status = 'draft', updated_at = NOW() WHERE id = $1", [tripId]);
-            return res.status(502).json({ error: 'AI returned invalid format. Please try again.' });
+        // Add image URLs to activities
+        for (const day of (itinerary.days || [])) {
+            for (const act of (day.activities || [])) {
+                if (act.image_search_query) {
+                    act.image_url = unsplashUrl(act.image_search_query);
+                } else if (act.title) {
+                    act.image_url = unsplashUrl(`${act.title} ${destination}`);
+                }
+            }
         }
 
         // ─── Save to Database ───
@@ -439,17 +504,19 @@ IMPORTANT RULES:
         await pool.query(
             `UPDATE travel_trips SET
                 weather_summary = $2, transport_notes = $3, visa_info = $4,
-                budget_estimate = $5, packing_list = $6, status = 'ready', updated_at = NOW()
+                budget_estimate = $5, packing_list = $6, hero_image = $7,
+                flights_info = $8, status = 'ready', updated_at = NOW()
              WHERE id = $1`,
             [tripId, itinerary.weather_summary, itinerary.transport_notes, itinerary.visa_info,
-             JSON.stringify(itinerary.budget_estimate), JSON.stringify(itinerary.packing_list)]
+             JSON.stringify(itinerary.budget_estimate), JSON.stringify(itinerary.packing_list),
+             heroImage, itinerary.flights_info || null]
         );
 
         // Insert days and activities
         for (const day of (itinerary.days || [])) {
             const dayRes = await pool.query(
-                'INSERT INTO travel_days (trip_id, day_number, title, summary) VALUES ($1,$2,$3,$4) RETURNING id',
-                [tripId, day.day_number, day.title, day.summary]
+                'INSERT INTO travel_days (trip_id, day_number, title, summary, playlist) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+                [tripId, day.day_number, day.title, day.summary, day.playlist || null]
             );
             const dayId = dayRes.rows[0].id;
 
@@ -467,12 +534,17 @@ IMPORTANT RULES:
 
         // Insert restaurants
         for (const r of (itinerary.restaurants || [])) {
+            // Append extra details to description if present
+            let desc = r.description || '';
+            if (r.best_time) desc += `\n🕐 Best time: ${r.best_time}`;
+            if (r.dress_code) desc += `\n👔 Dress code: ${r.dress_code}`;
+
             await pool.query(
                 `INSERT INTO travel_restaurants (trip_id, name, cuisine, price_range, address, latitude, longitude,
                     description, must_try_dishes, reservation_needed, url)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
                 [tripId, r.name, r.cuisine, r.price_range, r.address, r.latitude, r.longitude,
-                 r.description, r.must_try_dishes, r.reservation_needed || false, r.url || null]
+                 desc, r.must_try_dishes, r.reservation_needed || false, r.url || null]
             );
         }
 
@@ -510,6 +582,8 @@ IMPORTANT RULES:
             activities: allActivities.filter(a => a.day_id === day.id)
         }));
 
+        console.log(`[Travel] Successfully generated ${numDays}-day itinerary for ${dest} (trip ${tripId})`);
+
         res.json({
             ...fullTrip.rows[0],
             days: daysWithAct,
@@ -518,39 +592,11 @@ IMPORTANT RULES:
         });
 
     } catch (err) {
-        console.error('Generate error:', err);
-        // Reset status on unexpected errors
+        console.error('[Travel] Generate error:', err);
         try {
             await pool.query("UPDATE travel_trips SET status = 'draft', updated_at = NOW() WHERE id = $1", [tripId]);
         } catch (_) {}
         res.status(500).json({ error: 'Generation failed: ' + err.message });
-    }
-});
-
-// ─── Update Activity ───
-router.patch('/trips/:tripId/activities/:activityId', async (req, res) => {
-    try {
-        const { tripId, activityId } = req.params;
-        // Verify trip ownership
-        const trip = await pool.query('SELECT id FROM travel_trips WHERE id = $1 AND user_id = $2', [tripId, req.user.id]);
-        if (!trip.rows[0]) return res.status(404).json({ error: 'Trip not found' });
-
-        const { title, description, duration_hours, estimated_cost, tips, sort_order } = req.body;
-        const { rows } = await pool.query(
-            `UPDATE travel_activities SET
-                title = COALESCE($2, title),
-                description = COALESCE($3, description),
-                duration_hours = COALESCE($4, duration_hours),
-                estimated_cost = COALESCE($5, estimated_cost),
-                tips = COALESCE($6, tips),
-                sort_order = COALESCE($7, sort_order)
-             WHERE id = $1 RETURNING *`,
-            [activityId, title, description, duration_hours, estimated_cost, tips, sort_order]
-        );
-        if (!rows[0]) return res.status(404).json({ error: 'Activity not found' });
-        res.json(rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
     }
 });
 

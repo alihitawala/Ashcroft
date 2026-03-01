@@ -544,6 +544,7 @@ const Travel = {
 
     openCreateModal() {
         this._selectedCountry = null;
+        this._selectedSourceCity = null;
         createModal({
             title: '✈️ Plan a Trip',
             bodyHTML: `
@@ -551,6 +552,11 @@ const Travel = {
                     <label>Where to?</label>
                     <input class="form-input" name="destination" id="tripDestInput" placeholder="Start typing a city..." autocomplete="off" required>
                     <div id="tripDestDropdown" class="autocomplete-dropdown" style="display:none"></div>
+                </div>
+                <div class="form-group" style="position:relative">
+                    <label>Flying from <span style="color:var(--text-secondary);font-weight:normal">(optional)</span></label>
+                    <input class="form-input" name="source_city" id="tripSourceInput" placeholder="Your departure city..." autocomplete="off">
+                    <div id="tripSourceDropdown" class="autocomplete-dropdown" style="display:none"></div>
                 </div>
                 <div class="form-group">
                     <label>Start Date</label>
@@ -565,11 +571,13 @@ const Travel = {
             async onSubmit(modal) {
                 const destination = modal.querySelector('[name="destination"]').value.trim();
                 if (!destination) throw new Error('Please pick a destination');
+                const source_city = modal.querySelector('[name="source_city"]').value.trim() || null;
                 const start_date = modal.querySelector('[name="start_date"]').value || null;
                 const num_days = parseInt(modal.querySelector('[name="num_days"]').value) || 5;
                 const trip = await API.post('/travel/trips', {
                     destination,
                     country: Travel._selectedCountry || null,
+                    source_city,
                     start_date,
                     num_days
                 });
@@ -585,26 +593,38 @@ const Travel = {
     _initAutocomplete() {
         const input = document.getElementById('tripDestInput');
         const dropdown = document.getElementById('tripDestDropdown');
-        if (!input || !dropdown) return;
+        if (input && dropdown) {
+            this._setupCityAutocomplete(input, dropdown, (place, country) => {
+                Travel._selectedCountry = country;
+            });
+        }
 
+        const sourceInput = document.getElementById('tripSourceInput');
+        const sourceDropdown = document.getElementById('tripSourceDropdown');
+        if (sourceInput && sourceDropdown) {
+            this._setupCityAutocomplete(sourceInput, sourceDropdown, (place, country) => {
+                Travel._selectedSourceCity = place;
+            });
+        }
+    },
+
+    _setupCityAutocomplete(input, dropdown, onSelect) {
         let timer = null;
         input.addEventListener('input', () => {
             clearTimeout(timer);
-            Travel._selectedCountry = null;
             const q = input.value.trim();
             if (q.length < 2) { dropdown.style.display = 'none'; return; }
-            timer = setTimeout(() => this._fetchSuggestions(q, input, dropdown), 300);
+            timer = setTimeout(() => this._fetchSuggestions(q, input, dropdown, onSelect), 300);
         });
 
-        // Close on outside click
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#tripDestInput') && !e.target.closest('#tripDestDropdown')) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
         });
     },
 
-    async _fetchSuggestions(query, input, dropdown) {
+    async _fetchSuggestions(query, input, dropdown, onSelect) {
         try {
             const results = await API.get(`/travel/geocode?q=${encodeURIComponent(query)}`);
             if (!results.length) { dropdown.style.display = 'none'; return; }
@@ -618,7 +638,7 @@ const Travel = {
             dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
                 item.addEventListener('click', () => {
                     input.value = item.dataset.place;
-                    Travel._selectedCountry = item.dataset.country;
+                    if (onSelect) onSelect(item.dataset.place, item.dataset.country);
                     dropdown.style.display = 'none';
                 });
             });
