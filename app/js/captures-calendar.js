@@ -73,6 +73,13 @@ const CapturesCalendar = {
         this.loadMonth(year, month);
     },
 
+    _esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    },
+
     // Get local YYYY-MM-DD for a capture timestamp
     _localDate(ts) {
         const d = new Date(ts);
@@ -198,10 +205,9 @@ const CapturesCalendar = {
             const icon = typeIcons[c.type] || 'file-text';
             const color = typeColors[c.type] || '#6366f1';
             const time = new Date(c.captured_at || c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const thumb = c.thumbnail_url || c.photo_url;
-            const hasPhoto = thumb ? true : false;
+            const thumb = c.image_thumb_path || c.image_path;
             html += '<div class="cal-detail-item" onclick="CapturesCalendar.openCapture(\'' + c.id + '\')">' +
-                (hasPhoto ? '<img src="' + thumb + '" class="cal-detail-thumb" alt="">' :
+                (thumb ? '<img src="' + thumb + '" class="cal-detail-thumb" alt="">' :
                 '<i data-lucide="' + icon + '" style="width:15px;height:15px;color:' + color + '" class="cal-detail-icon"></i>') +
                 '<div class="cal-detail-info">' +
                     '<span class="cal-detail-title">' + (c.title || c.text || 'Untitled').substring(0, 60) + '</span>' +
@@ -235,15 +241,15 @@ const CapturesCalendar = {
         });
 
         let body = '';
-        if (cap.photo_url) {
-            body += '<img src="' + cap.photo_url + '" class="cal-modal-photo" onclick="event.stopPropagation()">';
+        if (cap.image_path) {
+            body += '<img src="' + cap.image_path + '" class="cal-modal-photo" onclick="event.stopPropagation()">';
         }
-        if (cap.body || cap.text) {
-            body += '<p class="cal-modal-body">' + (cap.body || cap.text || '') + '</p>';
+        if (cap.body) {
+            body += '<p class="cal-modal-body">' + this._esc(cap.body) + '</p>';
         }
-        if (cap.checklist_items && cap.checklist_items.length) {
+        if (cap.checklist && cap.checklist.length) {
             body += '<ul class="cal-modal-checklist">';
-            cap.checklist_items.forEach(item => {
+            cap.checklist.forEach(item => {
                 body += '<li class="' + (item.checked ? 'done' : '') + '">' + (item.text || item) + '</li>';
             });
             body += '</ul>';
@@ -260,9 +266,9 @@ const CapturesCalendar = {
                 '<span class="cal-modal-type" style="color:' + color + '">' + (cap.type || 'note') + '</span>' +
                 '<button class="cal-modal-close" onclick="this.closest(\'.cal-modal-overlay\').remove()">✕</button>' +
             '</div>' +
-            '<h3 class="cal-modal-title">' + (cap.title || 'Untitled') + '</h3>' +
+            '<h3 class="cal-modal-title">' + this._esc(cap.title || 'Untitled') + '</h3>' +
             '<span class="cal-modal-time">' + time + '</span>' +
-            (cap.place_name ? '<span class="cal-modal-location">📍 ' + cap.place_name + '</span>' : '') +
+            (cap.place_name ? '<span class="cal-modal-location">📍 ' + this._esc(cap.place_name) + '</span>' : '') +
             body +
             '</div>';
         document.body.appendChild(overlay);
