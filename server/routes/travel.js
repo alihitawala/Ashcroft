@@ -3,6 +3,26 @@ const { pool } = require('../db');
 
 const router = Router();
 
+// ─── Geocode Proxy (avoids CORS) ───
+router.get('/geocode', async (req, res) => {
+    const q = req.query.q;
+    if (!q || q.length < 2) return res.json([]);
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&accept-language=en`;
+        const resp = await fetch(url, { headers: { 'User-Agent': 'ashcroft-cloud/1.0' } });
+        const data = await resp.json();
+        const results = data.map(r => {
+            const a = r.address || {};
+            const place = a.city || a.town || a.village || a.state || r.name || '';
+            const country = a.country || '';
+            return { place, country, display: r.display_name, lat: r.lat, lon: r.lon };
+        });
+        res.json(results);
+    } catch (e) {
+        res.json([]);
+    }
+});
+
 // ─── Helper: fetch with timeout ───
 async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
     const controller = new AbortController();
@@ -457,11 +477,18 @@ IMPORTANT RULES:
         }
 
         // Insert stays
+        const normalizeTier = (t) => {
+            if (!t) return 'mid';
+            const l = t.toLowerCase().trim();
+            if (l.includes('budget') || l.includes('hostel')) return 'budget';
+            if (l.includes('luxury') || l.includes('premium') || l.includes('high')) return 'luxury';
+            return 'mid';
+        };
         for (const s of (itinerary.stays || [])) {
             await pool.query(
                 `INSERT INTO travel_stays (trip_id, name, tier, price_per_night, currency, address, latitude, longitude, url, notes)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-                [tripId, s.name, s.tier, s.price_per_night, s.currency || 'USD', s.address,
+                [tripId, s.name, normalizeTier(s.tier), s.price_per_night, s.currency || 'USD', s.address,
                  s.latitude, s.longitude, s.url || null, s.notes]
             );
         }

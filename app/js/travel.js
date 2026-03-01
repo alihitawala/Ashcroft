@@ -606,17 +606,12 @@ const Travel = {
 
     async _fetchSuggestions(query, input, dropdown) {
         try {
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1&accept-language=en`;
-            const resp = await fetch(url, { headers: { 'User-Agent': 'ashcroft-cloud/1.0' } });
-            const results = await resp.json();
+            const results = await API.get(`/travel/geocode?q=${encodeURIComponent(query)}`);
             if (!results.length) { dropdown.style.display = 'none'; return; }
 
-            dropdown.innerHTML = results.map((r, i) => {
-                const addr = r.address || {};
-                const place = addr.city || addr.town || addr.village || addr.state || r.name || '';
-                const country = addr.country || '';
-                const label = place + (country ? ', ' + country : '');
-                return `<div class="autocomplete-item" data-idx="${i}" data-place="${esc(place)}" data-country="${esc(country)}">${esc(label)}</div>`;
+            dropdown.innerHTML = results.map(r => {
+                const label = r.place + (r.country ? ', ' + r.country : '');
+                return `<div class="autocomplete-item" data-place="${esc(r.place)}" data-country="${esc(r.country)}">${esc(label)}</div>`;
             }).join('');
 
             dropdown.style.display = 'block';
