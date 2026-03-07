@@ -480,6 +480,59 @@ router.get('/f1/race/:round/results', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch race results' }); }
 });
 
+/** GET /f1/race/:round/qualifying - Qualifying results */
+router.get('/f1/race/:round/qualifying', async (req, res) => {
+  try {
+    const round = parseInt(req.params.round) || 1;
+    const key = `f1-quali-${round}`;
+    const result = await cached(key, TTL.results, async () => {
+      let json = await fetchJSON(`${JOLPICA}/2026/${round}/qualifying.json`);
+      let results = json?.MRData?.RaceTable?.Races?.[0]?.QualifyingResults;
+      if (!results || !results.length) {
+        json = await fetchJSON(`${JOLPICA}/2025/${round}/qualifying.json`);
+        results = json?.MRData?.RaceTable?.Races?.[0]?.QualifyingResults;
+      }
+      if (!results) return [];
+      return results.map(q => ({
+        position: parseInt(q.position),
+        driver: `${q.Driver.givenName} ${q.Driver.familyName}`,
+        code: q.Driver.code,
+        constructor: q.Constructor.name,
+        q1: q.Q1 || null,
+        q2: q.Q2 || null,
+        q3: q.Q3 || null
+      }));
+    });
+    respond(res, result, cache.has(key));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch qualifying results' }); }
+});
+
+/** GET /f1/race/:round/sprint - Sprint results */
+router.get('/f1/race/:round/sprint', async (req, res) => {
+  try {
+    const round = parseInt(req.params.round) || 1;
+    const key = `f1-sprint-${round}`;
+    const result = await cached(key, TTL.results, async () => {
+      let json = await fetchJSON(`${JOLPICA}/2026/${round}/sprint.json`);
+      let results = json?.MRData?.RaceTable?.Races?.[0]?.SprintResults;
+      if (!results || !results.length) {
+        json = await fetchJSON(`${JOLPICA}/2025/${round}/sprint.json`);
+        results = json?.MRData?.RaceTable?.Races?.[0]?.SprintResults;
+      }
+      if (!results) return [];
+      return results.map(r => ({
+        position: parseInt(r.position),
+        driver: `${r.Driver.givenName} ${r.Driver.familyName}`,
+        code: r.Driver.code,
+        constructor: r.Constructor.name,
+        time: r.Time?.time || r.status,
+        points: parseFloat(r.points)
+      }));
+    });
+    respond(res, result, cache.has(key));
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch sprint results' }); }
+});
+
 // ═══════════════════════════════════════
 // CROSS-SPORT: Next Up
 // ═══════════════════════════════════════

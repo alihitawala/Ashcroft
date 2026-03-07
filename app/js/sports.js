@@ -1354,9 +1354,18 @@ function renderF1Calendar(races, now) {
             </div>`;
         });
 
-        // Results placeholder for completed races
-        if (isCompleted) {
-            html += `<div class="f1-results-area" id="f1-results-${r.round}"><button class="f1-results-btn" onclick="f1LoadResults(${r.round}, event)">View Race Results</button></div>`;
+        // Show results buttons based on what's completed
+        const qualiDone = r.qualifying && new Date(r.qualifying.date + 'T' + r.qualifying.time) < now;
+        const sprintDone = r.sprint && new Date(r.sprint.date + 'T' + r.sprint.time) < now;
+        const raceDone = new Date(r.date + 'T' + (r.time || '00:00:00Z')) < now;
+
+        if (qualiDone || sprintDone || raceDone) {
+            html += `<div class="f1-results-area" id="f1-results-${r.round}">`;
+            html += `<div class="f1-results-buttons">`;
+            if (qualiDone) html += `<button class="f1-results-btn" onclick="f1LoadQualiResults(${r.round}, event)">Qualifying Grid</button>`;
+            if (sprintDone) html += `<button class="f1-results-btn" onclick="f1LoadSprintResults(${r.round}, event)">Sprint Results</button>`;
+            if (raceDone) html += `<button class="f1-results-btn f1-results-btn-primary" onclick="f1LoadResults(${r.round}, event)">Race Results</button>`;
+            html += `</div></div>`;
         }
 
         html += '</div></div>';
@@ -1386,6 +1395,67 @@ function renderF1Calendar(races, now) {
     });
 
     return html;
+}
+
+async function f1LoadQualiResults(round, event) {
+    event.stopPropagation();
+    const area = document.getElementById(`f1-results-${round}`);
+    if (!area) return;
+    const existing = area.querySelector('.f1-quali-results');
+    if (existing) { existing.remove(); return; }
+    const loader = document.createElement('div');
+    loader.className = 'f1-quali-results';
+    loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">Loading...</div>';
+    area.appendChild(loader);
+    try {
+        const data = await safeGet(`/sports/f1/race/${round}/qualifying`);
+        const results = data?.data || [];
+        if (!results.length) { loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">No qualifying data yet</div>'; return; }
+        let h = '<div class="f1-results-list"><div class="f1-results-header" style="font-weight:700;font-size:11px;color:var(--text-tertiary);padding:4px 8px;display:flex;gap:8px"><span style="width:24px">P</span><span style="flex:1">Driver</span><span style="width:70px">Q1</span><span style="width:70px">Q2</span><span style="width:70px">Q3</span></div>';
+        results.slice(0, 20).forEach(r => {
+            const color = findTeamColor(r.constructor);
+            h += `<div class="f1-result-row" style="display:flex;align-items:center;gap:8px;padding:4px 8px">
+                <span class="f1-result-pos">${r.position}</span>
+                <div class="f1-result-color" style="background:${color}"></div>
+                <span class="f1-result-name" style="flex:1">${r.code || r.driver}</span>
+                <span style="width:70px;font-size:11px;color:var(--text-secondary);font-family:monospace">${r.q1 || '-'}</span>
+                <span style="width:70px;font-size:11px;color:var(--text-secondary);font-family:monospace">${r.q2 || '-'}</span>
+                <span style="width:70px;font-size:11px;color:${r.q3 ? 'var(--text)' : 'var(--text-secondary)'};font-weight:${r.q3 ? '600' : '400'};font-family:monospace">${r.q3 || '-'}</span>
+            </div>`;
+        });
+        h += '</div>';
+        loader.innerHTML = h;
+    } catch { loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">Failed to load qualifying</div>'; }
+}
+
+async function f1LoadSprintResults(round, event) {
+    event.stopPropagation();
+    const area = document.getElementById(`f1-results-${round}`);
+    if (!area) return;
+    const existing = area.querySelector('.f1-sprint-results');
+    if (existing) { existing.remove(); return; }
+    const loader = document.createElement('div');
+    loader.className = 'f1-sprint-results';
+    loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">Loading...</div>';
+    area.appendChild(loader);
+    try {
+        const data = await safeGet(`/sports/f1/race/${round}/sprint`);
+        const results = data?.data || [];
+        if (!results.length) { loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">No sprint data yet</div>'; return; }
+        let h = '<div class="f1-results-list">';
+        results.slice(0, 10).forEach(r => {
+            const color = findTeamColor(r.constructor);
+            h += `<div class="f1-result-row">
+                <span class="f1-result-pos">${r.position}</span>
+                <div class="f1-result-color" style="background:${color}"></div>
+                <span class="f1-result-name">${r.driver}</span>
+                <span class="f1-result-team">${r.constructor}</span>
+                <span class="f1-result-pts">${r.points || 0}pt</span>
+            </div>`;
+        });
+        h += '</div>';
+        loader.innerHTML = h;
+    } catch { loader.innerHTML = '<div style="padding:8px;color:var(--text-secondary)">Failed to load sprint results</div>'; }
 }
 
 async function f1LoadResults(round, event) {

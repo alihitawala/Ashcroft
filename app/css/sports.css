@@ -1220,8 +1220,7 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .f1-session-done { color: var(--green, #2ecc71); }
 .f1-session-live { color: #e74c3c; font-weight: 800; animation: pulse 1.5s ease infinite; }
 .f1-results-area { padding: 8px 14px 12px; }
-.f1-results-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 11px; color: var(--text-secondary); cursor: pointer; width: 100%; }
-.f1-results-btn:hover { background: var(--surface3); }
+/* old f1-results-btn styles moved to bottom */
 .f1-results-list { display: flex; flex-direction: column; gap: 2px; }
 .f1-result-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
 .f1-result-pos { font-weight: 800; min-width: 20px; text-align: center; }
@@ -1652,4 +1651,33 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
   box-shadow: 0 0 16px 2px rgba(var(--sport-glow), 0.15),
               0 4px 12px rgba(0,0,0,0.3);
   border-color: rgba(var(--sport-glow), 0.3);
+}
+
+.f1-results-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+}
+.f1-results-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.f1-results-btn:hover {
+    background: var(--surface3);
+    color: var(--text);
+}
+.f1-results-btn-primary {
+    background: var(--sport-primary, #e10600);
+    color: white;
+    border-color: transparent;
+}
+.f1-results-btn-primary:hover {
+    opacity: 0.9;
 }
