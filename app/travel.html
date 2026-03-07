@@ -10,8 +10,25 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#635BFF">
     <link rel="stylesheet" href="/app/css/shared.css">
-    <link rel="stylesheet" href="/app/css/travel.css?v=1772407071">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/app/css/travel.css?v=1772427562">
+    <link rel="stylesheet" href="/app/css/leaflet/leaflet.css?v=1772427562">
+    <style>
+        /* Critical Leaflet overrides — ensures tiles render even if leaflet.css is cached stale */
+        .leaflet-pane, .leaflet-tile, .leaflet-marker-icon, .leaflet-marker-shadow,
+        .leaflet-tile-container, .leaflet-pane > svg, .leaflet-pane > canvas,
+        .leaflet-zoom-box, .leaflet-image-layer, .leaflet-layer { position: absolute; left: 0; top: 0; }
+        .leaflet-container { overflow: hidden; }
+        .leaflet-tile, .leaflet-marker-icon, .leaflet-marker-shadow { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+        .leaflet-tile { filter: inherit; visibility: hidden; }
+        .leaflet-tile-loaded { visibility: inherit; }
+        .leaflet-tile-pane { z-index: 200; }
+        .leaflet-overlay-pane { z-index: 400; }
+        .leaflet-marker-pane { z-index: 600; }
+        .leaflet-tooltip-pane { z-index: 650; }
+        .leaflet-popup-pane { z-index: 700; }
+        .leaflet-container .leaflet-tile-pane img, .leaflet-container .leaflet-tile { max-width: none !important; max-height: none !important; }
+        .leaflet-container img.leaflet-image-layer { max-width: none !important; }
+    </style>
 </head>
 <body>
     <div class="app-layout" id="appLayout"></div>
@@ -21,7 +38,7 @@
     <script src="/app/js/shared/ui.js"></script>
     <script src="/app/js/shared/components.js"></script>
     <script src="/app/js/shared/nav.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/app/js/travel.js?v=1772407071"></script>
+    <script src="/app/js/leaflet.js"></script>
+    <script src="/app/js/travel.js?v=1772427562"></script>
 </body>
 </html>

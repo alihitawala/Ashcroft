@@ -27,7 +27,7 @@ let todayTasks = [];
 
 // ─── Load All Data ───
 async function loadDashboard() {
-    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures, travelTrips] = await Promise.all([
+    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures, travelTrips, photoRes] = await Promise.all([
         API.get('/tasks').catch(() => []),
         API.get('/tasks?due=today').catch(() => []),
         API.get('/events?upcoming=5').catch(() => []),
@@ -37,6 +37,7 @@ async function loadDashboard() {
         API.get('/sports/next-up').catch(() => null),
         API.get('/captures/recent').catch(() => []),
         API.get('/travel/trips').catch(() => []),
+        API.get('/captures?type=photo&limit=20').catch(() => ({ captures: [] })),
     ]);
 
     const norm = v => Array.isArray(v) ? v : (v?.items || []);
@@ -49,8 +50,10 @@ async function loadDashboard() {
     const uncheckedGrocery = groceryItems.filter(i => !i.checked).length;
     const needsAttention = gardenDash.needs_attention_count || 0;
 
+    const photoCaptures = (photoRes?.captures || photoRes || []).filter(c => c.image_path);
+
     renderSummary(incompleteTasks, evts.length, uncheckedGrocery, needsAttention);
-    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures, travelTrips);
+    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures, travelTrips, photoCaptures);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -104,18 +107,26 @@ function renderSummary(taskCount, eventCount, groceryCount, gardenCount) {
 }
 
 // ─── Widgets ───
-function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips) {
+function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips, photoCaptures) {
+    // Filter: hide tasks/events widgets when empty
+    const hasTasks = todayTasks.length > 0;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const futureEvents = (events || []).filter(e => ((e.date || '').split('T')[0]) >= todayStr);
+    const hasEvents = futureEvents.length > 0;
+
     document.getElementById('widgets').innerHTML = `
+        ${renderPhotoCarousel(photoCaptures)}
         ${renderSportsNextUp(sportsNext)}
         ${renderTravelWidget(travelTrips)}
-        <div class="card">
+        ${hasTasks ? `<div class="card">
             <div class="card-header"><h3>Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
             <div class="card-body" id="tasksList">${renderTodayTasks()}</div>
-        </div>
-        <div class="card">
+        </div>` : ''}
+        ${hasEvents ? `<div class="card">
             <div class="card-header"><h3>Upcoming Events</h3><a href="/app/events.html" class="link">View All →</a></div>
             <div class="card-body">${renderEvents(events)}</div>
-        </div>
+        </div>` : ''}
         <div class="card">
             <div class="card-header"><h3>Recent Captures</h3><a href="/app/captures.html" class="link">View All →</a></div>
             <div class="card-body">${renderRecentCaptures(recentCaptures)}</div>
@@ -130,6 +141,7 @@ function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recen
         </div>
     `;
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    initPhotoCarousel();
 }
 
 // ─── Today's Tasks ───
@@ -230,6 +242,65 @@ function renderGarden(watering, dashboard) {
     }
 
     return html;
+}
+
+// ─── Photo Carousel ───
+let _carouselInterval = null;
+function renderPhotoCarousel(photos) {
+    if (!photos || !photos.length) return '';
+    return `<div class="card photo-carousel-card">
+        <div class="photo-carousel" id="photoCarousel">
+            ${photos.map((p, i) => `
+                <div class="carousel-slide${i === 0 ? ' active' : ''}" data-index="${i}">
+                    <img src="${p.image_path}" alt="${esc(p.title || '')}" loading="${i < 2 ? 'eager' : 'lazy'}">
+                    <div class="carousel-caption">${esc(p.title || '')}</div>
+                </div>
+            `).join('')}
+            <div class="carousel-dots">
+                ${photos.map((_, i) => `<span class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}"></span>`).join('')}
+            </div>
+        </div>
+    </div>`;
+}
+
+function initPhotoCarousel() {
+    const el = document.getElementById('photoCarousel');
+    if (!el) return;
+    const slides = el.querySelectorAll('.carousel-slide');
+    const dots = el.querySelectorAll('.carousel-dot');
+    if (slides.length < 2) return;
+
+    let current = 0;
+    const show = (idx) => {
+        slides[current].classList.remove('active');
+        dots[current].classList.remove('active');
+        current = (idx + slides.length) % slides.length;
+        slides[current].classList.add('active');
+        dots[current].classList.add('active');
+    };
+
+    // Auto-rotate every 5s
+    if (_carouselInterval) clearInterval(_carouselInterval);
+    _carouselInterval = setInterval(() => show(current + 1), 5000);
+
+    // Dot clicks
+    dots.forEach(d => d.addEventListener('click', () => {
+        show(+d.dataset.index);
+        clearInterval(_carouselInterval);
+        _carouselInterval = setInterval(() => show(current + 1), 5000);
+    }));
+
+    // Swipe support
+    let startX = 0;
+    el.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    el.addEventListener('touchend', e => {
+        const diff = startX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+            show(diff > 0 ? current + 1 : current - 1);
+            clearInterval(_carouselInterval);
+            _carouselInterval = setInterval(() => show(current + 1), 5000);
+        }
+    }, { passive: true });
 }
 
 // ─── Recent Captures ───

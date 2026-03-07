@@ -321,46 +321,83 @@
 }
 
 /* ─── Day Tabs ─── */
-.day-tabs {
+/* ─── Day Selector (arrow + center + arrow) ─── */
+.day-selector {
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-}
-.day-tabs::-webkit-scrollbar { display: none; }
-.day-tab {
-    padding: 10px 20px;
-    border-radius: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    scroll-snap-align: start;
-    min-height: 44px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 8px;
+    margin-bottom: 8px;
 }
-.day-tab .day-tab-num { font-size: 11px; font-weight: 500; opacity: 0.7; }
-.day-tab:hover { border-color: var(--accent); color: var(--text); }
-.day-tab.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-    box-shadow: 0 2px 12px rgba(99,91,255,0.3);
+.day-arrow {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 22px;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
 }
-.day-tab.active .day-tab-num { opacity: 0.85; }
-.day-tab.today { border-color: var(--green); }
-.day-tab.today.active { background: var(--green); border-color: var(--green); box-shadow: 0 2px 12px rgba(62,207,142,0.3); }
+.day-arrow:active { transform: scale(0.92); background: var(--surface2); }
+.day-arrow.disabled { opacity: 0.25; pointer-events: none; }
+.day-selector-center {
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+}
+.day-selector-label {
+    font-size: 16px;
+    font-weight: 700;
+}
+.day-selector-of {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.5;
+}
+.day-selector-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Day Dots (quick nav) ─── */
+.day-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.day-dot, .map-day-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+.day-dot:hover, .map-day-dot:hover { transform: scale(1.3); }
+.day-dot.active {
+    background: var(--dot-color, var(--accent));
+    width: 24px;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.map-day-dot.active {
+    background: var(--dot-color, var(--accent));
+    width: 24px;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
 
 /* ─── Day Summary ─── */
 .day-summary {
@@ -599,90 +636,241 @@
 }
 
 /* ─── Map ─── */
-.travel-map {
-    height: 100%;
-    min-height: 400px;
+/* ─── Map Tab ─── */
+.map-tab-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* map pills replaced by day-selector + day-dots */
+
+.map-toggle-row {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+}
+.map-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.map-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.travel-map-full {
+    height: calc(100vh - 340px);
+    min-height: 350px;
+    max-height: 600px;
     border-radius: 16px;
     overflow: hidden;
     border: 1px solid var(--border);
 }
-.travel-map-standalone { margin-bottom: 16px; }
 
-.map-legend {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.8;
-    margin-bottom: 12px;
-}
-.legend-item { display: flex; align-items: center; gap: 8px; }
-.legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-
-/* Day number label markers */
-.day-number-marker {
+/* Map pins */
+.day-number-marker, .restaurant-marker-icon, .hotel-marker-icon, .route-arrow-icon {
     background: none !important;
     border: none !important;
 }
-.day-pin {
-    width: 30px;
-    height: 30px;
+
+.map-pin {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 2px solid #fff;
+    border: 2.5px solid #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     transition: transform 0.2s ease;
+    position: relative;
+    animation: pinDrop 0.4s ease calc(var(--order, 0) * 0.08s) both;
 }
-.day-pin:hover { transform: scale(1.2); }
-.day-pin.pulse {
-    animation: pinPulse 0.6s ease;
-}
-@keyframes pinPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.4); }
+.map-pin:hover { transform: scale(1.25); }
+.map-pin-num { font-size: 14px; font-weight: 800; }
+.map-pin-seq {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    color: #333;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.restaurant-marker-icon { background: none !important; border: none !important; }
-.restaurant-pin {
-    width: 28px;
-    height: 28px;
-    background: var(--amber);
-    border: 2px solid #fff;
+@keyframes pinDrop {
+    0% { transform: translateY(-20px) scale(0.5); opacity: 0; }
+    70% { transform: translateY(2px) scale(1.1); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.map-emoji-pin {
+    width: 32px;
+    height: 32px;
+    background: #fff;
+    border: 2px solid var(--border);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+.map-emoji-pin:hover { transform: scale(1.2); }
+
+.route-arrow {
+    font-size: 18px;
+    font-weight: 900;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    opacity: 0.7;
 }
 
-.hotel-marker-icon { background: none !important; border: none !important; }
-.hotel-pin {
-    width: 28px;
-    height: 28px;
-    background: var(--blue);
-    border: 2px solid #fff;
+/* Map popup cards */
+.map-custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.map-custom-popup .leaflet-popup-content {
+    margin: 0;
+    min-width: 220px;
+    width: auto !important;
+}
+.map-custom-popup .leaflet-popup-tip {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.map-popup-card {
+    font-family: inherit;
+    min-width: 220px;
+}
+.map-popup-img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+}
+.map-popup-body {
+    padding: 8px 12px 10px;
+}
+.map-popup-day {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.map-popup-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+.map-popup-meta {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+}
+.map-popup-desc {
+    font-size: 11px;
+    color: #555;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+.map-popup-cost {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+}
+.map-popup-tip {
+    font-size: 10px;
+    color: #888;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Map info panel */
+.map-info-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 12px;
+    transition: all 0.3s ease;
+}
+.map-info-panel.hidden { display: none; }
+
+.map-info-header {
+    padding-left: 10px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+.map-info-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding-left: 10px;
+}
+.map-info-stops {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.map-info-stop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.map-info-stop:hover, .map-info-stop:active {
+    background: var(--surface2);
+}
+.map-info-stop-num {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+.map-info-stop-title {
     font-size: 13px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-weight: 600;
+    color: var(--text);
+}
+.map-info-stop-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
 }
 
 /* ─── Restaurant Cards ─── */
@@ -1136,12 +1324,11 @@
     .trip-hero-banner { height: 200px; border-radius: 14px; }
     .trip-hero-content h1 { font-size: 26px; }
     .trip-hero-content { padding: 20px; }
-    .travel-map { min-height: 280px; }
+    .travel-map-full { min-height: 280px; max-height: 450px; }
     .budget-bar-label { width: 100px; font-size: 12px; }
     .budget-bar-amount { width: 60px; font-size: 12px; }
     .section-tab { padding: 10px 12px; font-size: 12px; }
-    .day-tabs { scroll-snap-type: x mandatory; }
-    .day-tab { scroll-snap-align: start; flex-shrink: 0; }
+    /* day-tab removed */
     .timeline-container { padding-left: 28px; }
     .timeline-dot { left: -28px; width: 20px; height: 20px; font-size: 10px; }
     .activity-card-image { height: 120px; }
@@ -1152,48 +1339,7 @@
     overflow: visible;
 }
 
-/* ─── Day Tabs Scroll Indicators ─── */
-.day-tabs-wrapper {
-    position: relative;
-    margin-bottom: 16px;
-}
-.day-tabs-fade-left, .day-tabs-fade-right {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 32px;
-    z-index: 2;
-    pointer-events: none;
-}
-.day-tabs-fade-left {
-    left: 0;
-    background: linear-gradient(to right, var(--bg), transparent);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-.day-tabs-fade-right {
-    right: 0;
-    background: linear-gradient(to left, var(--bg), transparent);
-}
-.day-tabs {
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-.day-tabs::-webkit-scrollbar { display: none; }
-.day-tab {
-    scroll-snap-align: start;
-    flex-shrink: 0;
-}
-.day-tab-title {
-    display: block;
-    font-size: 11px;
-    opacity: 0.7;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100px;
-}
+/* day-tabs replaced by day-selector + day-dots */
 
 /* ─── Hero fixes ─── */
 .trip-hero-content h1 {
@@ -1223,8 +1369,4 @@
 }
 
 /* ─── Map standalone fix ─── */
-.travel-map-standalone {
-    min-height: 400px;
-    border-radius: 12px;
-    overflow: hidden;
-}
+/* (map-standalone removed — using map-tab-container now) */

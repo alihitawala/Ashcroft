@@ -173,7 +173,7 @@ async function fetchStocks() {
     return;
   }
   try {
-    const tickers = ['META', 'GOOGL', 'TSLA', 'AAPL', 'AVGO', 'VOO', 'ACHR', 'CRSP', 'MRVL', 'RBLX', 'ROKU', 'SHOP'];
+    const tickers = ['META', 'GOOGL', 'TSLA', 'AAPL', 'AVGO', 'VOO', 'ACHR', 'CRSP', 'MRVL', 'RBLX', 'ROKU', 'SHOP', 'XLE'];
     const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36';
     const quotes = [];
 

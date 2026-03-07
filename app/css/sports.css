@@ -1195,6 +1195,41 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .race-date-month { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; }
 .sprint-badge { font-size: 9px; background: #FF8000; color: white; padding: 1px 5px; border-radius: 3px; font-weight: 700; text-transform: uppercase; margin-left: 4px; vertical-align: middle; }
 
+/* F1 Collapsible GP Cards */
+.f1-gp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 6px; overflow: hidden; transition: border-color 0.2s; }
+.f1-gp-card:hover { border-color: var(--border-hover, var(--border)); }
+.f1-gp-next { border-color: var(--sport-primary); border-width: 2px; }
+.f1-gp-done { opacity: 0.6; }
+.f1-gp-done:hover { opacity: 1; }
+.f1-gp-header { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.f1-gp-info { flex: 1; min-width: 0; }
+.f1-gp-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f1-gp-circuit { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.f1-gp-status-col { text-align: right; flex-shrink: 0; }
+.f1-gp-status { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.f1-gp-round { font-size: 10px; color: var(--text-tertiary); }
+.f1-gp-chevron { font-size: 18px; color: var(--text-tertiary); transition: transform 0.3s; flex-shrink: 0; }
+.f1-gp-open .f1-gp-chevron { transform: rotate(90deg); }
+.f1-gp-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.f1-gp-open .f1-gp-body { max-height: 600px; }
+.f1-session-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-left: 3px solid #666; margin-left: 14px; margin-right: 14px; font-size: 12px; }
+.f1-session-row + .f1-session-row { border-top: 1px solid var(--border); }
+.f1-session-name { font-weight: 600; min-width: 120px; }
+.f1-session-time { flex: 1; color: var(--text-secondary); font-size: 11px; }
+.f1-session-countdown { font-weight: 700; font-size: 12px; color: var(--sport-primary); min-width: 60px; text-align: right; }
+.f1-session-done { color: var(--green, #2ecc71); }
+.f1-session-live { color: #e74c3c; font-weight: 800; animation: pulse 1.5s ease infinite; }
+.f1-results-area { padding: 8px 14px 12px; }
+.f1-results-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 11px; color: var(--text-secondary); cursor: pointer; width: 100%; }
+.f1-results-btn:hover { background: var(--surface3); }
+.f1-results-list { display: flex; flex-direction: column; gap: 2px; }
+.f1-result-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.f1-result-pos { font-weight: 800; min-width: 20px; text-align: center; }
+.f1-result-color { width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0; }
+.f1-result-name { font-weight: 600; flex: 1; }
+.f1-result-team { font-size: 11px; color: var(--text-tertiary); }
+.f1-result-pts { font-size: 11px; color: var(--text-secondary); min-width: 30px; text-align: right; }
+
 /* F1 Driver/Constructor Standings */
 .standings-card {
     background: var(--surface);

@@ -1,7 +1,7 @@
 // Service Worker for ashcroft.cloud PWA
 // Basic caching strategy: cache-first for app shell, network-first for API calls
 
-const CACHE_NAME = 'ashcroft-v1772407071';
+const CACHE_NAME = 'ashcroft-v1772427562';
 const STATIC_ASSETS = [
   '/app/css/shared.css',
   '/app/shared.css',
@@ -110,7 +110,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For everything else, just fetch normally
+  // Cross-origin requests (map tiles, external images): let browser handle natively
+  if (url.origin !== location.origin) {
+    return; // Don't call event.respondWith — browser handles it normally
+  }
+
+  // For everything else on same origin, fetch normally
   event.respondWith(fetch(request));
 });
 

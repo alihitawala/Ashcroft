@@ -426,7 +426,13 @@ router.get('/f1/calendar', async (req, res) => {
       }
       return races.map(r => ({
         round: parseInt(r.round), name: r.raceName, circuit: r.Circuit?.circuitName,
-        country: r.Circuit?.Location?.country, date: r.date, time: r.time
+        country: r.Circuit?.Location?.country, date: r.date, time: r.time,
+        qualifying: r.Qualifying ? { date: r.Qualifying.date, time: r.Qualifying.time } : null,
+        sprint: r.Sprint ? { date: r.Sprint.date, time: r.Sprint.time } : null,
+        sprintQualifying: r.SprintQualifying ? { date: r.SprintQualifying.date, time: r.SprintQualifying.time } : null,
+        fp1: r.FirstPractice ? { date: r.FirstPractice.date, time: r.FirstPractice.time } : null,
+        fp2: r.SecondPractice ? { date: r.SecondPractice.date, time: r.SecondPractice.time } : null,
+        fp3: r.ThirdPractice ? { date: r.ThirdPractice.date, time: r.ThirdPractice.time } : null,
       }));
     });
     respond(res, result, cache.has('f1-calendar'));

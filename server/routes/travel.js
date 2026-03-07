@@ -1,7 +1,12 @@
 const { Router } = require('express');
 const { pool } = require('../db');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
 const router = Router();
+const IMAGE_DIR = path.join(__dirname, '../../public/images/travel');
+fs.mkdirSync(IMAGE_DIR, { recursive: true });
 
 // ─── Geocode Proxy (avoids CORS) ───
 router.get('/geocode', async (req, res) => {
@@ -52,23 +57,20 @@ function extractJSON(text) {
 // ─── Helper: Fetch Wikipedia Image ───
 const WIKI_HEADERS = { 'User-Agent': 'ashcroft-cloud/1.0 (ali@ashcroft.cloud)', 'Accept': 'application/json' };
 
-async function wikiImage(query) {
+async function wikiImageUrl(query) {
     try {
         const title = query.replace(/ /g, '_');
         const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`;
         const resp = await fetch(url, { headers: WIKI_HEADERS });
-        const text = await resp.text();
-        const data = JSON.parse(text);
+        const data = JSON.parse(await resp.text());
         const pages = data.query?.pages || {};
         for (const pid of Object.keys(pages)) {
             const src = pages[pid]?.thumbnail?.source;
             if (src) return src;
         }
-        // Fallback: search
         const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=1&prop=pageimages&pithumbsize=800&format=json&origin=*`;
         const resp2 = await fetch(searchUrl, { headers: WIKI_HEADERS });
-        const text2 = await resp2.text();
-        const data2 = JSON.parse(text2);
+        const data2 = JSON.parse(await resp2.text());
         const pages2 = data2.query?.pages || {};
         for (const pid of Object.keys(pages2)) {
             const src = pages2[pid]?.thumbnail?.source;
@@ -76,7 +78,30 @@ async function wikiImage(query) {
         }
         return null;
     } catch (e) {
-        console.log('[Travel] wikiImage error for:', query, e.message);
+        console.log('[Travel] wikiImageUrl error for:', query, e.message);
+        return null;
+    }
+}
+
+async function wikiImage(query) {
+    try {
+        const remoteUrl = await wikiImageUrl(query);
+        if (!remoteUrl) return null;
+        // Download locally to avoid CSP/CORS/rate-limit issues
+        const hash = crypto.createHash('md5').update(remoteUrl).digest('hex').slice(0, 10);
+        const ext = remoteUrl.match(/\.(jpe?g|png|gif|webp)/i)?.[1] || 'jpg';
+        const filename = `wiki-${hash}.${ext.toLowerCase()}`;
+        const localPath = path.join(IMAGE_DIR, filename);
+        if (!fs.existsSync(localPath)) {
+            const imgResp = await fetch(remoteUrl, { headers: WIKI_HEADERS });
+            if (!imgResp.ok) return null;
+            const buf = Buffer.from(await imgResp.arrayBuffer());
+            if (buf.length < 5000) return null; // too small = error page
+            fs.writeFileSync(localPath, buf);
+        }
+        return `/images/travel/${filename}`;
+    } catch (e) {
+        console.log('[Travel] wikiImage download error for:', query, e.message);
         return null;
     }
 }

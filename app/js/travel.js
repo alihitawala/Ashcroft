@@ -214,9 +214,10 @@ const Travel = {
 
         if (hasDays && this.activeSection === 'itinerary') {
             this.initSplitMap();
+            
         }
         if (hasDays && this.activeSection === 'map') {
-            this.initMap('travelMapFull');
+            this.initMapTab();
         }
     },
 
@@ -242,7 +243,7 @@ const Travel = {
             case 'restaurants': return this.renderRestaurants();
             case 'stays': return this.renderStays();
             case 'info': return this.renderInfo();
-            case 'map': return '<div id="travelMapFull" class="travel-map travel-map-standalone" style="height:500px"></div>';
+            case 'map': return this.renderMapTab();
             default: return '';
         }
     },
@@ -255,8 +256,8 @@ const Travel = {
 
         const content = document.getElementById('tripContent');
         content.innerHTML = this.renderActiveSection();
-        if (section === 'itinerary') this.initSplitMap();
-        if (section === 'map') this.initMap('travelMapFull');
+        if (section === 'itinerary') { this.initSplitMap();  }
+        if (section === 'map') this.initMapTab();
     },
 
     // ─── Itinerary with Timeline + Split Map ───
@@ -267,30 +268,29 @@ const Travel = {
         const today = new Date();
         const tripStart = this.currentTrip.start_date ? new Date(this.currentTrip.start_date) : null;
 
-        const dayTabs = days.map(d => {
-            let isToday = false;
-            if (tripStart) {
-                const dayDate = new Date(tripStart);
-                dayDate.setDate(dayDate.getDate() + d.day_number - 1);
-                isToday = dayDate.toDateString() === today.toDateString();
-            }
-            const shortTitle = (d.title || '').length > 18 ? (d.title || '').substring(0, 18) + '…' : (d.title || `Day ${d.day_number}`);
-            return `<button class="day-tab${d.day_number === this.activeDay ? ' active' : ''}${isToday ? ' today' : ''}" onclick="Travel.switchDay(${d.day_number})">
-                <span class="day-tab-num">Day ${d.day_number}</span>
-                <span class="day-tab-title">${esc(shortTitle)}</span>
-            </button>`;
-        }).join('');
-
         const day = days.find(d => d.day_number === this.activeDay) || days[0];
+        const dayTitle = day.title || `Day ${day.day_number}`;
+        const color = this.DAY_COLORS[(day.day_number - 1) % this.DAY_COLORS.length];
+        const prevDisabled = this.activeDay <= 1;
+        const nextDisabled = this.activeDay >= days.length;
+
+        const dayDots = days.map(d =>
+            `<span class="day-dot${d.day_number === this.activeDay ? ' active' : ''}" style="--dot-color:${this.DAY_COLORS[(d.day_number-1) % this.DAY_COLORS.length]}" onclick="Travel.switchDay(${d.day_number})"></span>`
+        ).join('');
+
         const activities = day.activities || [];
         const slots = ['morning', 'afternoon', 'evening'];
         const slotIcons = { morning: '🌅', afternoon: '🌞', evening: '🌙' };
 
-        let itineraryHtml = `<div class="day-tabs-wrapper">
-            <div class="day-tabs-fade-left"></div>
-            <div class="day-tabs" id="dayTabsScroll">${dayTabs}</div>
-            <div class="day-tabs-fade-right"></div>
-        </div>`;
+        let itineraryHtml = `<div class="day-selector" id="daySelector">
+            <button class="day-arrow${prevDisabled ? ' disabled' : ''}" onclick="Travel.switchDay(${this.activeDay - 1})" ${prevDisabled ? 'disabled' : ''}>‹</button>
+            <div class="day-selector-center">
+                <div class="day-selector-label" style="color:${color}">Day ${day.day_number} <span class="day-selector-of">/ ${days.length}</span></div>
+                <div class="day-selector-title">${esc(dayTitle)}</div>
+            </div>
+            <button class="day-arrow${nextDisabled ? ' disabled' : ''}" onclick="Travel.switchDay(${this.activeDay + 1})" ${nextDisabled ? 'disabled' : ''}>›</button>
+        </div>
+        <div class="day-dots">${dayDots}</div>`;
         if (day.summary) {
             itineraryHtml += `<div class="day-summary">${esc(day.summary)}</div>`;
         }
@@ -351,7 +351,7 @@ const Travel = {
                 </div>
                 <div class="activity-badges">
                     <span class="activity-badge time-badge">${timeLabel}</span>
-                    ${a.duration_hours ? `<span class="activity-badge">⏱ ${a.duration_hours}h</span>` : ''}
+                    ${a.duration_hours ? `<span class="activity-badge">⏱ ${fmtDur(a.duration_hours)}</span>` : ''}
                     ${a.estimated_cost && parseFloat(a.estimated_cost) > 0 ? `<span class="activity-badge cost-badge">💰 ${a.currency || '$'}${Number(a.estimated_cost).toFixed(0)}</span>` : ''}
                     ${a.category ? `<span class="activity-badge category-badge">${esc(a.category)}</span>` : ''}
                 </div>
@@ -363,7 +363,7 @@ const Travel = {
             </div>
             <div class="activity-expand">
                 ${a.address ? `<div class="activity-expand-row"><span class="expand-icon">📍</span> ${esc(a.address)}</div>` : ''}
-                ${a.duration_hours ? `<div class="activity-expand-row"><span class="expand-icon">⏱</span> ${a.duration_hours} hours</div>` : ''}
+                ${a.duration_hours ? `<div class="activity-expand-row"><span class="expand-icon">⏱</span> ${fmtDur(a.duration_hours)}</div>` : ''}
                 ${a.estimated_cost && parseFloat(a.estimated_cost) > 0 ? `<div class="activity-expand-row"><span class="expand-icon">💰</span> ${a.currency || '$'}${Number(a.estimated_cost).toFixed(0)}</div>` : ''}
                 ${a.tips ? `<div class="activity-tips">💡 ${esc(a.tips)}</div>` : ''}
                 ${a.booking_url ? `<div class="activity-expand-row"><span class="expand-icon">🔗</span> <a href="${esc(a.booking_url)}" target="_blank">Book now →</a></div>` : ''}
@@ -460,101 +460,350 @@ const Travel = {
         if (content) {
             content.innerHTML = this.renderActiveSection();
             if (this.activeSection === 'itinerary') this.initSplitMap();
+            
         }
     },
 
-    // ─── Map ───
-    initSplitMap() {
-        setTimeout(() => this.initMap('travelMapSplit'), 100);
+    /* scrollDayTabIntoView removed — using day-selector arrows now */
+
+    // ─── Map Tab (Full Interactive) ───
+    renderMapTab() {
+        const days = this.currentTrip.days || [];
+        const mapDayDots = days.map((d, i) => {
+            const color = this.DAY_COLORS[i % this.DAY_COLORS.length];
+            return `<span class="map-day-dot${String(d.day_number) === String(this._mapActiveDay) ? ' active' : ''}" style="--dot-color:${color}" onclick="Travel.mapFilterDay('${d.day_number}')" data-day="${d.day_number}"></span>`;
+        }).join('');
+
+        const activeLabel = this._mapActiveDay === 'all' ? 'All Days' : `Day ${this._mapActiveDay}`;
+        const activeColor = this._mapActiveDay === 'all' ? 'var(--text)' : this.DAY_COLORS[(Number(this._mapActiveDay)-1) % this.DAY_COLORS.length];
+        const prevDay = this._mapActiveDay === 'all' ? null : (Number(this._mapActiveDay) <= 1 ? 'all' : Number(this._mapActiveDay) - 1);
+        const nextDay = this._mapActiveDay === 'all' ? '1' : (Number(this._mapActiveDay) >= days.length ? null : Number(this._mapActiveDay) + 1);
+
+        const toggles = `
+            <div class="map-toggle-row">
+                <label class="map-toggle"><input type="checkbox" id="mapShowRestaurants" checked onchange="Travel.mapToggleLayer('mapShowRestaurants',this.checked)"><span>🍴 Eats</span></label>
+                <label class="map-toggle"><input type="checkbox" id="mapShowStays" checked onchange="Travel.mapToggleLayer('mapShowStays',this.checked)"><span>🏨 Stays</span></label>
+                <label class="map-toggle"><input type="checkbox" id="mapShowRoutes" checked onchange="Travel.mapToggleLayer('mapShowRoutes',this.checked)"><span>📍 Routes</span></label>
+            </div>`;
+
+        return `
+            <div class="map-tab-container">
+                <div class="day-selector map-day-selector">
+                    <button class="day-arrow${!prevDay ? ' disabled' : ''}" onclick="Travel.mapFilterDay('${prevDay}')" ${!prevDay ? 'disabled' : ''}>‹</button>
+                    <div class="day-selector-center">
+                        <div class="day-selector-label" style="color:${activeColor}">${activeLabel}</div>
+                    </div>
+                    <button class="day-arrow${!nextDay ? ' disabled' : ''}" onclick="Travel.mapFilterDay('${nextDay}')" ${!nextDay ? 'disabled' : ''}>›</button>
+                </div>
+                <div class="day-dots map-day-dots">
+                    <span class="map-day-dot${this._mapActiveDay === 'all' ? ' active' : ''}" style="--dot-color:var(--text)" onclick="Travel.mapFilterDay('all')" data-day="all"></span>
+                    ${mapDayDots}
+                </div>
+                ${toggles}
+                <div id="travelMapFull" class="travel-map-full"></div>
+                <div id="mapInfoPanel" class="map-info-panel hidden"></div>
+            </div>`;
     },
 
-    initMap(containerId) {
-        setTimeout(() => {
-            const el = document.getElementById(containerId);
-            if (!el || el.offsetHeight === 0) {
-                // Retry if container not visible yet
-                setTimeout(() => this.initMap(containerId), 300);
-                return;
-            }
+    _mapDayLayers: {},
+    _mapRestaurantLayer: null,
+    _mapStayLayer: null,
+    _mapRouteLayer: null,
+    _mapActiveDay: 'all',
 
-            if (this.map) { this.map.remove(); this.map = null; }
-            this.markerMap = {};
+    initMapTab() {
+        const el = document.getElementById('travelMapFull');
+        if (!el) return;
+        if (el.offsetHeight === 0) {
+            setTimeout(() => this.initMapTab(), 200);
+            return;
+        }
 
-            this.map = L.map(el, { zoomControl: true }).setView([20, 0], 2);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap © CARTO',
-                maxZoom: 19
-            }).addTo(this.map);
+        try { if (this.map) this.map.remove(); } catch(e) { /* old container gone */ }
+        this.map = null;
+        this._mapDayLayers = {};
+        this._mapRestaurantLayer = null;
+        this._mapStayLayer = null;
+        this._mapRouteLayer = null;
+        this._mapActiveDay = 'all';
+        this._allBounds = [];
 
-            const bounds = [];
-            const days = this.currentTrip.days || [];
+        try {
+        this.map = L.map(el, { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
+        L.control.zoom({ position: 'topright' }).addTo(this.map);
 
-            // Draw route lines per day
-            days.forEach((day, di) => {
-                const color = this.DAY_COLORS[di % this.DAY_COLORS.length];
-                const dayCoords = [];
-                (day.activities || []).forEach(a => {
-                    if (!a.latitude || !a.longitude) return;
-                    dayCoords.push([a.latitude, a.longitude]);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(this.map);
 
-                    const icon = L.divIcon({
-                        className: 'day-number-marker',
-                        html: `<div class="day-pin" style="background:${color}" title="Day ${day.day_number}: ${esc(a.title)}">${day.day_number}</div>`,
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
-                    });
+        const days = this.currentTrip.days || [];
 
-                    const marker = L.marker([a.latitude, a.longitude], { icon }).addTo(this.map);
-                    marker.bindPopup(`<strong>Day ${day.day_number}: ${esc(a.title)}</strong><br><small>${esc(a.location_name || '')}</small>`);
-                    // Click pin to scroll to activity
-                    marker.on('click', () => {
-                        const card = document.getElementById(`activity-${a.id}`);
-                        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    });
-                    this.markerMap[a.id] = marker;
-                    bounds.push([a.latitude, a.longitude]);
+        // Build layer groups per day
+        days.forEach((day, di) => {
+            const color = this.DAY_COLORS[di % this.DAY_COLORS.length];
+            const group = L.layerGroup();
+            const routeGroup = L.layerGroup();
+            const dayCoords = [];
+
+            (day.activities || []).forEach((a, ai) => {
+                if (!a.latitude || !a.longitude) return;
+                dayCoords.push([a.latitude, a.longitude]);
+                this._allBounds.push([a.latitude, a.longitude]);
+
+                const icon = L.divIcon({
+                    className: 'day-number-marker',
+                    html: `<div class="map-pin" style="background:${color};--order:${ai}">
+                        <span class="map-pin-num">${day.day_number}</span>
+                        <span class="map-pin-seq">${ai + 1}</span>
+                    </div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
                 });
 
-                // Route line per day
-                if (dayCoords.length > 1) {
-                    L.polyline(dayCoords, { color, weight: 3, opacity: 0.5, dashArray: '8,6' }).addTo(this.map);
+                const marker = L.marker([a.latitude, a.longitude], { icon });
+                const timeLabel = a.time_slot ? {morning:'🌅 Morning',afternoon:'🌞 Afternoon',evening:'🌙 Evening'}[a.time_slot] || a.time_slot : '';
+                const imgHtml = a.image_url ? `<img src="${esc(a.image_url)}" class="map-popup-img" onerror="this.remove()">` : '';
+                const cost = a.estimated_cost ? `<div class="map-popup-cost">${a.currency||'$'}${Number(a.estimated_cost).toFixed(0)}</div>` : '';
+                const dur = a.duration_hours ? `${fmtDur(a.duration_hours)}` : '';
+                const meta = [timeLabel, dur].filter(Boolean).join(' · ');
+
+                const shortDesc = a.description ? esc(a.description).split(/[.!?]/)[0] : '';
+                marker.bindPopup(`
+                    <div class="map-popup-card">
+                        ${imgHtml}
+                        <div class="map-popup-body">
+                            <div class="map-popup-day" style="color:${color}">Day ${day.day_number} · Stop ${ai + 1}</div>
+                            <div class="map-popup-title">${esc(a.title)}</div>
+                            ${meta ? `<div class="map-popup-meta">${meta}</div>` : ''}
+                            ${shortDesc ? `<div class="map-popup-desc">${shortDesc}</div>` : ''}
+                            ${cost}
+                        </div>
+                    </div>
+                `, { maxWidth: 240, minWidth: 180, className: 'map-custom-popup' });
+
+                group.addLayer(marker);
+            });
+
+            if (dayCoords.length > 1) {
+                const routeLine = L.polyline(dayCoords, {
+                    color, weight: 3, opacity: 0.6, dashArray: '8,6',
+                    smoothFactor: 1.5
+                });
+                routeGroup.addLayer(routeLine);
+
+                // Animated direction arrows
+                for (let i = 0; i < dayCoords.length - 1; i++) {
+                    const mid = [(dayCoords[i][0]+dayCoords[i+1][0])/2, (dayCoords[i][1]+dayCoords[i+1][1])/2];
+                    const arrow = L.divIcon({
+                        className: 'route-arrow-icon',
+                        html: `<div class="route-arrow" style="color:${color}">›</div>`,
+                        iconSize: [16, 16], iconAnchor: [8, 8]
+                    });
+                    routeGroup.addLayer(L.marker(mid, { icon: arrow, interactive: false }));
+                }
+            }
+
+            this._mapDayLayers[day.day_number] = { markers: group, routes: routeGroup, color, bounds: dayCoords };
+            group.addTo(this.map);
+            routeGroup.addTo(this.map);
+        });
+
+        // Restaurant layer
+        this._mapRestaurantLayer = L.layerGroup();
+        (this.currentTrip.restaurants || []).forEach(r => {
+            if (!r.latitude || !r.longitude) return;
+            const icon = L.divIcon({
+                className: 'restaurant-marker-icon',
+                html: '<div class="map-emoji-pin">🍴</div>',
+                iconSize: [32, 32], iconAnchor: [16, 16]
+            });
+            const marker = L.marker([r.latitude, r.longitude], { icon });
+            const priceStr = r.price_range ? ' · ' + r.price_range : '';
+            marker.bindPopup(`
+                <div class="map-popup-card">
+                    <div class="map-popup-body">
+                        <div class="map-popup-day" style="color:var(--amber)">🍴 Restaurant</div>
+                        <div class="map-popup-title">${esc(r.name)}</div>
+                        <div class="map-popup-meta">${esc(r.cuisine || '')}${priceStr}</div>
+                        ${r.description ? `<div class="map-popup-desc">${esc(r.description).split(/[.!?]/)[0]}</div>` : ''}
+                    </div>
+                </div>
+            `, { maxWidth: 260, className: 'map-custom-popup' });
+            this._mapRestaurantLayer.addLayer(marker);
+            this._allBounds.push([r.latitude, r.longitude]);
+        });
+        this._mapRestaurantLayer.addTo(this.map);
+
+        // Stay layer
+        this._mapStayLayer = L.layerGroup();
+        (this.currentTrip.stays || []).forEach(s => {
+            if (!s.latitude || !s.longitude) return;
+            const icon = L.divIcon({
+                className: 'hotel-marker-icon',
+                html: '<div class="map-emoji-pin">🏨</div>',
+                iconSize: [32, 32], iconAnchor: [16, 16]
+            });
+            const marker = L.marker([s.latitude, s.longitude], { icon });
+            const price = s.price_per_night ? `${s.currency||'$'}${Number(s.price_per_night).toFixed(0)}/night` : '';
+            marker.bindPopup(`
+                <div class="map-popup-card">
+                    <div class="map-popup-body">
+                        <div class="map-popup-day" style="color:var(--blue)">🏨 Stay</div>
+                        <div class="map-popup-title">${esc(s.name)}</div>
+                        <div class="map-popup-meta">${esc(s.tier||'')} ${price}</div>
+                        ${s.description ? `<div class="map-popup-desc">${esc(s.description).split(/[.!?]/)[0]}</div>` : ''}
+                    </div>
+                </div>
+            `, { maxWidth: 260, className: 'map-custom-popup' });
+            this._mapStayLayer.addLayer(marker);
+            this._allBounds.push([s.latitude, s.longitude]);
+        });
+        this._mapStayLayer.addTo(this.map);
+
+        // Fit all bounds
+        if (this._allBounds.length) {
+            this.map.fitBounds(this._allBounds, { padding: [50, 50] });
+        }
+
+        // Pill clicks and toggle checkboxes use inline handlers
+
+        setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 200);
+        } catch(e) { console.error('[Map] init error:', e); }
+    },
+
+    mapFilterDay(day) {
+        if (day === 'null' || day === null) return;
+        this._mapActiveDay = day;
+
+        // Update selector + dots UI
+        const container = document.querySelector('.map-tab-container');
+        if (container) {
+            const days = this.currentTrip.days || [];
+            const activeLabel = day === 'all' ? 'All Days' : `Day ${day}`;
+            const activeColor = day === 'all' ? 'var(--text)' : this.DAY_COLORS[(Number(day)-1) % this.DAY_COLORS.length];
+            const prevDay = day === 'all' ? null : (Number(day) <= 1 ? 'all' : Number(day) - 1);
+            const nextDay = day === 'all' ? '1' : (Number(day) >= days.length ? null : Number(day) + 1);
+
+            const sel = container.querySelector('.map-day-selector');
+            if (sel) {
+                sel.innerHTML = `
+                    <button class="day-arrow${!prevDay ? ' disabled' : ''}" onclick="Travel.mapFilterDay('${prevDay}')" ${!prevDay ? 'disabled' : ''}>‹</button>
+                    <div class="day-selector-center">
+                        <div class="day-selector-label" style="color:${activeColor}">${activeLabel}</div>
+                    </div>
+                    <button class="day-arrow${!nextDay ? ' disabled' : ''}" onclick="Travel.mapFilterDay('${nextDay}')" ${!nextDay ? 'disabled' : ''}>›</button>`;
+            }
+            container.querySelectorAll('.map-day-dot').forEach(d => {
+                d.classList.toggle('active', d.dataset.day === String(day));
+            });
+        }
+
+        const days = this.currentTrip.days || [];
+        const showAll = day === 'all';
+
+        days.forEach((d) => {
+            const layer = this._mapDayLayers[d.day_number];
+            if (!layer) return;
+            if (showAll || d.day_number === Number(day)) {
+                if (!this.map.hasLayer(layer.markers)) layer.markers.addTo(this.map);
+                if (document.getElementById('mapShowRoutes')?.checked && !this.map.hasLayer(layer.routes)) {
+                    layer.routes.addTo(this.map);
+                }
+            } else {
+                this.map.removeLayer(layer.markers);
+                this.map.removeLayer(layer.routes);
+            }
+        });
+
+        // Fly to bounds
+        if (showAll && this._allBounds.length) {
+            this.map.flyToBounds(this._allBounds, { padding: [50, 50], duration: 0.8 });
+        } else if (!showAll) {
+            const layer = this._mapDayLayers[Number(day)];
+            if (layer && layer.bounds.length) {
+                this.map.flyToBounds(layer.bounds, { padding: [60, 60], duration: 0.8 });
+            }
+        }
+
+        // Update info panel
+        this.updateMapInfoPanel(day);
+    },
+
+    mapToggleLayer(id, show) {
+        if (id === 'mapShowRestaurants' && this._mapRestaurantLayer) {
+            show ? this._mapRestaurantLayer.addTo(this.map) : this.map.removeLayer(this._mapRestaurantLayer);
+        }
+        if (id === 'mapShowStays' && this._mapStayLayer) {
+            show ? this._mapStayLayer.addTo(this.map) : this.map.removeLayer(this._mapStayLayer);
+        }
+        if (id === 'mapShowRoutes') {
+            const days = this.currentTrip.days || [];
+            days.forEach(d => {
+                const layer = this._mapDayLayers[d.day_number];
+                if (!layer) return;
+                const visible = this._mapActiveDay === 'all' || d.day_number === Number(this._mapActiveDay);
+                if (show && visible && !this.map.hasLayer(layer.routes)) layer.routes.addTo(this.map);
+                if (!show && this.map.hasLayer(layer.routes)) this.map.removeLayer(layer.routes);
+            });
+        }
+    },
+
+    updateMapInfoPanel(day) {
+        const panel = document.getElementById('mapInfoPanel');
+        if (!panel) return;
+
+        if (day === 'all') {
+            panel.classList.add('hidden');
+            return;
+        }
+
+        const d = (this.currentTrip.days || []).find(x => x.day_number === Number(day));
+        if (!d) { panel.classList.add('hidden'); return; }
+
+        const acts = (d.activities || []).filter(a => a.latitude && a.longitude);
+        const color = this.DAY_COLORS[(d.day_number - 1) % this.DAY_COLORS.length];
+        const totalCost = acts.reduce((s, a) => s + (Number(a.estimated_cost) || 0), 0);
+        const totalHours = acts.reduce((s, a) => s + (Number(a.duration_hours) || 0), 0);
+
+        panel.classList.remove('hidden');
+        panel.innerHTML = `
+            <div class="map-info-header" style="border-left: 3px solid ${color}">
+                <strong>Day ${d.day_number}</strong> — ${esc(d.title || '')}
+            </div>
+            <div class="map-info-stats">
+                <span>📍 ${acts.length} stops</span>
+                <span>⏱ ${totalHours.toFixed(1)}h</span>
+                ${totalCost ? `<span>💰 $${totalCost.toFixed(0)}</span>` : ''}
+            </div>
+            <div class="map-info-stops">
+                ${acts.map((a, i) => `
+                    <div class="map-info-stop" onclick="Travel.mapFocusActivity(${a.id}, ${a.latitude}, ${a.longitude})">
+                        <div class="map-info-stop-num" style="background:${color}">${i + 1}</div>
+                        <div class="map-info-stop-text">
+                            <div class="map-info-stop-title">${esc(a.title)}</div>
+                            <div class="map-info-stop-meta">${a.time_slot || ''} ${a.duration_hours ? '· ' + fmtDur(a.duration_hours) : ''}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    },
+
+    mapFocusActivity(id, lat, lng) {
+        if (!this.map) return;
+        this.map.flyTo([lat, lng], 16, { duration: 0.6 });
+        // Find and open the marker popup
+        for (const dayNum of Object.keys(this._mapDayLayers)) {
+            this._mapDayLayers[dayNum].markers.eachLayer(marker => {
+                if (Math.abs(marker.getLatLng().lat - lat) < 0.0001 && Math.abs(marker.getLatLng().lng - lng) < 0.0001) {
+                    marker.openPopup();
                 }
             });
+        }
+    },
 
-            // Restaurant markers
-            (this.currentTrip.restaurants || []).forEach(r => {
-                if (!r.latitude || !r.longitude) return;
-                const icon = L.divIcon({
-                    className: 'restaurant-marker-icon',
-                    html: '<div class="restaurant-pin">🍴</div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                L.marker([r.latitude, r.longitude], { icon }).addTo(this.map)
-                    .bindPopup(`<strong>🍴 ${esc(r.name)}</strong><br><small>${esc(r.cuisine || '')}</small>`);
-                bounds.push([r.latitude, r.longitude]);
-            });
-
-            // Stay markers
-            (this.currentTrip.stays || []).forEach(s => {
-                if (!s.latitude || !s.longitude) return;
-                const icon = L.divIcon({
-                    className: 'hotel-marker-icon',
-                    html: '<div class="hotel-pin">🏨</div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                L.marker([s.latitude, s.longitude], { icon }).addTo(this.map)
-                    .bindPopup(`<strong>🏨 ${esc(s.name)}</strong><br><small>${esc(s.tier || '')} · ${s.currency || '$'}${Number(s.price_per_night).toFixed(0)}/night</small>`);
-                bounds.push([s.latitude, s.longitude]);
-            });
-
-            if (bounds.length) {
-                this.map.fitBounds(bounds, { padding: [40, 40] });
-            }
-            // Force map to recalculate size
-            setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 200);
-        }, 150);
+    // ─── Split Map (for itinerary tab) ───
+    initSplitMap() {
+        // No split map needed — map tab is the full experience
     },
 
     // ─── Restaurants ───
@@ -739,8 +988,44 @@ const Travel = {
     // ─── Share ───
     async shareTrip(tripId) {
         try {
-            const res = await API.post(`/travel/trips/${tripId}/share`);
-            await navigator.clipboard.writeText(res.url);
+            const res = await API.post(`/travel/trips/${tripId}/share`, {});
+            const url = res.url;
+
+            // 1) Try native share sheet (mobile)
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: this.currentTrip?.title || 'Trip', url });
+                    return;
+                } catch (e) {
+                    if (e.name === 'AbortError') return; // user cancelled
+                    // fall through to clipboard
+                }
+            }
+
+            // 2) Try clipboard API
+            let copied = false;
+            try {
+                await navigator.clipboard.writeText(url);
+                copied = true;
+            } catch {
+                // 3) Fallback: select in a visible input
+                const ta = document.createElement('textarea');
+                ta.value = url;
+                ta.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;padding:16px;font-size:16px;z-index:10000;background:var(--surface);color:var(--text);border:2px solid var(--primary)';
+                ta.readOnly = true;
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try { copied = document.execCommand('copy'); } catch {}
+                if (copied) {
+                    document.body.removeChild(ta);
+                } else {
+                    // Leave it visible so user can manually copy
+                    ta.addEventListener('blur', () => ta.remove());
+                    showToast('Long-press to copy the link ☝️');
+                    return;
+                }
+            }
             showToast('Link copied! 🔗');
         } catch (e) {
             showToast(e.message || 'Failed to share', 'error');
@@ -948,6 +1233,12 @@ function esc(str) {
     const d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
+}
+function fmtDur(h) {
+    if (!h) return '';
+    const n = Number(h);
+    if (n >= 1) return n % 1 === 0 ? `${n}hr` : `${n}hrs`;
+    return `${Math.round(n * 60)}min`;
 }
 
 // ─── Boot ───
