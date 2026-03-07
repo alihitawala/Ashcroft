@@ -1,0 +1,47 @@
+{
+  "updatedAt": "2026-03-07",
+  "teams": {
+    "test": [
+      { "rank": 1, "team": "India", "code": "IND", "rating": 124, "points": 3994, "flag": "🇮🇳" },
+      { "rank": 2, "team": "Australia", "code": "AUS", "rating": 117, "points": 3634, "flag": "🇦🇺" },
+      { "rank": 3, "team": "South Africa", "code": "SA", "rating": 110, "points": 2420, "flag": "🇿🇦" },
+      { "rank": 4, "team": "England", "code": "ENG", "rating": 105, "points": 3470, "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+      { "rank": 5, "team": "New Zealand", "code": "NZ", "rating": 99, "points": 2778, "flag": "🇳🇿" },
+      { "rank": 6, "team": "Sri Lanka", "code": "SL", "rating": 88, "points": 2024, "flag": "🇱🇰" },
+      { "rank": 7, "team": "Pakistan", "code": "PAK", "rating": 82, "points": 2542, "flag": "🇵🇰" },
+      { "rank": 8, "team": "West Indies", "code": "WI", "rating": 76, "points": 1672, "flag": "🏴‍☠️" },
+      { "rank": 9, "team": "Bangladesh", "code": "BAN", "rating": 64, "points": 1472, "flag": "🇧🇩" },
+      { "rank": 10, "team": "Afghanistan", "code": "AFG", "rating": 48, "points": 288, "flag": "🇦🇫" },
+      { "rank": 11, "team": "Ireland", "code": "IRE", "rating": 36, "points": 180, "flag": "🇮🇪" },
+      { "rank": 12, "team": "Zimbabwe", "code": "ZIM", "rating": 28, "points": 308, "flag": "🇿🇼" }
+    ],
+    "odi": [
+      { "rank": 1, "team": "India", "code": "IND", "rating": 121, "points": 4596, "flag": "🇮🇳" },
+      { "rank": 2, "team": "Australia", "code": "AUS", "rating": 114, "points": 3990, "flag": "🇦🇺" },
+      { "rank": 3, "team": "South Africa", "code": "SA", "rating": 108, "points": 3132, "flag": "🇿🇦" },
+      { "rank": 4, "team": "New Zealand", "code": "NZ", "rating": 103, "points": 2987, "flag": "🇳🇿" },
+      { "rank": 5, "team": "England", "code": "ENG", "rating": 100, "points": 3200, "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+      { "rank": 6, "team": "Pakistan", "code": "PAK", "rating": 94, "points": 3196, "flag": "🇵🇰" },
+      { "rank": 7, "team": "Bangladesh", "code": "BAN", "rating": 84, "points": 2268, "flag": "🇧🇩" },
+      { "rank": 8, "team": "Sri Lanka", "code": "SL", "rating": 80, "points": 2160, "flag": "🇱🇰" },
+      { "rank": 9, "team": "Afghanistan", "code": "AFG", "rating": 72, "points": 1584, "flag": "🇦🇫" },
+      { "rank": 10, "team": "West Indies", "code": "WI", "rating": 68, "points": 1496, "flag": "🏴‍☠️" },
+      { "rank": 11, "team": "Ireland", "code": "IRE", "rating": 52, "points": 780, "flag": "🇮🇪" },
+      { "rank": 12, "team": "Zimbabwe", "code": "ZIM", "rating": 40, "points": 600, "flag": "🇿🇼" }
+    ],
+    "t20i": [
+      { "rank": 1, "team": "India", "code": "IND", "rating": 268, "points": 14472, "flag": "🇮🇳" },
+      { "rank": 2, "team": "England", "code": "ENG", "rating": 261, "points": 11745, "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+      { "rank": 3, "team": "Australia", "code": "AUS", "rating": 258, "points": 10836, "flag": "🇦🇺" },
+      { "rank": 4, "team": "South Africa", "code": "SA", "rating": 253, "points": 8602, "flag": "🇿🇦" },
+      { "rank": 5, "team": "West Indies", "code": "WI", "rating": 248, "points": 8680, "flag": "🏴‍☠️" },
+      { "rank": 6, "team": "New Zealand", "code": "NZ", "rating": 244, "points": 7808, "flag": "🇳🇿" },
+      { "rank": 7, "team": "Pakistan", "code": "PAK", "rating": 238, "points": 9758, "flag": "🇵🇰" },
+      { "rank": 8, "team": "Sri Lanka", "code": "SL", "rating": 232, "points": 7888, "flag": "🇱🇰" },
+      { "rank": 9, "team": "Afghanistan", "code": "AFG", "rating": 226, "points": 6780, "flag": "🇦🇫" },
+      { "rank": 10, "team": "Bangladesh", "code": "BAN", "rating": 218, "points": 6540, "flag": "🇧🇩" },
+      { "rank": 11, "team": "Ireland", "code": "IRE", "rating": 200, "points": 5200, "flag": "🇮🇪" },
+      { "rank": 12, "team": "Zimbabwe", "code": "ZIM", "rating": 175, "points": 3850, "flag": "🇿🇼" }
+    ]
+  }
+}

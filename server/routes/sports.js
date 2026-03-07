@@ -225,10 +225,58 @@ function isICCMenMatch(teams, name) {
   return teamMatches.length >= 2;
 }
 
+/** GET /cricket/rankings - ICC team rankings (static data) */
+router.get('/cricket/rankings', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const rankingsPath = path.join(__dirname, '..', 'data', 'icc-rankings.json');
+    const data = JSON.parse(fs.readFileSync(rankingsPath, 'utf8'));
+    respond(res, data);
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch rankings' }); }
+});
+
 /** GET /cricket/live - Live cricket scores (international men's only) */
 router.get('/cricket/live', async (req, res) => {
   try {
     const result = await cached('cric-live', TTL.live, async () => {
+      // Try currentMatches first for richer data
+      const cmJson = await fetchJSON(`https://api.cricapi.com/v1/currentMatches?apikey=${cricKey()}&offset=0`);
+      if (cmJson?.data && Array.isArray(cmJson.data)) {
+        const matches = cmJson.data
+          .filter(m => isICCMenMatch(m.teams || [], m.name))
+          .map(m => {
+            const scores = (m.score || []).map(s => ({
+              r: s.r, w: s.w, o: s.o, inning: s.inning
+            }));
+            const teamInfo = (m.teamInfo || []).map(t => ({
+              name: t.name, shortname: t.shortname, img: t.img
+            }));
+            const t1 = teamInfo[0] || {};
+            const t2 = teamInfo[1] || {};
+            // Build formatted score strings per team
+            const t1Scores = scores.filter(s => s.inning && (s.inning.includes(t1.shortname) || s.inning.includes(t1.name)));
+            const t2Scores = scores.filter(s => s.inning && (s.inning.includes(t2.shortname) || s.inning.includes(t2.name)));
+            const fmtScore = (arr) => arr.map(s => `${s.r}/${s.w} (${s.o})`).join(' & ');
+            // Calculate run rate for current innings
+            const currentInnings = scores[scores.length - 1];
+            const runRate = currentInnings && currentInnings.o > 0 ? (currentInnings.r / currentInnings.o).toFixed(2) : null;
+            return {
+              id: m.id, name: m.name, status: m.status, venue: m.venue,
+              teams: m.teams || [t1.name || '?', t2.name || '?'],
+              scores: [fmtScore(t1Scores), fmtScore(t2Scores)],
+              scoreDetail: scores,
+              t1img: t1.img || '', t2img: t2.img || '',
+              matchType: m.matchType,
+              series: m.series || '',
+              runRate,
+              matchStarted: m.matchStarted, matchEnded: m.matchEnded,
+              dateTimeGMT: m.dateTimeGMT
+            };
+          });
+        if (matches.length) return matches;
+      }
+      // Fallback to cricScore
       const json = await fetchJSON(`https://api.cricapi.com/v1/cricScore?apikey=${cricKey()}`);
       if (!json?.data) return [];
       return json.data
@@ -631,7 +679,7 @@ router.delete('/notifications/:id', async (req, res) => {
 // ═══════════════════════════════════════
 const RSS_URLS = {
   football: 'https://www.espn.com/espn/rss/soccer/news',
-  cricket: 'https://www.espn.com/espn/rss/cricket/news',
+  cricket: 'https://news.google.com/rss/search?q=cricket+india&hl=en-IN&gl=IN&ceid=IN:en',
   tennis: 'https://www.espn.com/espn/rss/tennis/news',
   f1: 'https://www.espn.com/espn/rss/rpm/news',
 };

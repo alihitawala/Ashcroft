@@ -161,6 +161,7 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .hero-venue { font-size: 11px; opacity: 0.6; text-align: center; margin-top: 4px; position: relative; z-index: 1; }
 .hero-result-score { font-size: 36px; font-weight: 900; text-align: center; letter-spacing: 0.04em; text-shadow: 0 2px 12px rgba(0,0,0,0.3); position: relative; z-index: 1; }
 .hero-cricket { background: linear-gradient(135deg, #1a1a4e, #1e3a6e, #234680); }
+.hero-cricket-india { background: linear-gradient(135deg, #FF9933 0%, #1a1a4e 30%, #1e3a6e 70%, #138808 100%); }
 .hero-tennis-ao { background: linear-gradient(135deg, #005A8C, #0091D2); }
 .hero-tennis-rg { background: linear-gradient(135deg, #8B3121, #C84B31); }
 .hero-tennis-wim { background: linear-gradient(135deg, #004422, #006633); }
@@ -1211,7 +1212,7 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 .f1-gp-chevron { font-size: 18px; color: var(--text-tertiary); transition: transform 0.3s; flex-shrink: 0; }
 .f1-gp-open .f1-gp-chevron { transform: rotate(90deg); }
 .f1-gp-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
-.f1-gp-open .f1-gp-body { max-height: 600px; }
+.f1-gp-open .f1-gp-body { max-height: 2000px; }
 .f1-session-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-left: 3px solid #666; margin-left: 14px; margin-right: 14px; font-size: 12px; }
 .f1-session-row + .f1-session-row { border-top: 1px solid var(--border); }
 .f1-session-name { font-weight: 600; min-width: 120px; }
@@ -1680,4 +1681,120 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
 }
 .f1-results-btn-primary:hover {
     opacity: 0.9;
+}
+
+/* ─── Cricket Rankings ─── */
+.rankings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.rankings-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 3px;
+}
+.rankings-tab {
+    flex: 1;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+}
+.rankings-tab.active {
+    background: var(--sport-primary);
+    color: #fff;
+    box-shadow: var(--shadow-sm);
+}
+.rankings-tab:hover:not(.active) { color: var(--text); }
+.rankings-table { display: flex; flex-direction: column; gap: 2px; }
+.rankings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+}
+.rankings-row:hover { background: var(--surface2); }
+.rankings-focus { background: rgba(var(--sport-glow), 0.06); }
+.rankings-pos {
+    font-size: 12px;
+    font-weight: 800;
+    min-width: 22px;
+    text-align: center;
+    color: var(--text-tertiary);
+}
+.rankings-top3 { color: var(--sport-primary); font-size: 14px; }
+.rankings-flag { font-size: 18px; flex-shrink: 0; }
+.rankings-team { font-size: 13px; font-weight: 600; min-width: 90px; }
+.rankings-bar-wrap { flex: 1; }
+.rankings-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--sport-primary);
+    width: var(--bar-w, 0%);
+    animation: barGrow 0.7s ease both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+}
+.rankings-rating {
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 36px;
+    text-align: right;
+    color: var(--sport-primary);
+}
+.rankings-updated {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    text-align: right;
+    margin-top: 8px;
+}
+
+/* Cricket run rate & venue */
+.cricket-rr {
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.8;
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+    font-weight: 700;
+    color: #4CAF50;
+}
+.cc-rr {
+    font-size: 11px;
+    color: var(--sport-primary);
+    font-weight: 700;
+    margin-top: 4px;
+}
+.cc-venue-line {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+.cc-series {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cricket-status-win {
+    background: rgba(14, 159, 110, 0.25) !important;
+    color: #4CAF50 !important;
+    font-weight: 800 !important;
 }
