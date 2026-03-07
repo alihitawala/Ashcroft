@@ -1798,3 +1798,102 @@ body[data-sport="f1"] { --sport-primary: #FF1801; --sport-accent: #FFFFFF; --spo
     color: #4CAF50 !important;
     font-weight: 800 !important;
 }
+
+/* ─── Cricket V2: Emoji Flags & Visual Overhaul ─── */
+.cricket-hero-flag { font-size: 40px; line-height: 1; }
+.hero-cricket-score { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.cricket-hero-matchup { gap: 12px !important; }
+.cricket-hero-matchup-simple { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
+
+/* Match type hero gradients */
+.hero-cricket-t20 { background: linear-gradient(135deg, #880E4F, #E91E63, #AD1457) !important; }
+.hero-cricket-odi { background: linear-gradient(135deg, #0D47A1, #2196F3, #1565C0) !important; }
+.hero-cricket-test { background: linear-gradient(135deg, #1B5E20, #4CAF50, #2E7D32) !important; }
+.hero-cricket-win { border: 2px solid rgba(14, 159, 110, 0.6) !important; box-shadow: 0 0 24px rgba(14, 159, 110, 0.2) !important; }
+
+/* Celebration status */
+.cricket-status-celebration { font-size: 14px !important; font-weight: 800 !important; }
+
+/* Cricket card flag */
+.cc-flag { font-size: 24px; flex-shrink: 0; line-height: 1; }
+
+/* Match grid */
+.cricket-match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 600px) { .cricket-match-grid { grid-template-columns: 1fr; } }
+
+/* Result card */
+.cricket-result-card { border-left: 3px solid var(--border); }
+.cricket-result-card.india-win { border-left-color: #4CAF50 !important; border-image: none !important; }
+.result-badge {
+    display: inline-flex; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 8px;
+    background: rgba(107,114,128,0.2); color: var(--text-secondary); letter-spacing: 0.05em;
+}
+.cc-team-winner .cc-tname { font-weight: 800 !important; color: var(--sport-primary) !important; }
+.cc-team-winner .cc-tscore { color: var(--sport-primary) !important; font-weight: 900 !important; }
+.cc-result-status { font-size: 11px; color: var(--text-secondary); margin-top: 6px; font-weight: 600; }
+.cc-status-line { font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+
+/* Improved scores */
+.cc-tscore { font-size: 15px !important; font-weight: 800 !important; font-variant-numeric: tabular-nums; }
+
+/* Upcoming card matchup */
+.cc-upcoming-matchup {
+    display: flex; align-items: center; gap: 8px; margin: 8px 0 4px;
+    font-size: 14px; font-weight: 600;
+}
+.cc-upcoming-tname { font-weight: 700; }
+.cc-upcoming-vs { font-size: 11px; color: var(--text-tertiary); font-weight: 500; }
+
+/* Rankings compact + medals */
+.rankings-compact .rankings-row { padding: 5px 6px; }
+.rankings-gold { background: rgba(255,215,0,0.08) !important; }
+.rankings-silver { background: rgba(192,192,192,0.06) !important; }
+.rankings-bronze { background: rgba(205,127,50,0.06) !important; }
+
+/* ─── World Cup Bracket ─── */
+.wc-bracket-card {
+    background: linear-gradient(135deg, #1a0533, #2d1b69, #1a237e);
+    border-radius: 18px; padding: 20px; margin-bottom: 12px;
+    color: #fff; position: relative; overflow: hidden;
+    animation: slideUp 0.5s ease both;
+}
+.wc-bracket-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 80% 10%, rgba(255,255,255,0.08), transparent 55%);
+    pointer-events: none;
+}
+.wc-bracket-title {
+    font-size: 16px; font-weight: 900; text-align: center;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px;
+    position: relative; z-index: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.wc-bracket-matches {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    position: relative; z-index: 1;
+}
+@media (max-width: 500px) { .wc-bracket-matches { grid-template-columns: 1fr; } }
+.wc-bracket-match {
+    background: rgba(255,255,255,0.08); border-radius: 12px; padding: 12px;
+    backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
+}
+.wc-bracket-final {
+    grid-column: 1 / -1;
+    background: rgba(255,215,0,0.12) !important;
+    border: 2px solid rgba(255,215,0,0.4) !important;
+    text-align: center;
+}
+.wc-bracket-label {
+    font-size: 9px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; opacity: 0.7; display: block; margin-bottom: 6px;
+}
+.wc-final-label { font-size: 12px !important; opacity: 1 !important; color: #FFD700; }
+.wc-bracket-teams {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 3px 0; gap: 8px;
+}
+.wc-bracket-team { font-size: 13px; font-weight: 600; }
+.wc-winner { font-weight: 800 !important; color: #4CAF50 !important; }
+.wc-bracket-score { font-size: 12px; font-weight: 700; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.wc-bracket-vs { font-size: 11px; font-weight: 700; opacity: 0.5; letter-spacing: 0.1em; margin: 4px 0; }
+.wc-bracket-status { font-size: 10px; opacity: 0.6; margin-top: 4px; }

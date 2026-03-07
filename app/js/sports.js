@@ -75,6 +75,19 @@ const SLAM_WINNERS = {
 
 const SURFACE_COLORS = { 'Clay': '#C84B31', 'Hard': '#0091D2', 'Grass': '#006633' };
 
+const CRICKET_FLAGS = {
+    'India': '🇮🇳', 'Australia': '🇦🇺', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'New Zealand': '🇳🇿',
+    'South Africa': '🇿🇦', 'Pakistan': '🇵🇰', 'Sri Lanka': '🇱🇰', 'West Indies': '🌴',
+    'Bangladesh': '🇧🇩', 'Afghanistan': '🇦🇫', 'Ireland': '🇮🇪', 'Zimbabwe': '🇿🇼',
+    'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Netherlands': '🇳🇱', 'Nepal': '🇳🇵', 'Oman': '🇴🇲',
+    'Namibia': '🇳🇦', 'USA': '🇺🇸', 'UAE': '🇦🇪', 'Canada': '🇨🇦',
+};
+
+function cricketFlag(teamName) {
+    const clean = stripCode(teamName);
+    return CRICKET_FLAGS[clean] || '🏏';
+}
+
 const SPORTS = [
     { id:'football', icon:'⚽', label:'Football' },
     { id:'f1', icon:'🏎️', label:'F1' },
@@ -646,6 +659,14 @@ const CRICKET_FOCUS_TEAMS = ['IND', 'AUS', 'NZ', 'SA', 'ENG'];
 
 let cricketRankingsFormat = 'test';
 
+function getMatchTypeGradient(matchType) {
+    const t = (matchType || '').toLowerCase();
+    if (t.includes('t20')) return 'hero-cricket-t20';
+    if (t.includes('test')) return 'hero-cricket-test';
+    if (t.includes('odi')) return 'hero-cricket-odi';
+    return 'hero-cricket';
+}
+
 async function renderCricket() {
     if (!allCached('cr-live','cr-upcoming','cricket-news','cricket-summary','cr-rankings','cr-series')) showSkeletons();
     try {
@@ -658,18 +679,103 @@ async function renderCricket() {
             fetchCached('cr-series', () => safeGet('/sports/cricket/series')),
         ]);
 
-        const live = liveResp?.data || [];
+        const allMatches = liveResp?.data || [];
         const upcoming = upcomingResp?.data || [];
         const rankings = crRankings?.data || null;
         const series = crSeries?.data || [];
+
+        // Separate live vs completed
+        const liveMatches = Array.isArray(allMatches) ? allMatches.filter(m => m.isLive) : [];
+        const completedMatches = Array.isArray(allMatches) ? allMatches.filter(m => m.isCompleted) : [];
+
         let html = '';
 
-        // HERO — India-centric
         const isIndiaMatch = (m) => m.teams?.some(t => t.toLowerCase().includes('india'));
-        const indiaLive = Array.isArray(live) ? live.find(isIndiaMatch) : null;
-        // Check for recent India result (matchEnded within 24h)
-        const indiaResult = Array.isArray(live) ? live.find(m => isIndiaMatch(m) && m.matchEnded && m.dateTimeGMT && (Date.now() - new Date(m.dateTimeGMT).getTime()) < 86400000) : null;
-        const heroMatch = indiaLive || indiaResult || (Array.isArray(live) && live.find(m => !m.status?.toLowerCase().includes('match starts'))) || null;
+        const isWCMatch = (m) => {
+            const n = ((m.name || '') + ' ' + (m.series || '')).toLowerCase();
+            return n.includes('world cup') || n.includes('wc') || n.includes('icc');
+        };
+
+        // ── T20 WORLD CUP BRACKET ──
+        const wcCompleted = completedMatches.filter(isWCMatch);
+        const wcUpcoming = upcoming.filter(m => {
+            const n = ((m.name || '') + ' ' + (m.series || '') + ' ' + (m.status || '')).toLowerCase();
+            return n.includes('world cup') || n.includes('wc');
+        });
+        const hasWC = wcCompleted.length > 0 || wcUpcoming.length > 0;
+
+        if (hasWC) {
+            html += `<div class="wc-bracket-card stagger" style="--i:0">
+                <div class="wc-bracket-title">🏆 T20 WORLD CUP 2026</div>
+                <div class="wc-bracket-matches">`;
+
+            // Show semi-final results
+            const semis = wcCompleted.filter(m => {
+                const n = (m.name || '').toLowerCase();
+                return n.includes('semi') || n.includes('sf');
+            });
+            semis.forEach(m => {
+                const t1 = stripCode(m.teams?.[0]);
+                const t2 = stripCode(m.teams?.[1]);
+                const status = m.status || '';
+                const winnerTeam = [t1, t2].find(t => status.toLowerCase().includes(t.toLowerCase()));
+                html += `<div class="wc-bracket-match wc-bracket-done">
+                    <span class="wc-bracket-label">SEMI-FINAL</span>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team ${winnerTeam === t1 ? 'wc-winner' : ''}">${cricketFlag(t1)} ${t1}</span>
+                        <span class="wc-bracket-score">${m.scores?.[0] || ''}</span>
+                    </div>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team ${winnerTeam === t2 ? 'wc-winner' : ''}">${cricketFlag(t2)} ${t2}</span>
+                        <span class="wc-bracket-score">${m.scores?.[1] || ''}</span>
+                    </div>
+                    <div class="wc-bracket-status">${status} ✓</div>
+                </div>`;
+            });
+
+            // Show final
+            const wcFinal = wcUpcoming.find(m => (m.name || '').toLowerCase().includes('final'));
+            const wcOtherCompleted = wcCompleted.filter(m => !semis.includes(m));
+            wcOtherCompleted.forEach(m => {
+                const t1 = stripCode(m.teams?.[0]);
+                const t2 = stripCode(m.teams?.[1]);
+                html += `<div class="wc-bracket-match wc-bracket-done">
+                    <span class="wc-bracket-label">RESULT</span>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team">${cricketFlag(t1)} ${t1}</span>
+                        <span class="wc-bracket-score">${m.scores?.[0] || ''}</span>
+                    </div>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team">${cricketFlag(t2)} ${t2}</span>
+                        <span class="wc-bracket-score">${m.scores?.[1] || ''}</span>
+                    </div>
+                    <div class="wc-bracket-status">${m.status || ''} ✓</div>
+                </div>`;
+            });
+
+            if (wcFinal) {
+                const ft1 = stripCode(wcFinal.teams?.[0]);
+                const ft2 = stripCode(wcFinal.teams?.[1]);
+                html += `<div class="wc-bracket-match wc-bracket-final">
+                    <span class="wc-bracket-label wc-final-label">🏆 FINAL</span>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team">${cricketFlag(ft1)} ${ft1}</span>
+                    </div>
+                    <div class="wc-bracket-vs">VS</div>
+                    <div class="wc-bracket-teams">
+                        <span class="wc-bracket-team">${cricketFlag(ft2)} ${ft2}</span>
+                    </div>
+                    <div class="wc-bracket-status">${wcFinal.status || ''}</div>
+                </div>`;
+            }
+
+            html += '</div></div>';
+        }
+
+        // ── HERO — India-centric ──
+        const indiaLive = liveMatches.find(isIndiaMatch);
+        const indiaResult = completedMatches.find(m => isIndiaMatch(m) && m.dateTimeGMT && (Date.now() - new Date(m.dateTimeGMT).getTime()) < 86400000);
+        const heroMatch = indiaLive || indiaResult || liveMatches[0] || completedMatches[0] || null;
         const isIndiaHero = heroMatch && isIndiaMatch(heroMatch);
 
         if (heroMatch) {
@@ -677,44 +783,49 @@ async function renderCricket() {
             const t2 = stripCode(heroMatch.teams?.[1]);
             const s1 = heroMatch.scores?.[0] || '';
             const s2 = heroMatch.scores?.[1] || '';
-            const isLive = heroMatch.matchStarted && !heroMatch.matchEnded;
-            const isResult = heroMatch.matchEnded;
-            const heroGradient = isIndiaHero ? 'hero-cricket-india' : 'hero-cricket';
+            const isLive = heroMatch.isLive;
+            const isResult = heroMatch.isCompleted;
+            const heroGradient = isIndiaHero ? 'hero-cricket-india' : getMatchTypeGradient(heroMatch.matchType);
             const statusText = heroMatch.status || '';
-            // Detect win text
-            const isIndiaWin = isResult && statusText.toLowerCase().includes('india') && (statusText.toLowerCase().includes('won') || statusText.toLowerCase().includes('win'));
+            const isWin = isResult && (statusText.toLowerCase().includes('won') || statusText.toLowerCase().includes('win'));
+            const isIndiaWin = isWin && statusText.toLowerCase().includes('india');
 
-            html += `<div class="hero-card ${heroGradient}">
+            html += `<div class="hero-card ${heroGradient} ${isWin ? 'hero-cricket-win' : ''}">
                 <div class="hero-label">
                     ${isLive ? '<span class="live-dot"></span> LIVE' : isResult ? '🏏 RESULT' : '🏏 UPCOMING'}
                     ${mtBadge(heroMatch.matchType)}
                 </div>
-                <div class="hero-matchup">
+                <div class="hero-matchup cricket-hero-matchup">
                     <div class="hero-side">
-                        ${heroMatch.t1img ? `<img class="crest crest-48" src="${heroMatch.t1img}" alt="${t1}" width="48" height="48" onerror="this.style.display='none'">` : ''}
+                        <span class="cricket-hero-flag">${cricketFlag(t1)}</span>
                         <div class="hero-tname">${t1}</div>
-                        ${s1 ? `<div class="hero-tscore">${s1}</div>` : ''}
+                        ${s1 ? `<div class="hero-cricket-score">${s1}</div>` : ''}
                     </div>
                     <div class="hero-center"><div class="hero-vs">VS</div></div>
                     <div class="hero-side">
-                        ${heroMatch.t2img ? `<img class="crest crest-48" src="${heroMatch.t2img}" alt="${t2}" width="48" height="48" onerror="this.style.display='none'">` : ''}
+                        <span class="cricket-hero-flag">${cricketFlag(t2)}</span>
                         <div class="hero-tname">${t2}</div>
-                        ${s2 ? `<div class="hero-tscore">${s2}</div>` : ''}
+                        ${s2 ? `<div class="hero-cricket-score">${s2}</div>` : ''}
                     </div>
                 </div>
                 ${heroMatch.runRate && isLive ? `<div class="cricket-rr">RR: ${heroMatch.runRate}</div>` : ''}
-                <div class="cricket-status ${isIndiaWin ? 'cricket-status-win' : ''}">${statusText}</div>
+                <div class="cricket-status ${isIndiaWin ? 'cricket-status-win' : ''} ${isWin ? 'cricket-status-celebration' : ''}">${isWin ? statusText + ' 🎉' : statusText}</div>
                 ${heroMatch.venue ? `<div class="hero-venue">📍 ${heroMatch.venue}</div>` : ''}
                 ${heroMatch.series ? `<div style="font-size:10px;opacity:0.5;text-align:center;position:relative;z-index:1;margin-top:2px">${heroMatch.series}</div>` : ''}
             </div>`;
         } else {
-            // No live — show next India match countdown
             const nextIndia = upcoming.find(isIndiaMatch);
             if (nextIndia) {
+                const nt1 = stripCode(nextIndia.teams?.[0]);
+                const nt2 = stripCode(nextIndia.teams?.[1]);
                 html += `<div class="hero-card hero-cricket-india">
                     <div class="hero-label">🇮🇳 NEXT INDIA MATCH</div>
                     <div style="text-align:center;position:relative;z-index:1">
-                        <div style="font-size:18px;font-weight:800;margin-bottom:4px">${nextIndia.name || nextIndia.teams?.join(' vs ')}</div>
+                        <div class="cricket-hero-matchup-simple">
+                            <span class="cricket-hero-flag">${cricketFlag(nt1)}</span>
+                            <span style="font-size:18px;font-weight:800">${nt1} vs ${nt2}</span>
+                            <span class="cricket-hero-flag">${cricketFlag(nt2)}</span>
+                        </div>
                         <div style="font-size:12px;opacity:0.7">${nextIndia.venue || 'TBA'}</div>
                         <div class="countdown" id="cricketCountdown"></div>
                         <div style="font-size:11px;opacity:0.6;margin-top:4px">${fmtDate(nextIndia.date)}</div>
@@ -735,24 +846,38 @@ async function renderCricket() {
         // AI Summary
         html += renderSummary(crSummary?.data || crSummary);
 
-        // Additional live matches
-        if (Array.isArray(live) && live.length > 1) {
-            html += '<div class="sh stagger" style="--i:1"><span class="sh-emoji">🔴</span> OTHER LIVE</div>';
-            live.filter(m => m !== heroMatch).forEach((m, i) => {
+        // ── LIVE MATCHES ──
+        const otherLive = liveMatches.filter(m => m !== heroMatch);
+        if (otherLive.length) {
+            html += '<div class="sh stagger" style="--i:1"><span class="sh-emoji">🔴</span> LIVE</div>';
+            html += '<div class="cricket-match-grid">';
+            otherLive.forEach((m, i) => {
                 html += renderCricketMatchCard(m, i + 2, false, true);
             });
+            html += '</div>';
+        }
+
+        // ── RECENT RESULTS ──
+        const recentResults = completedMatches.filter(m => m !== heroMatch);
+        if (recentResults.length) {
+            html += '<div class="sh stagger" style="--i:3"><span class="sh-emoji">📊</span> RECENT RESULTS</div>';
+            html += '<div class="cricket-match-grid">';
+            recentResults.forEach((m, i) => {
+                html += renderCricketResultCard(m, i + 4);
+            });
+            html += '</div>';
         }
 
         // ICC RANKINGS
         if (rankings?.teams) {
-            html += '<div class="sh stagger" style="--i:3"><span class="sh-emoji">🏆</span> ICC TEAM RANKINGS</div>';
+            html += '<div class="sh stagger" style="--i:6"><span class="sh-emoji">🏆</span> ICC RANKINGS</div>';
             html += renderCricketRankings(rankings);
         }
 
         // Filter bar
         const allTypes = ['all'];
         const typeSet = new Set();
-        [...(Array.isArray(live) ? live : []), ...upcoming].forEach(m => {
+        [...(Array.isArray(allMatches) ? allMatches : []), ...upcoming].forEach(m => {
             const t = (m.matchType || '').toLowerCase();
             if (t && !typeSet.has(t)) { typeSet.add(t); allTypes.push(t); }
         });
@@ -768,8 +893,10 @@ async function renderCricket() {
         if (cricketFilter === 'all' || cricketFilter === 'india') {
             const indiaMatches = upcoming.filter(isIndiaMatch);
             if (indiaMatches.length) {
-                html += '<div class="sh stagger" style="--i:5"><span class="sh-emoji">🇮🇳</span> INDIA MATCHES</div>';
-                indiaMatches.slice(0, 5).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 6, true));
+                html += '<div class="sh stagger" style="--i:8"><span class="sh-emoji">🇮🇳</span> INDIA MATCHES</div>';
+                html += '<div class="cricket-match-grid">';
+                indiaMatches.slice(0, 5).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 9, true));
+                html += '</div>';
             }
         }
 
@@ -798,33 +925,20 @@ async function renderCricket() {
                 return h;
             };
 
-            html += renderSeriesGroup('INDIA TOURS', indiaSeries, 10);
-            html += renderSeriesGroup('ICC EVENTS', iccSeries, 16);
-            html += renderSeriesGroup('OTHER INTERNATIONAL', otherSeries, 22);
-        }
-
-        // T20 World Cup section
-        if (cricketFilter === 'all' || cricketFilter === 't20i' || cricketFilter === 't20') {
-            const wcMatches = upcoming.filter(m => {
-                const n = ((m.name || '') + ' ' + (m.series || '')).toLowerCase();
-                return n.includes('world cup') || n.includes('wc');
-            });
-            if (wcMatches.length) {
-                html += `<div class="sh stagger" style="--i:28">
-                    <span class="sh-emoji">🏆</span> T20 WORLD CUP
-                    <span style="font-size:11px;opacity:0.6;margin-left:8px">${wcMatches.length} match${wcMatches.length > 1 ? 'es' : ''}</span>
-                </div>`;
-                wcMatches.slice(0, 6).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 29, false));
-            }
+            html += renderSeriesGroup('INDIA TOURS', indiaSeries, 12);
+            html += renderSeriesGroup('ICC EVENTS', iccSeries, 18);
+            html += renderSeriesGroup('OTHER INTERNATIONAL', otherSeries, 24);
         }
 
         // Upcoming
         if (cricketFilter !== 'india') {
-            html += '<div class="sh stagger" style="--i:35"><span class="sh-emoji">📅</span> UPCOMING</div>';
+            html += '<div class="sh stagger" style="--i:30"><span class="sh-emoji">📅</span> UPCOMING</div>';
             const filtered = cricketFilter === 'all' || cricketFilter === 'india' ? upcoming :
                 upcoming.filter(m => (m.matchType || '').toLowerCase() === cricketFilter);
             if (filtered.length) {
-                filtered.slice(0, 12).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 36, false));
+                html += '<div class="cricket-match-grid">';
+                filtered.slice(0, 12).forEach((m, i) => html += renderUpcomingCricketCard(m, i + 31, false));
+                html += '</div>';
             } else {
                 html += emptyCard('🏏', 'No Matches', `No ${cricketFilter.toUpperCase()} matches scheduled`);
             }
@@ -835,14 +949,13 @@ async function renderCricket() {
         document.getElementById('sportsContent').innerHTML = html || emptyCard('🏏', 'No Cricket Data', 'Check back later');
 
         updateFooter();
-        // Countdown for India match
         const nextIndia = upcoming.find(isIndiaMatch);
         if (!heroMatch && nextIndia) {
             const el = document.getElementById('cricketCountdown');
             if (el) startCountdown(nextIndia.date, el);
         }
 
-        if (Array.isArray(live) && live.length) {
+        if (liveMatches.length) {
             autoRefreshTimer = setInterval(() => { cache['cr-live'] = null; renderCricket(); }, 60000);
         }
     } catch (e) {
@@ -857,16 +970,18 @@ function setCricketRankingsFormat(fmt) { cricketRankingsFormat = fmt; renderCric
 function renderCricketRankings(rankings) {
     const formats = ['test', 'odi', 't20i'];
     const teams = rankings.teams[cricketRankingsFormat] || [];
-    let html = `<div class="rankings-card stagger" style="--i:4">
+    let html = `<div class="rankings-card rankings-compact stagger" style="--i:7">
         <div class="rankings-tabs">
             ${formats.map(f => `<button class="rankings-tab ${cricketRankingsFormat === f ? 'active' : ''}" onclick="setCricketRankingsFormat('${f}')">${f.toUpperCase()}</button>`).join('')}
         </div>
         <div class="rankings-table">`;
     teams.forEach((t, i) => {
         const isFocus = CRICKET_FOCUS_TEAMS.includes(t.code);
-        html += `<div class="rankings-row ${isFocus ? 'rankings-focus' : ''}">
+        const medalClass = i === 0 ? 'rankings-gold' : i === 1 ? 'rankings-silver' : i === 2 ? 'rankings-bronze' : '';
+        const flagEmoji = CRICKET_FLAGS[t.team] || t.flag || '🏏';
+        html += `<div class="rankings-row ${isFocus ? 'rankings-focus' : ''} ${medalClass}">
             <span class="rankings-pos ${i < 3 ? 'rankings-top3' : ''}">${t.rank}</span>
-            <span class="rankings-flag">${t.flag}</span>
+            <span class="rankings-flag">${flagEmoji}</span>
             <span class="rankings-team">${t.team}</span>
             <div class="rankings-bar-wrap"><div class="rankings-bar" style="--bar-w:${Math.round((t.rating / (teams[0]?.rating || 1)) * 100)}%;--i:${i}"></div></div>
             <span class="rankings-rating">${t.rating}</span>
@@ -889,32 +1004,66 @@ function renderCricketMatchCard(m, i, highlight, isLive) {
         </div>
         <div class="cc-teams">
             <div class="cc-team">
-                ${m.t1img ? `<img class="crest crest-28" src="${m.t1img}" width="28" height="28" onerror="this.style.display='none'">` : ''}
+                <span class="cc-flag">${cricketFlag(t1)}</span>
                 <span class="cc-tname">${t1}</span>
                 <span class="cc-tscore">${m.scores?.[0] || ''}</span>
             </div>
             <div class="cc-team">
-                ${m.t2img ? `<img class="crest crest-28" src="${m.t2img}" width="28" height="28" onerror="this.style.display='none'">` : ''}
+                <span class="cc-flag">${cricketFlag(t2)}</span>
                 <span class="cc-tname">${t2}</span>
                 <span class="cc-tscore">${m.scores?.[1] || ''}</span>
             </div>
         </div>
         ${m.runRate && isLive ? `<div class="cc-rr">RR: ${m.runRate}</div>` : ''}
         ${m.venue ? `<div class="cc-venue-line">📍 ${m.venue}</div>` : ''}
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px">${m.status || ''}</div>
+        <div class="cc-status-line">${m.status || ''}</div>
+    </div>`;
+}
+
+function renderCricketResultCard(m, i) {
+    const t1 = stripCode(m.teams?.[0]);
+    const t2 = stripCode(m.teams?.[1]);
+    const status = m.status || '';
+    const winnerTeam = [t1, t2].find(t => status.toLowerCase().includes(t.toLowerCase()));
+    const isIndiaWin = winnerTeam && winnerTeam.toLowerCase() === 'india';
+    return `<div class="cricket-card cricket-result-card ${isIndiaWin ? 'india-win' : ''} stagger" style="--i:${i}">
+        <div class="cc-header">
+            <span class="result-badge">RESULT</span>
+            ${mtBadge(m.matchType)}
+            ${m.series ? `<span class="cc-series">${m.series}</span>` : ''}
+        </div>
+        <div class="cc-teams">
+            <div class="cc-team ${winnerTeam === t1 ? 'cc-team-winner' : ''}">
+                <span class="cc-flag">${cricketFlag(t1)}</span>
+                <span class="cc-tname">${t1}</span>
+                <span class="cc-tscore">${m.scores?.[0] || ''}</span>
+            </div>
+            <div class="cc-team ${winnerTeam === t2 ? 'cc-team-winner' : ''}">
+                <span class="cc-flag">${cricketFlag(t2)}</span>
+                <span class="cc-tname">${t2}</span>
+                <span class="cc-tscore">${m.scores?.[1] || ''}</span>
+            </div>
+        </div>
+        <div class="cc-result-status">${status}</div>
     </div>`;
 }
 
 function renderUpcomingCricketCard(m, i, highlight) {
-    const t1 = m.teams?.[0] || '?';
-    const t2 = m.teams?.[1] || '?';
+    const t1 = stripCode(m.teams?.[0] || '?');
+    const t2 = stripCode(m.teams?.[1] || '?');
     const isIndia = m.teams?.some(t => t.toLowerCase().includes('india'));
     return `<div class="cricket-card ${highlight || isIndia ? 'india' : ''} stagger" style="--i:${i}">
         <div class="cc-header">
             ${mtBadge(m.matchType)}
             <span class="cc-date">${fmtShort(m.date)}</span>
         </div>
-        <div class="cc-name">${m.name || `${t1} vs ${t2}`}</div>
+        <div class="cc-upcoming-matchup">
+            <span class="cc-flag">${cricketFlag(t1)}</span>
+            <span class="cc-upcoming-tname">${t1}</span>
+            <span class="cc-upcoming-vs">vs</span>
+            <span class="cc-upcoming-tname">${t2}</span>
+            <span class="cc-flag">${cricketFlag(t2)}</span>
+        </div>
         <div class="cc-venue">📍 ${m.venue || 'TBA'}</div>
     </div>`;
 }

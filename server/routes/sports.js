@@ -236,6 +236,66 @@ router.get('/cricket/rankings', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch rankings' }); }
 });
 
+/** Format cricket score properly: T20/ODI → "253/7 (20 ov)", Test → "269 & 198" */
+function fmtCricketScore(scoreArr, matchType) {
+  if (!scoreArr || !scoreArr.length) return '';
+  const isTest = (matchType || '').toLowerCase() === 'test';
+  if (isTest) {
+    // Test: show both innings separated by " & "
+    return scoreArr.map(s => {
+      if (s.w >= 10) return `${s.r}`;
+      return `${s.r}/${s.w}`;
+    }).join(' & ');
+  }
+  // T20/ODI: show last innings score with overs
+  const last = scoreArr[scoreArr.length - 1];
+  if (!last) return '';
+  return `${last.r}/${last.w} (${last.o} ov)`;
+}
+
+/** Extract winning teams from completed semi-final results */
+function extractWCFinalists(matches) {
+  const finalists = [];
+  for (const m of matches) {
+    if (!m.matchEnded) continue;
+    const nameLC = ((m.name || '') + ' ' + (m.series || '')).toLowerCase();
+    if (!nameLC.includes('semi') && !nameLC.includes('sf')) continue;
+    if (!nameLC.includes('world cup') && !nameLC.includes('wc') && !nameLC.includes('icc')) continue;
+    const status = (m.status || '').toLowerCase();
+    // Extract winning team from status like "India won by 7 runs"
+    for (const team of m.teams || []) {
+      const cleanTeam = team.replace(/\s*\[.*?\]\s*$/, '').trim();
+      if (status.includes(cleanTeam.toLowerCase()) && (status.includes('won') || status.includes('win'))) {
+        finalists.push(cleanTeam);
+        break;
+      }
+    }
+  }
+  return finalists;
+}
+
+/** Replace TBC teams in upcoming WC matches with actual finalists */
+function resolveTBCTeams(upcomingMatches, liveMatches) {
+  const finalists = extractWCFinalists(liveMatches);
+  if (!finalists.length) return upcomingMatches;
+  return upcomingMatches.map(m => {
+    const nameLC = ((m.name || '') + ' ' + (m.series || '') + ' ' + (m.status || '')).toLowerCase();
+    if (!nameLC.includes('world cup') && !nameLC.includes('wc') && !nameLC.includes('icc')) return m;
+    const teams = (m.teams || []).map(t => {
+      const clean = t.replace(/\s*\[.*?\]\s*$/, '').trim();
+      if (clean.toLowerCase() === 'tbc' || clean.toLowerCase() === 'to be confirmed') {
+        // Find a finalist not already in the match
+        const otherTeams = (m.teams || []).filter(ot => ot !== t).map(ot => ot.replace(/\s*\[.*?\]\s*$/, '').trim().toLowerCase());
+        const replacement = finalists.find(f => !otherTeams.includes(f.toLowerCase()));
+        if (replacement) return replacement;
+      }
+      return t;
+    });
+    const name = (m.name || '').replace(/Tbc\s*\[TBC\]/gi, teams.find(t => !m.teams.includes(t)) || 'TBC');
+    return { ...m, teams, name };
+  });
+}
+
 /** GET /cricket/live - Live cricket scores (international men's only) */
 router.get('/cricket/live', async (req, res) => {
   try {
@@ -257,20 +317,25 @@ router.get('/cricket/live', async (req, res) => {
             // Build formatted score strings per team
             const t1Scores = scores.filter(s => s.inning && (s.inning.includes(t1.shortname) || s.inning.includes(t1.name)));
             const t2Scores = scores.filter(s => s.inning && (s.inning.includes(t2.shortname) || s.inning.includes(t2.name)));
-            const fmtScore = (arr) => arr.map(s => `${s.r}/${s.w} (${s.o})`).join(' & ');
             // Calculate run rate for current innings
             const currentInnings = scores[scores.length - 1];
             const runRate = currentInnings && currentInnings.o > 0 ? (currentInnings.r / currentInnings.o).toFixed(2) : null;
+
+            // Categorize match state
+            const isLive = m.matchStarted && !m.matchEnded;
+            const isCompleted = !!m.matchEnded;
+
             return {
               id: m.id, name: m.name, status: m.status, venue: m.venue,
               teams: m.teams || [t1.name || '?', t2.name || '?'],
-              scores: [fmtScore(t1Scores), fmtScore(t2Scores)],
+              scores: [fmtCricketScore(t1Scores, m.matchType), fmtCricketScore(t2Scores, m.matchType)],
               scoreDetail: scores,
-              t1img: t1.img || '', t2img: t2.img || '',
               matchType: m.matchType,
               series: m.series || '',
               runRate,
               matchStarted: m.matchStarted, matchEnded: m.matchEnded,
+              isLive,
+              isCompleted,
               dateTimeGMT: m.dateTimeGMT
             };
           });
@@ -284,7 +349,9 @@ router.get('/cricket/live', async (req, res) => {
         .map(m => ({
           id: m.id, name: m.name, status: m.status, venue: m.venue,
           teams: [m.t1, m.t2], scores: [m.t1s, m.t2s],
-          t1img: m.t1img, t2img: m.t2img, matchType: m.matchType
+          matchType: m.matchType,
+          isLive: !(m.status || '').toLowerCase().includes('won') && !(m.status || '').toLowerCase().includes('draw'),
+          isCompleted: (m.status || '').toLowerCase().includes('won') || (m.status || '').toLowerCase().includes('draw'),
         }));
     });
     respond(res, result, cache.has('cric-live'));
@@ -298,15 +365,25 @@ router.get('/cricket/upcoming', async (req, res) => {
       // Use /cricScore which has clean international scheduled matches with [CODE] brackets
       const json = await fetchJSON(`https://api.cricapi.com/v1/cricScore?apikey=${cricKey()}`);
       if (!json?.data) return [];
-      return json.data
+      let upcoming = json.data
         .filter(m => isICCMenMatch([m.t1, m.t2], m.name))
         .filter(m => (m.status || '').toLowerCase().includes('match starts'))
         .map(m => ({
           id: m.id, name: m.name, venue: m.venue, date: null,
           teams: [m.t1, m.t2], matchType: m.matchType, status: m.status,
-          t1img: m.t1img, t2img: m.t2img
         }))
         .slice(0, 20);
+
+      // Resolve TBC teams using completed matches from currentMatches
+      try {
+        const liveEntry = cache.get('cric-live');
+        const liveMatches = liveEntry?.data || [];
+        if (liveMatches.length) {
+          upcoming = resolveTBCTeams(upcoming, liveMatches);
+        }
+      } catch (e) { /* ignore TBC resolution errors */ }
+
+      return upcoming;
     });
     respond(res, result, cache.has('cric-upcoming'));
   } catch (e) { console.error(e); res.status(500).json({ error: 'Failed to fetch upcoming cricket' }); }
