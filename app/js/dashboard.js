@@ -10,24 +10,53 @@
             ${shell.topbar}
             <div class="main-body" id="dashBody">
                 <div id="greeting"></div>
+                <div id="summaryStrip"></div>
                 <div class="quick-actions" id="quickActions"></div>
-                <div class="summary-grid" id="summaryGrid">${skeletonCards(4)}</div>
-                <div class="dash-grid" id="widgets">${skeletonWidget()}${skeletonWidget()}${skeletonWidget()}${skeletonWidget()}</div>
+                <div class="dash-grid" id="widgets">${skeletonWidget()}${skeletonWidget()}${skeletonWidget()}</div>
             </div>
         </div>
     `;
     initAppShell('dashboard');
-    renderGreeting();
     renderQuickActions();
     await loadDashboard();
 })();
 
 // ─── State ───
 let todayTasks = [];
+let weatherData = null;
+
+// ─── Grocery Emoji Map ───
+const GROCERY_EMOJIS = {
+    'milk':'🥛','bread':'🍞','egg':'🥚','eggs':'🥚','rice':'🍚','chicken':'🍗','meat':'🥩','beef':'🥩',
+    'tomato':'🍅','tomatoes':'🍅','onion':'🧅','onions':'🧅','potato':'🥔','potatoes':'🥔',
+    'banana':'🍌','apple':'🍎','orange':'🍊','lemon':'🍋','lime':'🍋','mango':'🥭','grape':'🍇',
+    'strawberry':'🍓','avocado':'🥑','carrot':'🥕','corn':'🌽','broccoli':'🥦','lettuce':'🥬',
+    'pepper':'🌶️','garlic':'🧄','mushroom':'🍄','cucumber':'🥒','eggplant':'🍆',
+    'cheese':'🧀','yogurt':'🥛','butter':'🧈','cream':'🥛','oil':'🫒','sugar':'🍬',
+    'honey':'🍯','salt':'🧂','coffee':'☕','tea':'🍵','water':'💧','juice':'🧃',
+    'soda':'🥤','cereal':'🥣','pasta':'🍝','noodle':'🍜','fish':'🐟','shrimp':'🦐','salmon':'🐟',
+    'paneer':'🧀','dal':'🫘','lentil':'🫘','bean':'🫘','chickpea':'🫘',
+    'atta':'🌾','flour':'🌾','masala':'🌶️','spice':'🌶️','turmeric':'🌶️','cumin':'🌶️',
+    'ghee':'🧈','naan':'🫓','roti':'🫓','tortilla':'🫓','pita':'🫓',
+    'chocolate':'🍫','cookie':'🍪','cake':'🎂','ice cream':'🍦','chips':'🍿',
+    'wine':'🍷','beer':'🍺','soap':'🧼','tissue':'🧻','toothpaste':'🪥',
+    'almond':'🥜','nut':'🥜','peanut':'🥜','coconut':'🥥','pineapple':'🍍',
+    'peach':'🍑','cherry':'🍒','watermelon':'🍉','kiwi':'🥝','pear':'🍐',
+    'pizza':'🍕','taco':'🌮','burrito':'🌯','sausage':'🌭','bacon':'🥓',
+    'shallot':'🧅','ginger':'🫚','herb':'🌿','basil':'🌿','cilantro':'🌿','mint':'🌿',
+};
+
+function groceryEmoji(name) {
+    const lower = (name || '').toLowerCase();
+    for (const [key, emoji] of Object.entries(GROCERY_EMOJIS)) {
+        if (lower.includes(key)) return emoji;
+    }
+    return '🛒';
+}
 
 // ─── Load All Data ───
 async function loadDashboard() {
-    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures, travelTrips, photoRes] = await Promise.all([
+    const [allTasks, todayRes, events, grocery, watering, gardenDash, sportsNext, recentCaptures, travelTrips, photoRes, weatherRes] = await Promise.all([
         API.get('/tasks').catch(() => []),
         API.get('/tasks?due=today').catch(() => []),
         API.get('/events?upcoming=5').catch(() => []),
@@ -38,6 +67,7 @@ async function loadDashboard() {
         API.get('/captures/recent').catch(() => []),
         API.get('/travel/trips').catch(() => []),
         API.get('/captures?type=photo&limit=20').catch(() => ({ captures: [] })),
+        fetch('/data/weather.json').then(r => r.json()).catch(() => null),
     ]);
 
     const norm = v => Array.isArray(v) ? v : (v?.items || []);
@@ -47,101 +77,246 @@ async function loadDashboard() {
     const groceryItems = norm(grocery);
 
     const incompleteTasks = tasks.filter(t => !t.completed && t.status !== 'done').length;
-    const uncheckedGrocery = groceryItems.filter(i => !i.checked).length;
+    const uncheckedGrocery = groceryItems.filter(i => !i.checked);
     const needsAttention = gardenDash.needs_attention_count || 0;
 
     const photoCaptures = (photoRes?.captures || photoRes || []).filter(c => c.image_path);
 
-    renderSummary(incompleteTasks, evts.length, uncheckedGrocery, needsAttention);
-    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures, travelTrips, photoCaptures);
+    weatherData = weatherRes?.locations?.[0] || null;
+
+    renderGreeting(needsAttention, sportsNext, weatherData);
+    renderSummaryStrip(incompleteTasks, evts.length, uncheckedGrocery.length, needsAttention);
+    renderWidgets(evts, watering, gardenDash, tasks, sportsNext, recentCaptures, travelTrips, photoCaptures, uncheckedGrocery);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ─── Greeting ───
-function renderGreeting() {
+// ─── Dynamic Greeting ───
+function renderGreeting(gardenAlerts, sportsNext, weather) {
     const name = currentUser?.name?.split(' ')[0] || 'there';
+    const h = new Date().getHours();
     const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    let greetWord, greetEmoji;
+    if (h < 6) { greetWord = 'Good night'; greetEmoji = '🌃'; }
+    else if (h < 12) { greetWord = 'Good morning'; greetEmoji = '🌅'; }
+    else if (h < 17) { greetWord = 'Good afternoon'; greetEmoji = '☀️'; }
+    else { greetWord = 'Good evening'; greetEmoji = '🌙'; }
+
+    // Weather inline
+    let weatherInline = '';
+    if (weather) {
+        weatherInline = ` · ${weather.temp}°F ${weather.emoji || ''}`;
+    }
+
+    // Fun one-liner
+    const lines = [
+        "Let's make today count! 💪",
+        "What shall we build today? 🔨",
+        "One step at a time 🚀",
+        "Stay curious, stay awesome ✨",
+        "You've got this! 🌟",
+        "Make something beautiful today 🎨",
+        "Keep the momentum going 🔥",
+    ];
+    const sportsEvents = sportsNext?.data || sportsNext || [];
+    let oneLiner;
+    if (gardenAlerts > 0) {
+        oneLiner = "Your garden misses you 🌱";
+    } else if (sportsEvents.length > 0) {
+        oneLiner = "Game day! 🏏";
+    } else {
+        const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        oneLiner = lines[dayOfYear % lines.length];
+    }
+
     document.getElementById('greeting').innerHTML = `
-        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px;">${getGreeting()}, ${name}</h1>
-        <p style="color:var(--text-tertiary);font-size:13px;margin-bottom:20px;">${dateStr}</p>
+        <h1 class="dash-greeting">${greetEmoji} ${greetWord}, ${name}${weatherInline}</h1>
+        <p class="dash-date">${dateStr} — ${oneLiner}</p>
     `;
 }
 
 // ─── Quick Actions ───
 function renderQuickActions() {
     document.getElementById('quickActions').innerHTML = `
-        <div class="quick-actions-grid">
-            <button class="btn btn-secondary quick-action-btn" onclick="openAddTaskModal()"><i data-lucide="check-square" class="quick-action-icon"></i><span>Task</span></button>
-            <button class="btn btn-secondary quick-action-btn" onclick="openAddEventModal()"><i data-lucide="calendar" class="quick-action-icon"></i><span>Event</span></button>
-            <button class="btn btn-secondary quick-action-btn" onclick="openAddGroceryModal()"><i data-lucide="shopping-cart" class="quick-action-icon"></i><span>Grocery</span></button>
-            <button class="btn btn-secondary quick-action-btn" onclick="openAddNoteModal()"><i data-lucide="file-text" class="quick-action-icon"></i><span>Note</span></button>
+        <div class="quick-actions-grid dash-quick-actions">
+            <button class="btn quick-action-btn qa-tasks" onclick="openAddTaskModal()"><span class="qa-emoji">✅</span><span>Task</span></button>
+            <button class="btn quick-action-btn qa-events" onclick="openAddEventModal()"><span class="qa-emoji">📅</span><span>Event</span></button>
+            <button class="btn quick-action-btn qa-grocery" onclick="openAddGroceryModal()"><span class="qa-emoji">🛒</span><span>Grocery</span></button>
+            <button class="btn quick-action-btn qa-notes" onclick="openAddNoteModal()"><span class="qa-emoji">📝</span><span>Note</span></button>
+            <a href="/app/captures.html" class="btn quick-action-btn qa-capture"><span class="qa-emoji">📸</span><span>Capture</span></a>
         </div>
     `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ─── Summary Cards ───
-function renderSummary(taskCount, eventCount, groceryCount, gardenCount) {
-    document.getElementById('summaryGrid').innerHTML = `
-        <a href="/app/tasks.html" class="summary-card">
-            <div class="summary-label">Tasks</div>
-            <div class="summary-value val-blue">${taskCount}</div>
-            <div class="summary-sub">Incomplete</div>
-        </a>
-        <a href="/app/events.html" class="summary-card">
-            <div class="summary-label">Events</div>
-            <div class="summary-value val-amber">${eventCount}</div>
-            <div class="summary-sub">Upcoming</div>
-        </a>
-        <a href="/app/grocery.html" class="summary-card">
-            <div class="summary-label">Grocery</div>
-            <div class="summary-value val-green">${groceryCount}</div>
-            <div class="summary-sub">Items needed</div>
-        </a>
-        <a href="/app/garden.html" class="summary-card">
-            <div class="summary-label">Garden</div>
-            <div class="summary-value val-accent">${gardenCount}</div>
-            <div class="summary-sub">Needs attention</div>
-        </a>
+// ─── Summary Strip (pills) ───
+function renderSummaryStrip(taskCount, eventCount, groceryCount, gardenCount) {
+    document.getElementById('summaryStrip').innerHTML = `
+        <div class="summary-strip">
+            <a href="/app/tasks.html" class="summary-pill pill-tasks" style="animation-delay:0s">✅ ${taskCount} task${taskCount !== 1 ? 's' : ''}</a>
+            <a href="/app/events.html" class="summary-pill pill-events" style="animation-delay:0.05s">📅 ${eventCount} event${eventCount !== 1 ? 's' : ''}</a>
+            <a href="/app/grocery.html" class="summary-pill pill-grocery" style="animation-delay:0.1s">🛒 ${groceryCount} item${groceryCount !== 1 ? 's' : ''}</a>
+            <a href="/app/garden.html" class="summary-pill pill-garden" style="animation-delay:0.15s">🌱 ${gardenCount} alert${gardenCount !== 1 ? 's' : ''}</a>
+        </div>
     `;
 }
 
 // ─── Widgets ───
-function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips, photoCaptures) {
-    // Filter: hide tasks/events widgets when empty
+function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips, photoCaptures, groceryItems) {
     const hasTasks = todayTasks.length > 0;
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const futureEvents = (events || []).filter(e => ((e.date || '').split('T')[0]) >= todayStr);
     const hasEvents = futureEvents.length > 0;
 
+    let widgetIdx = 0;
+    const delay = () => `style="animation-delay:${(widgetIdx++) * 0.08}s"`;
+
     document.getElementById('widgets').innerHTML = `
         ${renderPhotoCarousel(photoCaptures)}
+        ${renderWeatherCard()}
         ${renderSportsNextUp(sportsNext)}
-        ${renderTravelWidget(travelTrips)}
-        ${hasTasks ? `<div class="card">
-            <div class="card-header"><h3>Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
+        ${renderGroceryWidget(groceryItems)}
+        ${hasTasks ? `<div class="card widget-card widget-tasks" ${delay()}>
+            <div class="card-header"><h3>📋 Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
             <div class="card-body" id="tasksList">${renderTodayTasks()}</div>
         </div>` : ''}
-        ${hasEvents ? `<div class="card">
-            <div class="card-header"><h3>Upcoming Events</h3><a href="/app/events.html" class="link">View All →</a></div>
+        ${hasEvents ? `<div class="card widget-card widget-events" ${delay()}>
+            <div class="card-header"><h3>📅 Upcoming Events</h3><a href="/app/events.html" class="link">View All →</a></div>
             <div class="card-body">${renderEvents(events)}</div>
         </div>` : ''}
-        <div class="card">
-            <div class="card-header"><h3>Recent Captures</h3><a href="/app/captures.html" class="link">View All →</a></div>
-            <div class="card-body">${renderRecentCaptures(recentCaptures)}</div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3>Garden Overview</h3><a href="/app/garden.html" class="link">View All →</a></div>
+        ${renderTravelWidget(travelTrips)}
+        <div class="card widget-card widget-garden" ${delay()}>
+            <div class="card-header"><h3>🌿 Garden Overview</h3><a href="/app/garden.html" class="link">View All →</a></div>
             <div class="card-body">${renderGarden(watering, gardenDash)}</div>
         </div>
-        <div class="card">
-            <div class="card-header"><h3>Recent Activity</h3></div>
+        <div class="card widget-card widget-captures" ${delay()}>
+            <div class="card-header"><h3>⚡ Recent Captures</h3><a href="/app/captures.html" class="link">View All →</a></div>
+            <div class="card-body">${renderRecentCaptures(recentCaptures)}</div>
+        </div>
+        <div class="card widget-card widget-activity" ${delay()}>
+            <div class="card-header"><h3>📊 Recent Activity</h3></div>
             <div class="card-body">${renderActivity(allTasks, events)}</div>
         </div>
     `;
     if (typeof lucide !== 'undefined') lucide.createIcons();
     initPhotoCarousel();
+}
+
+// ─── Weather Card ───
+function renderWeatherCard() {
+    if (!weatherData) return '';
+    const w = weatherData;
+    const isSunny = (w.description || '').toLowerCase().includes('clear') || (w.emoji || '').includes('☀');
+    const gradClass = isSunny ? 'weather-sunny' : 'weather-cloudy';
+
+    let forecastHtml = '';
+    if (w.forecast?.length) {
+        forecastHtml = w.forecast.slice(0, 4).map(f =>
+            `<div class="weather-forecast-day">
+                <span class="wf-label">${f.label}</span>
+                <span class="wf-emoji">${f.emoji}</span>
+                <span class="wf-temp">${f.high}°</span>
+            </div>`
+        ).join('');
+    }
+
+    return `<div class="weather-card ${gradClass}">
+        <div class="weather-main">
+            <div class="weather-temp">${w.emoji || '🌤️'} ${w.temp}°F</div>
+            <div class="weather-desc">${w.description || ''}</div>
+            <div class="weather-hl">H: ${w.high}° · L: ${w.low}°</div>
+        </div>
+        <div class="weather-location">${w.location || ''}</div>
+        ${forecastHtml ? `<div class="weather-forecast">${forecastHtml}</div>` : ''}
+    </div>`;
+}
+
+// ─── Grocery Widget ───
+function renderGroceryWidget(items) {
+    if (!items || !items.length) {
+        return `<div class="card widget-card widget-grocery">
+            <div class="card-header"><h3>🛒 Grocery List</h3><a href="/app/grocery.html" class="link">View All →</a></div>
+            <div class="card-body">
+                <div class="empty-state"><p>List is empty! 🎉</p>
+                <button class="btn btn-secondary" onclick="openAddGroceryModal()">Add Items</button></div>
+            </div>
+        </div>`;
+    }
+    const gridItems = items.slice(0, 8).map(item => {
+        const emoji = groceryEmoji(item.name || item.title || '');
+        const name = esc(item.name || item.title || 'Item');
+        const store = item.store ? `<span class="grocery-store">🏪 ${esc(item.store)}</span>` : '';
+        return `<div class="grocery-grid-item">
+            <span class="grocery-emoji">${emoji}</span>
+            <span class="grocery-name">${name}</span>
+            ${store}
+        </div>`;
+    }).join('');
+    const more = items.length > 8 ? `<a href="/app/grocery.html" class="grocery-more">+${items.length - 8} more →</a>` : '';
+
+    return `<div class="card widget-card widget-grocery">
+        <div class="card-header"><h3>🛒 Grocery List</h3><a href="/app/grocery.html" class="link">View All →</a></div>
+        <div class="card-body">
+            <div class="grocery-grid">${gridItems}</div>
+            ${more}
+        </div>
+    </div>`;
+}
+
+// ─── Photo Carousel ───
+let _carouselInterval = null;
+function renderPhotoCarousel(photos) {
+    if (!photos || !photos.length) return '';
+    return `<div class="card photo-carousel-card full-width">
+        <div class="photo-carousel" id="photoCarousel">
+            ${photos.map((p, i) => `
+                <div class="carousel-slide${i === 0 ? ' active' : ''}" data-index="${i}">
+                    <img src="${p.image_path}" alt="${esc(p.title || '')}" loading="${i < 2 ? 'eager' : 'lazy'}">
+                    <div class="carousel-caption">${esc(p.title || '')}</div>
+                </div>
+            `).join('')}
+            <div class="carousel-dots">
+                ${photos.map((_, i) => `<span class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}"></span>`).join('')}
+            </div>
+        </div>
+    </div>`;
+}
+
+function initPhotoCarousel() {
+    const el = document.getElementById('photoCarousel');
+    if (!el) return;
+    const slides = el.querySelectorAll('.carousel-slide');
+    const dots = el.querySelectorAll('.carousel-dot');
+    if (slides.length < 2) return;
+
+    let current = 0;
+    const show = (idx) => {
+        slides[current].classList.remove('active');
+        dots[current].classList.remove('active');
+        current = (idx + slides.length) % slides.length;
+        slides[current].classList.add('active');
+        dots[current].classList.add('active');
+    };
+
+    if (_carouselInterval) clearInterval(_carouselInterval);
+    _carouselInterval = setInterval(() => show(current + 1), 5000);
+
+    dots.forEach(d => d.addEventListener('click', () => {
+        show(+d.dataset.index);
+        clearInterval(_carouselInterval);
+        _carouselInterval = setInterval(() => show(current + 1), 5000);
+    }));
+
+    let startX = 0;
+    el.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    el.addEventListener('touchend', e => {
+        const diff = startX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) {
+            show(diff > 0 ? current + 1 : current - 1);
+            clearInterval(_carouselInterval);
+            _carouselInterval = setInterval(() => show(current + 1), 5000);
+        }
+    }, { passive: true });
 }
 
 // ─── Today's Tasks ───
@@ -179,7 +354,6 @@ async function toggleTask(id, complete) {
 
 // ─── Events ───
 function renderEvents(events) {
-    // Filter out past events client-side as safety net
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const futureEvents = events.filter(e => {
@@ -190,7 +364,7 @@ function renderEvents(events) {
         return `<div class="empty-state"><div class="emoji"><i data-lucide="calendar"></i></div><p>No upcoming events</p></div>`;
     }
     return futureEvents.map(e => {
-        const dateStr = (e.date || '').split('T')[0]; // "2026-02-28"
+        const dateStr = (e.date || '').split('T')[0];
         const d = new Date(dateStr + 'T00:00:00Z');
         const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
         const day = d.getUTCDate();
@@ -234,7 +408,6 @@ function renderGarden(watering, dashboard) {
 
     if (dashboard.recommendations?.length) {
         const rec = dashboard.recommendations[0];
-        // Recommendations can be strings or objects with description/action fields
         const recText = typeof rec === 'string' ? rec
             : (rec.description || rec.action || rec.message || rec.recommendation || rec.text || JSON.stringify(rec));
         const plantName = rec.plant_name ? `<strong>${esc(rec.plant_name)}:</strong> ` : '';
@@ -244,63 +417,59 @@ function renderGarden(watering, dashboard) {
     return html;
 }
 
-// ─── Photo Carousel ───
-let _carouselInterval = null;
-function renderPhotoCarousel(photos) {
-    if (!photos || !photos.length) return '';
-    return `<div class="card photo-carousel-card">
-        <div class="photo-carousel" id="photoCarousel">
-            ${photos.map((p, i) => `
-                <div class="carousel-slide${i === 0 ? ' active' : ''}" data-index="${i}">
-                    <img src="${p.image_path}" alt="${esc(p.title || '')}" loading="${i < 2 ? 'eager' : 'lazy'}">
-                    <div class="carousel-caption">${esc(p.title || '')}</div>
-                </div>
-            `).join('')}
-            <div class="carousel-dots">
-                ${photos.map((_, i) => `<span class="carousel-dot${i === 0 ? ' active' : ''}" data-index="${i}"></span>`).join('')}
+// ─── Sports Next Up ───
+function renderSportsNextUp(data) {
+    const events = data?.data || data;
+    if (!events || !events.length) return '';
+    const icons = { football: '⚽', cricket: '🏏', tennis: '🎾', f1: '🏎️' };
+    const colors = { football: '#2D8544', cricket: '#FF9933', tennis: '#4CAF50', f1: '#FF1801' };
+    const items = events.slice(0, 3).map(e => {
+        const dt = e.date ? new Date(e.date) : null;
+        const timeStr = dt ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+        const relTime = dt ? getRelativeTime(dt) : '';
+        const isLive = relTime === 'Live/Past' || (e.status && e.status.toLowerCase() === 'live');
+        const liveIndicator = isLive ? '<span class="live-dot"></span>' : '';
+        return `<div class="sports-next-item" style="border-left: 3px solid ${colors[e.sport] || '#666'}">
+            <div style="font-size:20px">${icons[e.sport] || '🏅'}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${liveIndicator}${esc(e.title || e.name || 'TBA')}</div>
+                <div style="font-size:11px;opacity:0.6">${e.competition || e.series || ''}</div>
             </div>
-        </div>
+            <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:11px;font-weight:600;color:${colors[e.sport] || '#888'}">${isLive ? '🔴 LIVE' : relTime}</div>
+                <div style="font-size:10px;opacity:0.5">${timeStr}</div>
+            </div>
+        </div>`;
+    }).join('');
+    return `<div class="card widget-card widget-sports">
+        <div class="card-header"><h3>⚡ Sports Next Up</h3><a href="/app/sports.html" class="link">View All →</a></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
     </div>`;
 }
 
-function initPhotoCarousel() {
-    const el = document.getElementById('photoCarousel');
-    if (!el) return;
-    const slides = el.querySelectorAll('.carousel-slide');
-    const dots = el.querySelectorAll('.carousel-dot');
-    if (slides.length < 2) return;
-
-    let current = 0;
-    const show = (idx) => {
-        slides[current].classList.remove('active');
-        dots[current].classList.remove('active');
-        current = (idx + slides.length) % slides.length;
-        slides[current].classList.add('active');
-        dots[current].classList.add('active');
-    };
-
-    // Auto-rotate every 5s
-    if (_carouselInterval) clearInterval(_carouselInterval);
-    _carouselInterval = setInterval(() => show(current + 1), 5000);
-
-    // Dot clicks
-    dots.forEach(d => d.addEventListener('click', () => {
-        show(+d.dataset.index);
-        clearInterval(_carouselInterval);
-        _carouselInterval = setInterval(() => show(current + 1), 5000);
-    }));
-
-    // Swipe support
-    let startX = 0;
-    el.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
-    el.addEventListener('touchend', e => {
-        const diff = startX - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 50) {
-            show(diff > 0 ? current + 1 : current - 1);
-            clearInterval(_carouselInterval);
-            _carouselInterval = setInterval(() => show(current + 1), 5000);
-        }
-    }, { passive: true });
+// ─── Travel Widget ───
+function renderTravelWidget(trips) {
+    if (!trips || !trips.length) return '';
+    const active = trips.filter(t => t.status !== 'archived').slice(0, 2);
+    if (!active.length) return '';
+    const items = active.map(t => {
+        const statusColors = { planning: 'var(--amber)', ready: 'var(--green)' };
+        const statusColor = statusColors[t.status] || 'var(--text-secondary)';
+        return `<div class="travel-widget-item" onclick="window.location='/app/travel.html'" style="cursor:pointer">
+            <div style="font-size:24px">✈️</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:14px">${esc(t.destination)}</div>
+                <div style="font-size:11px;color:var(--text-secondary)">${t.country || ''} · ${t.activity_count || 0} activities</div>
+            </div>
+            <div style="text-align:right">
+                <span style="font-size:11px;font-weight:600;color:${statusColor};text-transform:uppercase">${t.status}</span>
+            </div>
+        </div>`;
+    }).join('');
+    return `<div class="card widget-card widget-travel">
+        <div class="card-header"><h3>✈️ Trips</h3><a href="/app/travel.html" class="link">View All →</a></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
+    </div>`;
 }
 
 // ─── Recent Captures ───
@@ -368,60 +537,6 @@ function timeAgo(date) {
     return d === 1 ? 'yesterday' : `${d}d ago`;
 }
 
-// ─── Sports Next Up Widget ───
-function renderSportsNextUp(data) {
-    const events = data?.data || data;
-    if (!events || !events.length) return '';
-    const icons = { football: '⚽', cricket: '🏏', tennis: '🎾', f1: '🏎️' };
-    const colors = { football: '#2D8544', cricket: '#FF9933', tennis: '#4CAF50', f1: '#FF1801' };
-    const items = events.slice(0, 3).map(e => {
-        const dt = e.date ? new Date(e.date) : null;
-        const timeStr = dt ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
-        const relTime = dt ? getRelativeTime(dt) : '';
-        return `<div class="sports-next-item" style="border-left: 3px solid ${colors[e.sport] || '#666'}">
-            <div style="font-size:20px">${icons[e.sport] || '🏅'}</div>
-            <div style="flex:1;min-width:0">
-                <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.title || e.name || 'TBA')}</div>
-                <div style="font-size:11px;opacity:0.6">${e.competition || e.series || ''}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-                <div style="font-size:11px;font-weight:600;color:${colors[e.sport] || '#888'}">${relTime}</div>
-                <div style="font-size:10px;opacity:0.5">${timeStr}</div>
-            </div>
-        </div>`;
-    }).join('');
-    return `<div class="card">
-        <div class="card-header"><h3>⚡ Sports Next Up</h3><a href="/app/sports.html" class="link">View All →</a></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
-    </div>`;
-}
-
-// ─── Travel Widget ───
-function renderTravelWidget(trips) {
-    if (!trips || !trips.length) return '';
-    // Show non-archived trips, most recent first
-    const active = trips.filter(t => t.status !== 'archived').slice(0, 2);
-    if (!active.length) return '';
-    const items = active.map(t => {
-        const statusColors = { planning: 'var(--amber)', ready: 'var(--green)' };
-        const statusColor = statusColors[t.status] || 'var(--text-secondary)';
-        return `<div class="travel-widget-item" onclick="window.location='/app/travel.html'" style="cursor:pointer">
-            <div style="font-size:24px">✈️</div>
-            <div style="flex:1;min-width:0">
-                <div style="font-weight:600;font-size:14px">${esc(t.destination)}</div>
-                <div style="font-size:11px;color:var(--text-secondary)">${t.country || ''} · ${t.activity_count || 0} activities</div>
-            </div>
-            <div style="text-align:right">
-                <span style="font-size:11px;font-weight:600;color:${statusColor};text-transform:uppercase">${t.status}</span>
-            </div>
-        </div>`;
-    }).join('');
-    return `<div class="card">
-        <div class="card-header"><h3>✈️ Trips</h3><a href="/app/travel.html" class="link">View All →</a></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">${items}</div>
-    </div>`;
-}
-
 function getRelativeTime(date) {
     const now = new Date();
     const diff = date - now;
@@ -435,5 +550,4 @@ function getRelativeTime(date) {
 
 // ─── Helpers ───
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-function skeletonCards(n) { return Array(n).fill('<div class="summary-card"><div class="skeleton skeleton-line" style="width:60%"></div><div class="skeleton skeleton-line" style="width:30%;height:28px"></div><div class="skeleton skeleton-line" style="width:40%"></div></div>').join(''); }
 function skeletonWidget() { return `<div class="card"><div class="card-header"><div class="skeleton skeleton-line" style="width:40%"></div></div><div class="card-body">${Array(3).fill('<div class="skeleton skeleton-line"></div>').join('')}</div></div>`; }
