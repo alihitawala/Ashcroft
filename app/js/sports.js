@@ -1305,7 +1305,7 @@ async function renderF1() {
             fetchCached('f1-recap', () => safeGet('/sports/f1/recap/2025')),
         ]);
 
-        const races = calendar?.data || [];
+        const races = (calendar?.data || []).sort((a, b) => new Date(a.date) - new Date(b.date));
         const driverList = drivers?.data || [];
         const consList = constructors?.data || [];
         const now = new Date();
@@ -1332,6 +1332,55 @@ async function renderF1() {
 
         // AI Summary
         html += renderSummary(f1Summary?.data || f1Summary);
+
+        // 2026 STANDINGS (current season)
+        if (driverList.length) {
+            html += '<div class="standings-card stagger" style="--i:2"><div class="standings-title">🏆 Driver Standings</div>';
+            driverList.slice(0, 10).forEach((d, i) => {
+                const name = d.driver?.name || d.name || '?';
+                const team = d.constructor || d.team || '';
+                const color = findTeamColor(team);
+                html += `<div class="st-row">
+                    <span class="st-pos">${d.position || i + 1}</span>
+                    <div class="st-color" style="background:${color}"></div>
+                    <div class="st-info"><div class="st-dname">${name}</div><div class="st-team">${f1Logo(team, 14)}${team}</div></div>
+                    <span class="st-pts">${d.points || 0}</span>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        if (consList.length) {
+            const maxPtsTop = parseFloat(consList[0]?.points) || 1;
+            html += '<div class="standings-card stagger" style="--i:3"><div class="standings-title">🏗️ Constructor Standings</div>';
+            consList.forEach((c, i) => {
+                const name = c.constructor?.name || c.name || '?';
+                const pts = c.points || 0;
+                const pct = Math.round((pts / maxPtsTop) * 100);
+                const color = findTeamColor(name);
+                html += `<div class="st-row">
+                    <span class="st-pos">${c.position || i + 1}</span>
+                    <div class="st-color" style="background:${color}"></div>
+                    <div class="st-info" style="flex:1"><div class="st-dname">${f1Logo(name, 18)}${name}</div></div>
+                    <div style="flex:2"><div class="rr-bar"><div class="rr-bar-fill" style="--bar-w:${pct}%;--i:${i};background:${color}"></div></div></div>
+                    <span class="st-pts">${pts}</span>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        if (!driverList.length && !consList.length && races.length) {
+            html += `<div class="info-card stagger" style="--i:4">
+                <div class="info-card-title">⏳ Season Starts ${fmtShort(races[0]?.date)}</div>
+                <div class="info-card-body">Driver and constructor standings will appear once the 2026 season begins with the ${races[0]?.name || 'first race'}.</div>
+            </div>`;
+        }
+
+        // RACE CALENDAR
+        if (races.length) {
+            html += '<div class="sh stagger" style="--i:5"><span class="sh-emoji">📅</span> RACE CALENDAR</div>';
+            html += renderF1Calendar(races, now);
+        }
 
         // 2025 SEASON RECAP
         const recapData = f1Recap?.data || f1Recap;
@@ -1406,55 +1455,6 @@ async function renderF1() {
                     <strong>Key storylines:</strong> Lewis Hamilton at Ferrari for his second year, Kimi Antonelli in his sophomore season at Mercedes, Carlos Sainz at Williams, and the question — can Norris defend his title against a hungry Verstappen?<br><br>
                     <strong>New engine suppliers:</strong> Audi enters as a works team, marking the most significant regulation change since 2014.
                 </div>
-            </div>`;
-        }
-
-        // RACE CALENDAR
-        if (races.length) {
-            html += '<div class="sh stagger" style="--i:3"><span class="sh-emoji">📅</span> RACE CALENDAR</div>';
-            html += renderF1Calendar(races, now);
-        }
-
-        // STANDINGS (when data exists)
-        if (driverList.length) {
-            html += '<div class="standings-card stagger" style="--i:20"><div class="standings-title">🏆 Driver Standings</div>';
-            driverList.slice(0, 10).forEach((d, i) => {
-                const name = d.name || d.driver?.familyName || '?';
-                const team = d.team || d.constructors?.[0]?.name || '';
-                const color = findTeamColor(team);
-                html += `<div class="st-row">
-                    <span class="st-pos">${d.position || i + 1}</span>
-                    <div class="st-color" style="background:${color}"></div>
-                    <div class="st-info"><div class="st-dname">${name}</div><div class="st-team">${f1Logo(team, 14)}${team}</div></div>
-                    <span class="st-pts">${d.points || 0}</span>
-                </div>`;
-            });
-            html += '</div>';
-        }
-
-        if (consList.length) {
-            const maxPts = parseFloat(consList[0]?.points) || 1;
-            html += '<div class="standings-card stagger" style="--i:21"><div class="standings-title">🏗️ Constructor Standings</div>';
-            consList.forEach((c, i) => {
-                const name = c.name || c.constructor?.name || '?';
-                const pts = c.points || 0;
-                const pct = Math.round((pts / maxPts) * 100);
-                const color = findTeamColor(name);
-                html += `<div class="st-row">
-                    <span class="st-pos">${c.position || i + 1}</span>
-                    <div class="st-color" style="background:${color}"></div>
-                    <div class="st-info" style="flex:1"><div class="st-dname">${f1Logo(name, 18)}${name}</div></div>
-                    <div style="flex:2"><div class="rr-bar"><div class="rr-bar-fill" style="--bar-w:${pct}%;--i:${i};background:${color}"></div></div></div>
-                    <span class="st-pts">${pts}</span>
-                </div>`;
-            });
-            html += '</div>';
-        }
-
-        if (!driverList.length && !consList.length && races.length) {
-            html += `<div class="info-card stagger" style="--i:22">
-                <div class="info-card-title">⏳ Season Starts ${fmtShort(races[0]?.date)}</div>
-                <div class="info-card-body">Driver and constructor standings will appear once the 2026 season begins with the ${races[0]?.name || 'first race'}.</div>
             </div>`;
         }
 

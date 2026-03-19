@@ -61,7 +61,7 @@
             <div class="detail-panel" id="detailPanel"></div>
             <div class="quick-action-bar" id="quickActionBar"></div>
         </div>
-        <!-- Garden Photo Lightbox -->
+        <!-- Garden Photo Lightbox (dual-layer) -->
         <div class="garden-lightbox" id="gardenLightbox">
             <div class="garden-lightbox-header">
                 <div>
@@ -71,17 +71,34 @@
                 <button class="garden-lightbox-close" id="glbClose"><i data-lucide="x"></i></button>
             </div>
             <div class="garden-lightbox-body" id="glbBody">
-                <img class="garden-lightbox-img" id="glbImg" src="" alt="">
+                <div class="glb-layer" id="glbLayerA"><img id="glbImgA" src="" alt=""></div>
+                <div class="glb-layer" id="glbLayerB" style="visibility:hidden"><img id="glbImgB" src="" alt=""></div>
                 <button class="garden-lightbox-nav garden-lightbox-prev" id="glbPrev"><i data-lucide="chevron-left"></i></button>
                 <button class="garden-lightbox-nav garden-lightbox-next" id="glbNext"><i data-lucide="chevron-right"></i></button>
             </div>
             <div class="garden-lightbox-counter" id="glbCounter"></div>
+        </div>
+        <!-- Growth Animation Overlay -->
+        <div class="growth-overlay" id="growthOverlay">
+            <div class="growth-header">
+                <div class="growth-plant-name" id="growthPlantName"></div>
+                <button class="growth-close" id="growthClose"><i data-lucide="x"></i></button>
+            </div>
+            <div class="growth-canvas" id="growthCanvas"></div>
+            <div class="growth-date" id="growthDate"></div>
+            <div class="growth-controls">
+                <button class="growth-play-btn" id="growthPlayBtn"><i data-lucide="pause"></i></button>
+                <div class="growth-progress-bar"><div class="growth-progress-fill" id="growthProgressFill"></div></div>
+            </div>
+            <div class="growth-summary hidden" id="growthSummary"></div>
         </div>
     `;
     initAppShell('garden');
 
     // ─── State ───
     let plants = [];
+    let zones = [];
+    let activeZoneFilter = null; // null = All
     let currentPlant = null;
     let currentTimeline = [];
     let currentLogs = [];
@@ -90,11 +107,19 @@
     let wateringData = null;
     let wateringExpanded = false;
 
+    // ─── Load Zones ───
+    async function loadZones() {
+        try {
+            zones = await API.get('/garden/zones') || [];
+        } catch { zones = []; }
+    }
+
     // ─── Load Plants ───
     async function loadPlants() {
         const area = document.getElementById('contentArea');
         area.innerHTML = renderSkeletons(8);
         try {
+            await loadZones();
             plants = await API.get('/garden/plants') || [];
             renderPlantGrid();
         } catch (err) {
@@ -174,7 +199,8 @@
                     : `<div class="watering-thumb-placeholder"><i data-lucide="sprout"></i></div>`;
                 const due = p.next_watering ? formatDate(p.next_watering) : '';
                 const last = p.last_watered ? formatDate(p.last_watered) : '';
-                const meta = [due ? `Due ${due}` : '', last ? `Last ${last}` : ''].filter(Boolean).join(' · ');
+                const zoneName = p.zone_name ? ` · ${p.zone_name}` : '';
+                const meta = [due ? `Due ${due}` : '', last ? `Last ${last}` : ''].filter(Boolean).join(' · ') + zoneName;
                 const gal = p.water_gallons || '';
                 h += `<div class="watering-plant-row" data-plant-id="${p.id}">
                     ${thumb}
@@ -254,6 +280,19 @@
         });
     }
 
+    // ─── Render Zone Filter Pills ───
+    function renderZoneFilter() {
+        if (zones.length === 0) return '';
+        let html = '<div class="zone-filter-bar">';
+        html += `<button class="zone-pill ${activeZoneFilter === null ? 'active' : ''}" data-zone-id="">All</button>`;
+        zones.forEach(z => {
+            html += `<button class="zone-pill ${activeZoneFilter === z.id ? 'active' : ''}" data-zone-id="${z.id}">${esc(z.name)}</button>`;
+        });
+        html += `<button class="zone-pill zone-pill-manage" data-action="manage-zones" title="Manage Zones"><i data-lucide="settings"></i></button>`;
+        html += '</div>';
+        return html;
+    }
+
     // ─── Render Plant Grid ───
     function renderPlantGrid() {
         const area = document.getElementById('contentArea');
@@ -261,7 +300,7 @@
         countEl.textContent = `${plants.length} plant${plants.length !== 1 ? 's' : ''}`;
 
         if (plants.length === 0) {
-            area.innerHTML = `
+            area.innerHTML = renderZoneFilter() + `
                 <div class="garden-empty">
                     <div class="garden-empty-icon"><i data-lucide="sprout"></i></div>
                     <h2>Start Your Garden</h2>
@@ -272,25 +311,54 @@
                 </div>
             `;
             lucide.createIcons();
+            bindZoneFilterEvents();
             return;
         }
 
-        const sorted = sortPlants(plants);
-        let html = '<div class="plants-grid">';
-        sorted.forEach((plant, i) => {
-            const delay = i * 50;
-            html += renderPlantCard(plant, delay);
-        });
-        // Add plant card at end
+        let filtered = plants;
+        if (activeZoneFilter !== null) {
+            filtered = plants.filter(p => p.zone_id === activeZoneFilter);
+        }
+
+        const sorted = sortPlants(filtered);
+        let html = renderZoneFilter();
+
+        // Group by zone when no filter active
+        if (activeZoneFilter === null && zones.length > 0) {
+            // Group: each zone, then unassigned
+            zones.forEach(z => {
+                const zonePlants = sorted.filter(p => p.zone_id === z.id);
+                if (zonePlants.length === 0) return;
+                html += `<div class="zone-group-header">${esc(z.name)}</div>`;
+                html += '<div class="plants-grid">';
+                zonePlants.forEach((plant, i) => { html += renderPlantCard(plant, i * 50); });
+                html += '</div>';
+            });
+            const unassigned = sorted.filter(p => !p.zone_id);
+            if (unassigned.length > 0) {
+                html += `<div class="zone-group-header">Unassigned</div>`;
+                html += '<div class="plants-grid">';
+                unassigned.forEach((plant, i) => { html += renderPlantCard(plant, i * 50); });
+                html += '</div>';
+            }
+        } else {
+            html += '<div class="plants-grid">';
+            sorted.forEach((plant, i) => { html += renderPlantCard(plant, i * 50); });
+            html += '</div>';
+        }
+
+        // Add plant card
         html += `
-            <div class="add-plant-card" style="animation-delay:${sorted.length * 50}ms" onclick="document.getElementById('addPlantBtnTop').click()">
-                <i data-lucide="plus"></i>
-                <span>Add Plant</span>
+            <div class="plants-grid" style="margin-top:12px">
+                <div class="add-plant-card" onclick="document.getElementById('addPlantBtnTop').click()">
+                    <i data-lucide="plus"></i>
+                    <span>Add Plant</span>
+                </div>
             </div>
         `;
-        html += '</div>';
         area.innerHTML = html;
         lucide.createIcons();
+        bindZoneFilterEvents();
 
         // Click handlers
         area.querySelectorAll('.plant-card').forEach(card => {
@@ -301,8 +369,54 @@
             });
         });
 
+        // Quick water CTA buttons
+        area.querySelectorAll('.plant-card-water-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const plantId = btn.dataset.plantId;
+                const plantName = btn.dataset.plantName;
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader"></i> ...';
+                lucide.createIcons({ nodes: [btn] });
+                try {
+                    await API.post(`/garden/plants/${plantId}/logs`, { type: 'watering', notes: 'Quick water from garden view' });
+                    // Refresh data and re-render
+                    [wateringData, plants] = await Promise.all([
+                        API.get('/garden/watering-schedule').catch(() => null),
+                        API.get('/garden/plants').catch(() => plants)
+                    ]);
+                    renderPlantGrid();
+                    // Find next watering date for toast
+                    let nextDate = '';
+                    if (wateringData) {
+                        for (const list of [wateringData.today, wateringData.soon, wateringData.upcoming]) {
+                            const found = (list || []).find(p => p.id == plantId);
+                            if (found?.next_watering) { nextDate = ' — next: ' + formatDate(found.next_watering); break; }
+                        }
+                    }
+                    showToast(`💧 Watered ${plantName} ✓${nextDate}`);
+                } catch (err) {
+                    showToast('Failed to log watering', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="droplets"></i> Water';
+                    lucide.createIcons({ nodes: [btn] });
+                }
+            });
+        });
+
         // Re-render watering schedule (since innerHTML replaced it)
         if (wateringData) renderWateringSchedule();
+    }
+
+    function bindZoneFilterEvents() {
+        document.querySelectorAll('.zone-pill[data-zone-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const zid = btn.dataset.zoneId;
+                activeZoneFilter = zid === '' ? null : parseInt(zid);
+                renderPlantGrid();
+            });
+        });
+        document.querySelector('.zone-pill-manage')?.addEventListener('click', openZoneManager);
     }
 
     function renderPlantCard(plant, delay) {
@@ -333,21 +447,28 @@
         else if (trend === 'stable' && score != null) trendHTML = '<span class="trend-arrow stable">→</span>';
 
         // Watering info
-        let wateringLine = '';
+        let wateringLabel = '';
+        let wateringClass = '';
+        let wateringGal = '';
         if (plant.next_watering && wateringData) {
             const allPlants = [...(wateringData.overdue||[]), ...(wateringData.today||[]), ...(wateringData.soon||[]), ...(wateringData.upcoming||[])];
             const wp = allPlants.find(w => w.id === plant.id);
             if (wp) {
-                const gal = wp.water_gallons ? ` · ${wp.water_gallons} gal` : '';
-                if (wp.days_until_watering < 0) {
-                    wateringLine = `<div class="plant-card-watering pcw-overdue">💧 Overdue by ${Math.abs(wp.days_until_watering)} day${Math.abs(wp.days_until_watering)!==1?'s':''}${gal}</div>`;
-                } else if (wp.days_until_watering === 0) {
-                    wateringLine = `<div class="plant-card-watering pcw-today">💧 Due today${gal}</div>`;
-                } else {
-                    wateringLine = `<div class="plant-card-watering">💧 Due in ${wp.days_until_watering} day${wp.days_until_watering!==1?'s':''}${gal}</div>`;
-                }
+                const d = wp.days_until_watering;
+                wateringGal = wp.water_gallons ? wp.water_gallons.replace(/\s*gallons?/i,'').replace(/\s*gal\.?/i,'').trim() : '';
+                if (d < 0) { wateringLabel = `Overdue ${Math.abs(d)}d`; wateringClass = 'pcw-overdue'; }
+                else if (d === 0) { wateringLabel = 'Today'; wateringClass = 'pcw-today'; }
+                else { wateringLabel = `In ${d}d`; wateringClass = d <= 2 ? 'pcw-soon' : ''; }
             }
         }
+
+        const wateringFooter = wateringLabel ? `
+            <div class="plant-card-footer ${wateringClass}">
+                <span class="pcw-label ${wateringClass}">💧 ${wateringLabel}</span>
+                <button class="plant-card-water-btn ${wateringClass}" data-plant-id="${plant.id}" data-plant-name="${esc(plant.name)}" title="Log watering">
+                    <i data-lucide="droplets"></i>${wateringGal ? ` ${wateringGal}` : ' Water'}
+                </button>
+            </div>` : '';
 
         return `
             <div class="plant-card" data-plant-id="${plant.id}" style="animation-delay:${delay}ms">
@@ -359,7 +480,7 @@
                         ${plant.species ? `<div class="plant-card-species">${esc(plant.species)}</div>` : ''}
                     </div>
                 </div>
-                ${wateringLine}
+                ${wateringFooter}
             </div>
         `;
     }
@@ -525,6 +646,7 @@
             timelineHTML = `<div class="detail-section">
                 <div class="detail-section-header">
                     <span class="detail-section-title"><i data-lucide="images"></i> Photo Timeline</span>
+                    ${currentTimeline.length >= 2 ? `<button class="btn btn-ghost growth-anim-btn" id="growthBtn" title="Growth Animation" style="font-size:12px;padding:4px 8px">🎬 Growth</button>` : ''}
                 </div>
                 <div class="photo-timeline" id="photoTimeline">`;
             currentTimeline.forEach((entry, i) => {
@@ -581,6 +703,7 @@
 
         // Plant meta
         const metaParts = [];
+        if (plant.zone_name) metaParts.push(`<span><i data-lucide="map"></i> ${esc(plant.zone_name)}</span>`);
         if (plant.type) metaParts.push(`<span><i data-lucide="tag"></i> ${esc(plant.type)}</span>`);
         if (plant.location) metaParts.push(`<span><i data-lucide="map-pin"></i> ${esc(plant.location)}</span>`);
         if (plant.sunlight) metaParts.push(`<span><i data-lucide="sun"></i> ${esc(plant.sunlight)}</span>`);
@@ -736,6 +859,9 @@
 
         // Delete plant
         document.getElementById('deletePlantBtn')?.addEventListener('click', () => confirmDeletePlant());
+
+        // Growth animation
+        document.getElementById('growthBtn')?.addEventListener('click', openGrowthAnimation);
     }
 
     // ─── Photo Upload ───
@@ -831,12 +957,14 @@
                         <label>Type</label>
                         <select class="form-input" name="type">
                             <option value="">Select...</option>
-                            <option value="tree">Tree</option>
-                            <option value="fruit">Fruit</option>
+                            <option value="fruit_tree">Fruit Tree</option>
                             <option value="vegetable">Vegetable</option>
                             <option value="herb">Herb</option>
                             <option value="flower">Flower</option>
                             <option value="succulent">Succulent</option>
+                            <option value="shrub">Shrub</option>
+                            <option value="vine">Vine</option>
+                            <option value="houseplant">Houseplant</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -857,9 +985,18 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Planted Date</label>
-                    <input class="form-input" name="planted_date" type="date">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Planted Date</label>
+                        <input class="form-input" name="planted_date" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label>Zone</label>
+                        <select class="form-input" name="zone_id">
+                            <option value="">No zone</option>
+                            ${zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join('')}
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Photo</label>
@@ -874,6 +1011,7 @@
             async onSubmit(modal) {
                 const name = modal.querySelector('[name="name"]').value.trim();
                 if (!name) throw new Error('Plant name is required');
+                const zoneVal = modal.querySelector('[name="zone_id"]')?.value;
                 const body = {
                     name,
                     species: modal.querySelector('[name="species"]').value.trim() || undefined,
@@ -881,6 +1019,7 @@
                     location: modal.querySelector('[name="location"]').value.trim() || undefined,
                     sunlight: modal.querySelector('[name="sunlight"]').value || undefined,
                     planted_date: modal.querySelector('[name="planted_date"]').value || undefined,
+                    zone_id: zoneVal ? parseInt(zoneVal) : undefined,
                 };
                 const newPlant = await API.post('/garden/plants', body);
                 // Upload photo if selected
@@ -936,8 +1075,8 @@
                         <label>Type</label>
                         <select class="form-input" name="type">
                             <option value="">Select...</option>
-                            ${['tree','fruit','vegetable','herb','flower','succulent','other'].map(t =>
-                                `<option value="${t}" ${p.type === t ? 'selected' : ''}>${capitalize(t)}</option>`
+                            ${['fruit_tree','vegetable','herb','flower','succulent','shrub','vine','houseplant','other'].map(t =>
+                                `<option value="${t}" ${p.type === t ? 'selected' : ''}>${t === 'fruit_tree' ? 'Fruit Tree' : capitalize(t)}</option>`
                             ).join('')}
                         </select>
                     </div>
@@ -957,17 +1096,26 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label>Zone</label>
+                    <select class="form-input" name="zone_id">
+                        <option value="">No zone</option>
+                        ${zones.map(z => `<option value="${z.id}" ${p.zone_id === z.id ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}
+                    </select>
+                </div>
             `,
             submitLabel: 'Save Changes',
             async onSubmit(modal) {
                 const name = modal.querySelector('[name="name"]').value.trim();
                 if (!name) throw new Error('Name is required');
+                const zoneVal = modal.querySelector('[name="zone_id"]').value;
                 await API.put(`/garden/plants/${p.id}`, {
                     name,
                     species: modal.querySelector('[name="species"]').value.trim() || null,
                     type: modal.querySelector('[name="type"]').value || null,
                     location: modal.querySelector('[name="location"]').value.trim() || null,
                     sunlight: modal.querySelector('[name="sunlight"]').value || null,
+                    zone_id: zoneVal ? parseInt(zoneVal) : null,
                 });
                 showToast('Plant updated ✓');
                 // Refresh
@@ -1045,41 +1193,81 @@
         }
     });
 
-    // ─── Garden Photo Lightbox ───
+    // ─── Garden Photo Lightbox (Dual-Layer) ───
     let glbPhotos = [];
     let glbIndex = 0;
     let glbControlsVisible = true;
+    let glbActiveLayerId = 'A';
+    let glbZoomScale = 1, glbZoomX = 0, glbZoomY = 0;
+    let glbIsAnimating = false;
+
+    function glbGetActiveLayer() { return document.getElementById('glbLayer' + glbActiveLayerId); }
+    function glbGetBackLayer() { return document.getElementById('glbLayer' + (glbActiveLayerId === 'A' ? 'B' : 'A')); }
+    function glbGetActiveImg() { return document.getElementById('glbImg' + glbActiveLayerId); }
+    function glbGetBackImg() { return document.getElementById('glbImg' + (glbActiveLayerId === 'A' ? 'B' : 'A')); }
+
+    function glbPhotoSrc(idx) {
+        if (idx < 0 || idx >= glbPhotos.length) return '';
+        const p = glbPhotos[idx];
+        return p.photo_url || p.thumbnail_url || '';
+    }
+
+    function glbResetLayers() {
+        const active = glbGetActiveLayer();
+        const back = glbGetBackLayer();
+        active.style.transition = 'none';
+        active.style.transform = '';
+        active.style.visibility = 'visible';
+        active.style.zIndex = '2';
+        back.style.transition = 'none';
+        back.style.transform = '';
+        back.style.visibility = 'hidden';
+        back.style.zIndex = '1';
+    }
+
+    function glbApplyZoom(animate) {
+        const w = glbGetActiveLayer();
+        if (!w) return;
+        w.style.transition = animate ? 'transform 0.25s ease' : 'none';
+        if (glbZoomScale <= 1) { glbZoomScale = 1; glbZoomX = 0; glbZoomY = 0; }
+        w.style.transform = `translate(${glbZoomX}px, ${glbZoomY}px) scale(${glbZoomScale})`;
+    }
+    function glbResetZoom() { glbZoomScale = 1; glbZoomX = 0; glbZoomY = 0; glbApplyZoom(true); }
+    function glbIsZoomed() { return glbZoomScale > 1.05; }
 
     function openGardenLightbox(photos, startIndex) {
         glbPhotos = photos;
         glbIndex = startIndex || 0;
+        glbActiveLayerId = 'A';
+        glbZoomScale = 1; glbZoomX = 0; glbZoomY = 0;
+        glbIsAnimating = false;
+        glbResetLayers();
         const lb = document.getElementById('gardenLightbox');
         lb.classList.add('active');
         lb.classList.remove('controls-hidden');
+        lb.style.background = '';
         glbControlsVisible = true;
         document.body.style.overflow = 'hidden';
-        updateGardenLightbox();
+        glbGetActiveImg().src = glbPhotoSrc(glbIndex);
+        updateGardenLightboxUI();
+        // Preload neighbors
+        if (glbIndex > 0) { const i = new Image(); i.src = glbPhotoSrc(glbIndex - 1); }
+        if (glbIndex < glbPhotos.length - 1) { const i = new Image(); i.src = glbPhotoSrc(glbIndex + 1); }
         lucide.createIcons({ attrs: { class: 'lucide' } });
-        initGlbTouch();
     }
 
     function closeGardenLightbox() {
         const lb = document.getElementById('gardenLightbox');
         lb.classList.remove('active');
+        lb.style.background = '';
         document.body.style.overflow = '';
     }
 
-    function updateGardenLightbox() {
+    function updateGardenLightboxUI() {
         const photo = glbPhotos[glbIndex];
         if (!photo) return;
-        const img = document.getElementById('glbImg');
-        img.src = photo.photo_url || photo.thumbnail_url || '';
-        img.style.transform = '';
-        img.classList.remove('dragging');
         document.getElementById('glbTitle').textContent = currentPlant?.name || '';
         document.getElementById('glbDate').textContent = photo.taken_at ? formatDate(photo.taken_at) : '';
-
-        // Dots
         const counter = document.getElementById('glbCounter');
         if (glbPhotos.length <= 20) {
             counter.innerHTML = glbPhotos.map((_, i) =>
@@ -1088,202 +1276,238 @@
         } else {
             counter.innerHTML = `<span style="color:#fff;font-size:13px">${glbIndex + 1} / ${glbPhotos.length}</span>`;
         }
-
-        // Nav buttons
         document.getElementById('glbPrev').style.display = glbIndex > 0 ? '' : 'none';
         document.getElementById('glbNext').style.display = glbIndex < glbPhotos.length - 1 ? '' : 'none';
     }
 
     function glbNavigate(dir) {
         const next = glbIndex + dir;
-        if (next < 0 || next >= glbPhotos.length) return;
-        glbIndex = next;
-        updateGardenLightbox();
+        if (next < 0 || next >= glbPhotos.length || glbIsAnimating) return;
+        glbIsAnimating = true;
+        const vw = window.innerWidth;
+        const active = glbGetActiveLayer();
+        const back = glbGetBackLayer();
+        // Prepare back layer with next photo
+        glbGetBackImg().src = glbPhotoSrc(next);
+        back.style.transition = 'none';
+        back.style.transform = `translateX(${dir > 0 ? vw : -vw}px)`;
+        back.style.visibility = 'visible';
+        back.style.zIndex = '1';
+        // Force reflow
+        back.offsetWidth;
+        // Animate
+        active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+        active.style.transform = `translateX(${dir > 0 ? -vw : vw}px)`;
+        back.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+        back.style.transform = 'translateX(0px)';
+        setTimeout(() => {
+            glbActiveLayerId = glbActiveLayerId === 'A' ? 'B' : 'A';
+            const newBack = glbGetBackLayer();
+            newBack.style.transition = 'none';
+            newBack.style.transform = '';
+            newBack.style.visibility = 'hidden';
+            newBack.style.zIndex = '1';
+            const newActive = glbGetActiveLayer();
+            newActive.style.zIndex = '2';
+            glbIndex = next;
+            glbZoomScale = 1; glbZoomX = 0; glbZoomY = 0;
+            updateGardenLightboxUI();
+            // Preload neighbors
+            if (next > 0) { const i = new Image(); i.src = glbPhotoSrc(next - 1); }
+            if (next < glbPhotos.length - 1) { const i = new Image(); i.src = glbPhotoSrc(next + 1); }
+            glbIsAnimating = false;
+        }, 310);
     }
 
-    // Touch handling for swipe and dismiss
-    function initGlbTouch() {
+    // Touch handling — dual-layer swipe, pinch-to-zoom, double-tap, swipe-to-dismiss
+    (function initGlbTouch() {
         const body = document.getElementById('glbBody');
-        const img = document.getElementById('glbImg');
-        let startX = 0, startY = 0, dx = 0, dy = 0, locked = null;
-
-        // Zoom state
-        let scale = 1, panX = 0, panY = 0;
+        let touchStartX = 0, touchStartY = 0, isDraggingDown = false, swipeDX = 0, swipeLocked = '';
         let pinchStartDist = 0, pinchStartScale = 1;
-        let pinchMidX = 0, pinchMidY = 0;
-        let isPinching = false;
+        let isPinching = false, lastTap = 0;
 
-        // Double-tap state
-        let lastTapTime = 0;
+        function pinchDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
 
-        function applyTransform(extra) {
-            img.style.transform = extra || `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
-
-        function resetZoom() {
-            scale = 1; panX = 0; panY = 0;
-            applyTransform();
-        }
-
-        function pinchDist(t) {
-            const dx = t[0].clientX - t[1].clientX;
-            const dy = t[0].clientY - t[1].clientY;
-            return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        body.addEventListener('touchstart', (e) => {
-            // Pinch start (2 fingers)
+        body.addEventListener('touchstart', e => {
+            if (glbIsAnimating) return;
             if (e.touches.length === 2) {
+                e.preventDefault();
                 isPinching = true;
-                locked = 'pinch';
                 pinchStartDist = pinchDist(e.touches);
-                pinchStartScale = scale;
-                pinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                pinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                img.classList.add('dragging');
-                return;
+                pinchStartScale = glbZoomScale;
+            } else if (e.touches.length === 1) {
+                isPinching = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDraggingDown = false;
+                swipeDX = 0;
+                swipeLocked = '';
             }
+        }, { passive: false });
 
-            if (e.touches.length !== 1) return;
-
-            // Double-tap detection
-            const now = Date.now();
-            if (now - lastTapTime < 300) {
-                // Double tap — toggle zoom
-                if (scale > 1) {
-                    resetZoom();
-                } else {
-                    scale = 2.5;
-                    // Zoom into tap point
-                    const rect = img.getBoundingClientRect();
-                    const cx = rect.left + rect.width / 2;
-                    const cy = rect.top + rect.height / 2;
-                    panX = (cx - e.touches[0].clientX) * 1.5;
-                    panY = (cy - e.touches[0].clientY) * 1.5;
-                    applyTransform();
-                }
-                lastTapTime = 0;
-                locked = 'doubletap';
-                return;
-            }
-            lastTapTime = now;
-
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            dx = 0; dy = 0; locked = null;
-            isPinching = false;
-            img.classList.add('dragging');
-        }, { passive: true });
-
-        body.addEventListener('touchmove', (e) => {
-            // Pinch zoom
-            if (e.touches.length === 2 && locked === 'pinch') {
+        body.addEventListener('touchmove', e => {
+            if (glbIsAnimating) return;
+            if (e.touches.length === 2) {
                 e.preventDefault();
                 const dist = pinchDist(e.touches);
-                scale = Math.min(5, Math.max(0.5, pinchStartScale * (dist / pinchStartDist)));
+                glbZoomScale = Math.min(5, Math.max(1, pinchStartScale * (dist / pinchStartDist)));
+                glbApplyZoom(false);
+                return;
+            }
+            if (isPinching || e.touches.length !== 1) return;
 
-                // Pan with pinch midpoint
-                const newMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const newMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                panX += (newMidX - pinchMidX);
-                panY += (newMidY - pinchMidY);
-                pinchMidX = newMidX;
-                pinchMidY = newMidY;
+            const dx = e.touches[0].clientX - touchStartX;
+            const dy = e.touches[0].clientY - touchStartY;
 
-                applyTransform();
+            if (glbIsZoomed()) {
+                e.preventDefault();
+                glbZoomX += dx; glbZoomY += dy;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                glbApplyZoom(false);
                 return;
             }
 
-            if (e.touches.length !== 1 || locked === 'doubletap') return;
+            if (!swipeLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                swipeLocked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            }
 
-            dx = e.touches[0].clientX - startX;
-            dy = e.touches[0].clientY - startY;
+            if (swipeLocked === 'x') {
+                e.preventDefault();
+                swipeDX = dx;
+                const active = glbGetActiveLayer();
+                const back = glbGetBackLayer();
+                const atStart = glbIndex === 0 && dx > 0;
+                const atEnd = glbIndex === glbPhotos.length - 1 && dx < 0;
+                const atEdge = atStart || atEnd;
+                const moveDX = atEdge ? dx * 0.25 : dx;
 
-            // If zoomed in, pan instead of swipe/dismiss
-            if (scale > 1.1) {
-                if (!locked) locked = 'pan';
-                if (locked === 'pan') {
-                    panX += dx;
-                    panY += dy;
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
-                    applyTransform();
+                active.style.transition = 'none';
+                active.style.transform = `translateX(${moveDX}px)`;
+
+                if (!atEdge) {
+                    const nextIdx = dx > 0 ? glbIndex - 1 : glbIndex + 1;
+                    const backImg = glbGetBackImg();
+                    const src = glbPhotoSrc(nextIdx);
+                    if (src && !backImg.src.endsWith(src)) backImg.src = src;
+                    const inX = dx > 0 ? moveDX - window.innerWidth : moveDX + window.innerWidth;
+                    back.style.transition = 'none';
+                    back.style.transform = `translateX(${inX}px)`;
+                    back.style.visibility = 'visible';
+                } else {
+                    back.style.visibility = 'hidden';
                 }
                 return;
             }
 
-            if (!locked) {
-                if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                    locked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-                }
-            }
-
-            if (locked === 'x') {
-                const resistance = (dx > 0 && glbIndex === 0) || (dx < 0 && glbIndex === glbPhotos.length - 1) ? 0.3 : 1;
-                applyTransform(`translateX(${dx * resistance}px)`);
-            } else if (locked === 'y' && dy > 0) {
+            // Vertical — swipe to dismiss
+            if (swipeLocked === 'y' && dy > 30) {
+                isDraggingDown = true;
+                const active = glbGetActiveLayer();
+                active.style.transition = 'none';
+                active.style.transform = `translateY(${dy}px) scale(${1 - dy * 0.001})`;
                 const opacity = Math.max(0, 1 - dy / 300);
-                applyTransform(`translateY(${dy}px) scale(${0.95 + 0.05 * opacity})`);
                 document.getElementById('gardenLightbox').style.background = `rgba(0,0,0,${0.95 * opacity})`;
             }
         }, { passive: false });
 
-        body.addEventListener('touchend', (e) => {
-            img.classList.remove('dragging');
-
-            // After pinch, snap back if too small
-            if (locked === 'pinch') {
-                if (scale < 1) { resetZoom(); }
-                isPinching = false;
+        body.addEventListener('touchend', e => {
+            if (glbIsAnimating) return;
+            if (isPinching) {
+                if (e.touches.length < 2) { isPinching = false; if (glbZoomScale < 1.1) glbResetZoom(); }
                 return;
             }
-            if (locked === 'doubletap') return;
-            if (locked === 'pan') return;
 
-            if (locked === 'x') {
-                if (Math.abs(dx) > 80) {
-                    glbNavigate(dx < 0 ? 1 : -1);
-                } else {
-                    applyTransform();
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (glbIsZoomed()) return;
+
+            const active = glbGetActiveLayer();
+            const back = glbGetBackLayer();
+
+            // Dismiss
+            if (isDraggingDown && dy > 120) { closeGardenLightbox(); return; }
+            if (isDraggingDown) {
+                active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                active.style.transform = '';
+                document.getElementById('gardenLightbox').style.background = '';
+                return;
+            }
+
+            const THRESHOLD = 50;
+            if (swipeLocked === 'x' && Math.abs(swipeDX) > THRESHOLD) {
+                const nextIdx = swipeDX > 0 ? glbIndex - 1 : glbIndex + 1;
+                if (nextIdx >= 0 && nextIdx < glbPhotos.length) {
+                    glbIsAnimating = true;
+                    const dir = swipeDX > 0 ? 1 : -1;
+                    const vw = window.innerWidth;
+                    active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                    active.style.transform = `translateX(${dir * vw}px)`;
+                    back.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+                    back.style.transform = 'translateX(0px)';
+                    setTimeout(() => {
+                        glbActiveLayerId = glbActiveLayerId === 'A' ? 'B' : 'A';
+                        const newBack = glbGetBackLayer();
+                        newBack.style.transition = 'none';
+                        newBack.style.transform = '';
+                        newBack.style.visibility = 'hidden';
+                        newBack.style.zIndex = '1';
+                        const newActive = glbGetActiveLayer();
+                        newActive.style.zIndex = '2';
+                        glbIndex = nextIdx;
+                        glbZoomScale = 1; glbZoomX = 0; glbZoomY = 0;
+                        updateGardenLightboxUI();
+                        if (nextIdx > 0) { const i = new Image(); i.src = glbPhotoSrc(nextIdx - 1); }
+                        if (nextIdx < glbPhotos.length - 1) { const i = new Image(); i.src = glbPhotoSrc(nextIdx + 1); }
+                        glbIsAnimating = false;
+                    }, 310);
+                    swipeDX = 0;
+                    return;
                 }
-            } else if (locked === 'y' && dy > 120) {
-                closeGardenLightbox();
-                document.getElementById('gardenLightbox').style.background = '';
-                resetZoom();
-            } else {
-                applyTransform();
-                document.getElementById('gardenLightbox').style.background = '';
             }
 
-            if (!locked) {
-                // Single tap — toggle controls (after double-tap timeout)
-                setTimeout(() => {
-                    if (lastTapTime === 0) return; // was consumed by double-tap
-                    glbControlsVisible = !glbControlsVisible;
-                    document.getElementById('gardenLightbox').classList.toggle('controls-hidden', !glbControlsVisible);
-                }, 310);
-            }
+            // Snap back
+            active.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+            active.style.transform = '';
+            back.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)';
+            back.style.transform = `translateX(${swipeDX > 0 ? '-' : ''}100vw)`;
+            setTimeout(() => { back.style.visibility = 'hidden'; }, 310);
+            swipeDX = 0;
         }, { passive: true });
 
-        // Reset zoom when navigating
-        const origNav = glbNavigate;
-    }
+        // Double-tap to zoom
+        body.addEventListener('touchend', e => {
+            if (glbIsAnimating || isPinching || e.touches.length > 0) return;
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                if (glbIsZoomed()) { glbResetZoom(); }
+                else {
+                    glbZoomScale = 2.5;
+                    const rect = body.getBoundingClientRect();
+                    const tapX = e.changedTouches[0].clientX - rect.left - rect.width / 2;
+                    const tapY = e.changedTouches[0].clientY - rect.top - rect.height / 2;
+                    glbZoomX = -tapX * 0.6; glbZoomY = -tapY * 0.6;
+                    glbApplyZoom(true);
+                }
+                lastTap = 0;
+                return;
+            }
+            lastTap = now;
+        }, { passive: true });
 
-    // Wrap glbNavigate to reset zoom on nav
-    const _origGlbNavigate = glbNavigate;
-    glbNavigate = function(dir) {
-        // Reset zoom state
-        const img = document.getElementById('glbImg');
-        img.style.transform = '';
-        _origGlbNavigate(dir);
-    };
+        // Click to toggle controls
+        body.addEventListener('click', (e) => {
+            if (e.target.closest('.garden-lightbox-nav')) return;
+            glbControlsVisible = !glbControlsVisible;
+            document.getElementById('gardenLightbox').classList.toggle('controls-hidden', !glbControlsVisible);
+        });
+    })();
 
     // Lightbox button events
     document.getElementById('glbClose').addEventListener('click', closeGardenLightbox);
     document.getElementById('glbPrev').addEventListener('click', () => glbNavigate(-1));
     document.getElementById('glbNext').addEventListener('click', () => glbNavigate(1));
 
-    // Escape key closes lightbox
+    // Keyboard
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.getElementById('gardenLightbox').classList.contains('active')) {
             closeGardenLightbox();
@@ -1293,6 +1517,293 @@
             glbNavigate(1);
         }
     });
+
+    // ─── Growth Animation ───
+    let growthTimer = null;
+    let growthIdx = 0;
+    let growthPlaying = false;
+    let growthPhotos = [];
+
+    function openGrowthAnimation() {
+        if (!currentPlant || currentTimeline.length < 2) {
+            showToast('Need at least 2 photos for growth animation', 'error');
+            return;
+        }
+        growthPhotos = currentTimeline.filter(e => e.photo_url || e.thumbnail_url).slice().reverse();
+        if (growthPhotos.length < 2) {
+            showToast('Need at least 2 photos for growth animation', 'error');
+            return;
+        }
+        growthIdx = 0;
+        growthPlaying = true;
+        const overlay = document.getElementById('growthOverlay');
+        overlay.classList.add('active');
+        document.getElementById('growthPlantName').textContent = currentPlant.name;
+        document.getElementById('growthSummary').classList.add('hidden');
+        document.body.style.overflow = 'hidden';
+        const canvas = document.getElementById('growthCanvas');
+        canvas.innerHTML = '';
+        lucide.createIcons({ attrs: { class: 'lucide' } });
+        showGrowthFrame(0);
+        scheduleGrowthNext();
+    }
+
+    function closeGrowthAnimation() {
+        clearTimeout(growthTimer);
+        growthPlaying = false;
+        document.getElementById('growthOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function showGrowthFrame(idx) {
+        growthIdx = idx;
+        const photo = growthPhotos[idx];
+        const canvas = document.getElementById('growthCanvas');
+        const src = photo.photo_url || photo.thumbnail_url || '';
+
+        // Growth-overlap effect: previous photo fades to ghost while new one emerges
+        // This creates a visual "transformation" showing the plant changing
+        const isFirst = idx === 0;
+        const progress = growthPhotos.length > 1 ? idx / (growthPhotos.length - 1) : 1;
+
+        // Mark all existing frames as "previous" — they'll fade to ghost opacity
+        const oldFrames = canvas.querySelectorAll('.growth-frame');
+        oldFrames.forEach(f => {
+            f.classList.add('growth-frame-ghost');
+            // Remove after transition
+            setTimeout(() => f.remove(), 1200);
+        });
+
+        // Create new frame
+        const div = document.createElement('div');
+        div.className = 'growth-frame growth-frame-enter';
+        // Start slightly zoomed out for growth feel, zoom in over time
+        const startScale = 1.0 + (progress * 0.08); // slightly more zoomed as plant grows
+        const endScale = startScale + 0.1;
+        const panX = (idx % 2 === 0 ? -1 : 1) * (8 + Math.random() * 8);
+        const panY = -5 + Math.random() * 10;
+        div.innerHTML = `<img src="${src}" alt="" style="transform: scale(${startScale}) translate(${panX}px, ${panY}px)">`;
+        canvas.appendChild(div);
+
+        // Force reflow then animate in
+        div.offsetWidth;
+        div.classList.remove('growth-frame-enter');
+        div.classList.add('growth-frame-active');
+
+        const img = div.querySelector('img');
+        requestAnimationFrame(() => {
+            img.style.transition = 'transform 3s ease-out';
+            img.style.transform = `scale(${endScale}) translate(${panX * 0.5}px, ${panY * 0.5}px)`;
+        });
+        // Update date
+        document.getElementById('growthDate').textContent = photo.taken_at ? formatDate(photo.taken_at) : '';
+        // Update progress
+        const pct = growthPhotos.length > 1 ? (idx / (growthPhotos.length - 1)) * 100 : 100;
+        document.getElementById('growthProgressFill').style.width = pct + '%';
+        // Update play button icon
+        const btn = document.getElementById('growthPlayBtn');
+        btn.innerHTML = growthPlaying ? '<i data-lucide="pause"></i>' : '<i data-lucide="play"></i>';
+        lucide.createIcons({ attrs: { class: 'lucide' } });
+    }
+
+    function scheduleGrowthNext() {
+        clearTimeout(growthTimer);
+        if (!growthPlaying) return;
+        growthTimer = setTimeout(() => {
+            if (growthIdx < growthPhotos.length - 1) {
+                showGrowthFrame(growthIdx + 1);
+                scheduleGrowthNext();
+            } else {
+                // Show summary
+                growthPlaying = false;
+                const first = growthPhotos[0];
+                const last = growthPhotos[growthPhotos.length - 1];
+                const firstDate = first.taken_at ? formatDate(first.taken_at) : '?';
+                const lastDate = last.taken_at ? formatDate(last.taken_at) : '?';
+                const summary = document.getElementById('growthSummary');
+                summary.innerHTML = `🌱 ${esc(currentPlant?.name || '')} — ${firstDate} to ${lastDate} — ${growthPhotos.length} photos`;
+                summary.classList.remove('hidden');
+                const btn = document.getElementById('growthPlayBtn');
+                btn.innerHTML = '<i data-lucide="rotate-ccw"></i>';
+                lucide.createIcons({ attrs: { class: 'lucide' } });
+            }
+        }, 3000);
+    }
+
+    document.getElementById('growthClose').addEventListener('click', closeGrowthAnimation);
+    document.getElementById('growthPlayBtn').addEventListener('click', () => {
+        if (growthIdx >= growthPhotos.length - 1 && !growthPlaying) {
+            // Replay
+            growthPlaying = true;
+            document.getElementById('growthSummary').classList.add('hidden');
+            document.getElementById('growthCanvas').innerHTML = '';
+            showGrowthFrame(0);
+            scheduleGrowthNext();
+        } else {
+            growthPlaying = !growthPlaying;
+            if (growthPlaying) {
+                scheduleGrowthNext();
+            } else {
+                clearTimeout(growthTimer);
+            }
+            const btn = document.getElementById('growthPlayBtn');
+            btn.innerHTML = growthPlaying ? '<i data-lucide="pause"></i>' : '<i data-lucide="play"></i>';
+            lucide.createIcons({ attrs: { class: 'lucide' } });
+        }
+    });
+
+    // ─── Zone Manager ───
+    function openZoneManager() {
+        let html = '<div class="zone-manager">';
+        zones.forEach(z => {
+            const plantCount = plants.filter(p => p.zone_id === z.id).length;
+            html += `<div class="zone-manager-item" data-zone-id="${z.id}">
+                <div class="zone-manager-info">
+                    ${z.thumbnail_url ? `<img class="zone-manager-thumb" src="${esc(z.thumbnail_url)}" alt="">` : `<div class="zone-manager-thumb-empty"><i data-lucide="map"></i></div>`}
+                    <div>
+                        <div class="zone-manager-name">${esc(z.name)}</div>
+                        <div class="zone-manager-count">${plantCount} plant${plantCount !== 1 ? 's' : ''}</div>
+                    </div>
+                </div>
+                <div class="zone-manager-actions">
+                    <button class="btn btn-ghost zone-photo-btn" data-zone-id="${z.id}" title="Photo"><i data-lucide="camera" style="width:14px;height:14px"></i></button>
+                    <button class="btn btn-ghost zone-edit-btn" data-zone-id="${z.id}" title="Edit"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+                    <button class="btn btn-ghost zone-delete-btn" data-zone-id="${z.id}" data-plant-count="${plantCount}" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        html += `<button class="btn btn-primary" id="addZoneBtn" style="width:100%;margin-top:12px"><i data-lucide="plus" style="width:14px;height:14px"></i> Add Zone</button>`;
+
+        const modal = createModal({
+            title: '🗺️ Manage Zones',
+            bodyHTML: html,
+            submitLabel: null,
+        });
+
+        setTimeout(() => {
+            lucide.createIcons();
+
+            document.getElementById('addZoneBtn')?.addEventListener('click', () => {
+                document.querySelector('.modal-backdrop')?.click();
+                openAddZoneModal();
+            });
+
+            document.querySelectorAll('.zone-edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const z = zones.find(zz => zz.id == btn.dataset.zoneId);
+                    if (!z) return;
+                    document.querySelector('.modal-backdrop')?.click();
+                    openEditZoneModal(z);
+                });
+            });
+
+            document.querySelectorAll('.zone-delete-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const z = zones.find(zz => zz.id == btn.dataset.zoneId);
+                    if (!z) return;
+                    const cnt = parseInt(btn.dataset.plantCount) || 0;
+                    document.querySelector('.modal-backdrop')?.click();
+                    confirmDeleteZone(z, cnt);
+                });
+            });
+
+            document.querySelectorAll('.zone-photo-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const zId = btn.dataset.zoneId;
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = async () => {
+                        const file = input.files[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('photo', file);
+                        try {
+                            await fetch(`/api/garden/zones/${zId}/photo`, { method: 'POST', credentials: 'same-origin', body: fd });
+                            showToast('Zone photo updated ✓');
+                            await loadZones();
+                            document.querySelector('.modal-backdrop')?.click();
+                            openZoneManager();
+                        } catch (err) { showToast(err.message, 'error'); }
+                    };
+                    input.click();
+                });
+            });
+        }, 100);
+    }
+
+    function openAddZoneModal() {
+        createModal({
+            title: '➕ Add Zone',
+            bodyHTML: `
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input class="form-input" name="name" placeholder="e.g. Front Yard" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-input" name="description" rows="2" placeholder="Optional"></textarea>
+                </div>
+            `,
+            submitLabel: 'Add Zone',
+            async onSubmit(modal) {
+                const name = modal.querySelector('[name="name"]').value.trim();
+                if (!name) throw new Error('Name is required');
+                await API.post('/garden/zones', { name, description: modal.querySelector('[name="description"]').value.trim() || undefined });
+                showToast('Zone added ✓');
+                await loadZones();
+                renderPlantGrid();
+            },
+        });
+    }
+
+    function openEditZoneModal(zone) {
+        createModal({
+            title: '✏️ Edit Zone',
+            bodyHTML: `
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input class="form-input" name="name" value="${esc(zone.name)}" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-input" name="description" rows="2">${esc(zone.description || '')}</textarea>
+                </div>
+            `,
+            submitLabel: 'Save',
+            async onSubmit(modal) {
+                const name = modal.querySelector('[name="name"]').value.trim();
+                if (!name) throw new Error('Name is required');
+                await API.put(`/garden/zones/${zone.id}`, { name, description: modal.querySelector('[name="description"]').value.trim() || null });
+                showToast('Zone updated ✓');
+                await loadZones();
+                plants = await API.get('/garden/plants') || [];
+                renderPlantGrid();
+            },
+        });
+    }
+
+    function confirmDeleteZone(zone, plantCount) {
+        const warning = plantCount > 0 ? `<p style="color:var(--red);font-weight:600;margin-bottom:8px">⚠️ ${plantCount} plant${plantCount !== 1 ? 's are' : ' is'} assigned to this zone. They will become unassigned.</p>` : '';
+        createModal({
+            title: '🗑️ Delete Zone',
+            bodyHTML: `${warning}<p style="font-size:14px;color:var(--text-secondary)">Delete <strong>${esc(zone.name)}</strong>?</p>`,
+            submitLabel: 'Delete',
+            async onSubmit() {
+                await API.delete(`/garden/zones/${zone.id}`);
+                showToast('Zone deleted');
+                await loadZones();
+                if (activeZoneFilter === zone.id) activeZoneFilter = null;
+                plants = await API.get('/garden/plants') || [];
+                renderPlantGrid();
+            },
+        });
+        setTimeout(() => {
+            const btn = document.querySelector('.modal-submit-btn');
+            if (btn) { btn.style.background = 'var(--red)'; btn.style.borderColor = 'var(--red)'; }
+        }, 50);
+    }
 
     // ─── Helpers ───
     function getScoreClass(score) {

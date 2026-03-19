@@ -611,12 +611,8 @@ router.get('/f1/race/:round/qualifying', async (req, res) => {
     const round = parseInt(req.params.round) || 1;
     const key = `f1-quali-${round}`;
     const result = await cached(key, TTL.results, async () => {
-      let json = await fetchJSON(`${JOLPICA}/2026/${round}/qualifying.json`);
-      let results = json?.MRData?.RaceTable?.Races?.[0]?.QualifyingResults;
-      if (!results || !results.length) {
-        json = await fetchJSON(`${JOLPICA}/2025/${round}/qualifying.json`);
-        results = json?.MRData?.RaceTable?.Races?.[0]?.QualifyingResults;
-      }
+      const json = await fetchJSON(`${JOLPICA}/current/${round}/qualifying.json`);
+      const results = json?.MRData?.RaceTable?.Races?.[0]?.QualifyingResults;
       if (!results) return [];
       return results.map(q => ({
         position: parseInt(q.position),
@@ -638,12 +634,8 @@ router.get('/f1/race/:round/sprint', async (req, res) => {
     const round = parseInt(req.params.round) || 1;
     const key = `f1-sprint-${round}`;
     const result = await cached(key, TTL.results, async () => {
-      let json = await fetchJSON(`${JOLPICA}/2026/${round}/sprint.json`);
-      let results = json?.MRData?.RaceTable?.Races?.[0]?.SprintResults;
-      if (!results || !results.length) {
-        json = await fetchJSON(`${JOLPICA}/2025/${round}/sprint.json`);
-        results = json?.MRData?.RaceTable?.Races?.[0]?.SprintResults;
-      }
+      const json = await fetchJSON(`${JOLPICA}/current/${round}/sprint.json`);
+      const results = json?.MRData?.RaceTable?.Races?.[0]?.SprintResults;
       if (!results) return [];
       return results.map(r => ({
         position: parseInt(r.position),

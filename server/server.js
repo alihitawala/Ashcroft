@@ -3,6 +3,52 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
+const fs = require('fs');
+const path = require('path');
+
+// ── Error logging setup ───────────────────────────────────────────
+const LOG_DIR = path.join(__dirname, '..', 'logs');
+const ERROR_LOG = path.join(LOG_DIR, 'error.log');
+const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
+
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+
+function rotateLogIfNeeded() {
+  try {
+    if (fs.existsSync(ERROR_LOG)) {
+      const stat = fs.statSync(ERROR_LOG);
+      if (stat.size > MAX_LOG_SIZE) {
+        const content = fs.readFileSync(ERROR_LOG, 'utf8');
+        const half = Math.floor(content.length / 2);
+        const newStart = content.indexOf('\n', half);
+        fs.writeFileSync(ERROR_LOG, newStart >= 0 ? content.slice(newStart + 1) : content.slice(half));
+      }
+    }
+  } catch (e) { /* ignore rotation errors */ }
+}
+
+function logError(context, err) {
+  rotateLogIfNeeded();
+  const entry = [
+    `[${new Date().toISOString()}]`,
+    context.method ? `${context.method} ${context.path}` : context.source || 'unknown',
+    `Error: ${err.message || err}`,
+    err.stack ? `Stack: ${err.stack}` : '',
+    '---'
+  ].filter(Boolean).join('\n') + '\n';
+  try { fs.appendFileSync(ERROR_LOG, entry); } catch (e) { /* ignore */ }
+}
+
+// Global handlers
+process.on('uncaughtException', (err) => {
+  logError({ source: 'uncaughtException' }, err);
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logError({ source: 'unhandledRejection' }, reason instanceof Error ? reason : new Error(String(reason)));
+  console.error('Unhandled Rejection:', reason);
+});
 
 const { authenticate } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
@@ -105,6 +151,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Error handler
 app.use((err, req, res, next) => {
+  logError({ method: req.method, path: req.originalUrl || req.path }, err);
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });

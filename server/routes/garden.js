@@ -80,16 +80,110 @@ async function generateThumbnail(filename) {
   return `/uploads/garden/thumbnails/${thumbName}`;
 }
 
+// ─── Zones CRUD ───
+router.get('/zones', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT gz.*, (SELECT COUNT(*) FROM garden_plants gp WHERE gp.zone_id = gz.id) AS plant_count
+       FROM garden_zones gz ORDER BY gz.sort_order, gz.name`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/zones', async (req, res) => {
+  try {
+    const { name, description, sort_order } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const result = await pool.query(
+      `INSERT INTO garden_zones (name, slug, description, sort_order, owner_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name, slug, description || null, sort_order ?? 0, req.user.id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/zones/:id', async (req, res) => {
+  try {
+    const { name, description, sort_order } = req.body;
+    const sets = [];
+    const params = [];
+    const maybeSet = (val, col) => {
+      if (val !== undefined) { params.push(val); sets.push(`${col}=$${params.length}`); }
+    };
+    maybeSet(name, 'name');
+    maybeSet(description, 'description');
+    maybeSet(sort_order, 'sort_order');
+    if (name !== undefined) {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      params.push(slug);
+      sets.push(`slug=$${params.length}`);
+    }
+    if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    sets.push('updated_at=NOW()');
+    params.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE garden_zones SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`,
+      params
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/zones/:id', async (req, res) => {
+  try {
+    // Unassign plants first
+    await pool.query('UPDATE garden_plants SET zone_id = NULL WHERE zone_id = $1', [req.params.id]);
+    const result = await pool.query('DELETE FROM garden_zones WHERE id=$1 RETURNING *', [req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/zones/:id/photo', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const photoUrl = `/uploads/garden/${req.file.filename}`;
+    const thumbnailUrl = await generateThumbnail(req.file.filename);
+    const result = await pool.query(
+      'UPDATE garden_zones SET photo_url=$1, thumbnail_url=$2, updated_at=NOW() WHERE id=$3 RETURNING *',
+      [photoUrl, thumbnailUrl, req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
 // ─── Dashboard ───
 // Watering schedule — plants due for watering, grouped by urgency
 router.get('/watering-schedule', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, type, water_gallons, watering_interval_days, 
-              next_watering, last_watered, watering_frequency, health_status,
-              latest_thumbnail_url
-       FROM garden_plants WHERE ${accessWhere(1)} AND next_watering IS NOT NULL
-       ORDER BY next_watering ASC`,
+      `SELECT gp.id, gp.name, gp.type, gp.water_gallons, gp.watering_interval_days, 
+              gp.next_watering, gp.last_watered, gp.watering_frequency, gp.health_status,
+              gp.latest_thumbnail_url, gp.zone_id, gz.name AS zone_name
+       FROM garden_plants gp
+       LEFT JOIN garden_zones gz ON gz.id = gp.zone_id
+       WHERE ${accessWhere(1).replace(/\baccess\b/g, 'gp.access').replace(/\bowner_id\b/g, 'gp.owner_id')} AND gp.next_watering IS NOT NULL
+       ORDER BY gp.next_watering ASC`,
       accessParams(req)
     );
     const today = new Date().toISOString().split('T')[0];
@@ -167,7 +261,11 @@ router.get('/plants/dashboard', async (req, res) => {
 router.get('/plants', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM garden_plants WHERE ${accessWhere(1)} ORDER BY name`,
+      `SELECT gp.*, gz.name AS zone_name, gz.slug AS zone_slug
+       FROM garden_plants gp
+       LEFT JOIN garden_zones gz ON gz.id = gp.zone_id
+       WHERE ${accessWhere(1).replace(/\baccess\b/g, 'gp.access').replace(/\bowner_id\b/g, 'gp.owner_id')}
+       ORDER BY gp.name`,
       accessParams(req)
     );
     res.json(result.rows);
@@ -190,10 +288,10 @@ router.post('/plants', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO garden_plants 
        (name, species, type, location, planted_date, photo_url, notes, health_status, 
-        watering_frequency, last_watered, last_fertilized, owner_id, access, sunlight, usda_zone, planting_method) 
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+        watering_frequency, last_watered, last_fertilized, owner_id, access, sunlight, usda_zone, planting_method, zone_id) 
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
       [name, species, type, location, planted_date, photo_url, notes, health_status, 
-       watering_frequency, last_watered, last_fertilized, req.user.id, access, sunlight || null, usda_zone || '9b', req.body.planting_method || 'in_ground']
+       watering_frequency, last_watered, last_fertilized, req.user.id, access, sunlight || null, usda_zone || '9b', req.body.planting_method || 'in_ground', req.body.zone_id || null]
     );
     
     res.status(201).json(result.rows[0]);
@@ -223,6 +321,7 @@ router.put('/plants/:id', async (req, res) => {
     maybeSet(last_watered, 'last_watered'); maybeSet(last_fertilized, 'last_fertilized');
     maybeSet(access, 'access'); maybeSet(sunlight, 'sunlight'); maybeSet(usda_zone, 'usda_zone');
     maybeSet(planting_method, 'planting_method');
+    if (req.body.zone_id !== undefined) { params.push(req.body.zone_id); sets.push(`zone_id=$${params.length}`); }
     
     if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
     

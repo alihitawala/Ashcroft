@@ -283,6 +283,31 @@
     transform: translate(-50%, -50%); font-weight: 700;
 }
 
+/* ─── Desktop Grid Layout for Timeline ─── */
+@media (min-width: 900px) {
+    #capturesFeed {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    #capturesFeed .date-sep,
+    #capturesFeed .pin-sep {
+        grid-column: 1 / -1;
+        margin-bottom: -4px;
+    }
+    #capturesFeed .capture-card {
+        margin-bottom: 0;
+    }
+    #capturesFeed .captures-empty {
+        grid-column: 1 / -1;
+    }
+}
+@media (min-width: 1200px) {
+    #capturesFeed {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 /* ─── Empty State ─── */
 .captures-empty {
     text-align: center;

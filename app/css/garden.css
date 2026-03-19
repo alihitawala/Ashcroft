@@ -841,12 +841,15 @@
     overflow: hidden; position: relative;
     touch-action: none;
 }
-.garden-lightbox-img {
+.glb-layer {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    will-change: transform;
+}
+.glb-layer img {
     max-width: 100%; max-height: 100%; object-fit: contain;
-    transition: transform 0.25s ease;
     user-select: none; -webkit-user-drag: none;
 }
-.garden-lightbox-img.dragging { transition: none; }
 .garden-lightbox-counter {
     position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
     display: flex; justify-content: center; align-items: center; gap: 6px;
@@ -869,7 +872,88 @@
 .garden-lightbox-nav:hover { background: rgba(255,255,255,0.2); color: #fff; }
 .garden-lightbox-prev { left: 12px; }
 .garden-lightbox-next { right: 12px; }
-@media (max-width: 768px) { .garden-lightbox-nav { display: none; } }
+@media (max-width: 768px) {
+    .garden-lightbox-nav { display: none; }
+    .glb-layer img { max-width: 100vw; max-height: 92vh; }
+}
+
+/* ─── Growth Animation Overlay ─── */
+.growth-overlay {
+    position: fixed; inset: 0; z-index: 2100;
+    background: #000; display: none; flex-direction: column;
+}
+.growth-overlay.active { display: flex; }
+.growth-header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+}
+.growth-plant-name { color: #fff; font-size: 16px; font-weight: 600; }
+.growth-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.growth-canvas {
+    flex: 1; position: relative; overflow: hidden;
+}
+.growth-frame {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1s ease-in-out;
+    z-index: 2;
+}
+.growth-frame-enter { opacity: 0; transform: scale(1.02); }
+.growth-frame-active { opacity: 1; }
+.growth-frame-ghost {
+    opacity: 0.3;
+    z-index: 1;
+    transition: opacity 1.2s ease-out;
+    filter: brightness(0.7);
+}
+.growth-frame img {
+    width: 100%; height: 100%; object-fit: cover;
+    will-change: transform;
+}
+.growth-date {
+    position: absolute; bottom: 70px; left: 0; right: 0; z-index: 10;
+    text-align: center; color: rgba(255,255,255,0.7); font-size: 13px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.growth-controls {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+.growth-play-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); border: none; color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    flex-shrink: 0;
+}
+.growth-progress-bar {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px;
+    overflow: hidden;
+}
+.growth-progress-fill {
+    height: 100%; background: #4ade80; width: 0; transition: width 0.3s ease;
+    border-radius: 2px;
+}
+.growth-summary {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 20; background: rgba(0,0,0,0.85); color: #fff;
+    padding: 24px 32px; border-radius: 16px; text-align: center;
+    font-size: 16px; line-height: 1.5; backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: growthSummaryIn 0.5s ease;
+}
+@keyframes growthSummaryIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 
 .timeline-comparison {
     text-align: center;
@@ -1241,21 +1325,164 @@
 .watering-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .watering-btn svg { width: 12px; height: 12px; }
 
-/* Watering info on plant cards */
-.plant-card-watering {
+/* Plant card footer — watering info + CTA */
+.plant-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px 7px;
+    border-radius: 0 0 16px 16px;
+    transition: background 0.2s;
+}
+.plant-card-footer.pcw-overdue { background: rgba(239, 68, 68, 0.10); }
+.plant-card-footer.pcw-today { background: rgba(99, 91, 255, 0.10); }
+.plant-card-footer.pcw-soon { background: rgba(234, 179, 8, 0.08); }
+.pcw-label {
     font-size: 11px;
-    padding: 0 12px 6px;
+    font-weight: 600;
     color: var(--text-tertiary);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
-.plant-card-watering.pcw-overdue { color: var(--red); }
-.plant-card-watering.pcw-today { color: var(--accent); }
+.pcw-label.pcw-overdue { color: var(--red); }
+.pcw-label.pcw-today { color: var(--accent); }
+.pcw-label.pcw-soon { color: var(--yellow, #e6a700); }
+/* Tint the CTA button to match urgency */
+.plant-card-water-btn.pcw-overdue { border-color: var(--red); color: var(--red); }
+.plant-card-water-btn.pcw-overdue:hover { background: var(--red); color: #fff; }
+.plant-card-water-btn.pcw-today { border-color: var(--accent); color: var(--accent); }
+.plant-card-water-btn.pcw-today:hover { background: var(--accent); color: #fff; }
+.plant-card-water-btn.pcw-soon { border-color: var(--yellow, #e6a700); color: var(--yellow, #e6a700); }
+.plant-card-water-btn.pcw-soon:hover { background: var(--yellow, #e6a700); color: #fff; }
+.plant-card-water-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.plant-card-water-btn:hover {
+    background: var(--accent);
+    color: #fff;
+}
+.plant-card-water-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.plant-card-water-btn svg { width: 12px; height: 12px; }
 
 @media (max-width: 480px) {
     .watering-gallons { font-size: 10px; }
 }
+
+/* ─── Zone Filter Pills ─── */
+.zone-filter-bar {
+    display: flex;
+    gap: 6px;
+    padding: 0 0 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: center;
+}
+.zone-filter-bar::-webkit-scrollbar { display: none; }
+.zone-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+.zone-pill:hover {
+    border-color: #635BFF;
+    color: #635BFF;
+}
+.zone-pill.active {
+    background: #635BFF;
+    border-color: #635BFF;
+    color: #fff;
+}
+.zone-pill-manage {
+    padding: 6px 8px;
+    color: var(--text-tertiary);
+}
+.zone-pill-manage:hover {
+    color: #635BFF;
+    border-color: #635BFF;
+}
+.zone-pill-manage svg { width: 14px; height: 14px; }
+
+/* ─── Zone Group Headers ─── */
+.zone-group-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 16px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.zone-group-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* Zone badge on plant cards — hidden when grouped by zone */
+
+/* ─── Zone Manager Modal ─── */
+.zone-manager { display: flex; flex-direction: column; gap: 8px; }
+.zone-manager-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+}
+.zone-manager-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.zone-manager-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--surface);
+}
+.zone-manager-thumb-empty {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-tertiary);
+}
+.zone-manager-thumb-empty svg { width: 18px; height: 18px; }
+.zone-manager-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.zone-manager-count { font-size: 11px; color: var(--text-tertiary); }
+.zone-manager-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.zone-manager-actions .btn { padding: 4px 6px; }
 
 /* ─── Utilities ─── */
 .hidden { display: none !important; }
