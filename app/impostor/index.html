@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Word Impostor 🕵️</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#1a1a2e;color:#eee;min-height:100dvh;display:flex;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto}
+#app{width:100%;max-width:480px;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 20px 40px;text-align:center;position:relative}
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:16px;animation:fadeIn .4s ease;flex-shrink:0}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes confettiFall{0%{transform:translateY(-100vh) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+h1{font-size:2.4em;margin-bottom:8px}
+h2{font-size:1.8em;color:#e94560}
+h3{font-size:1.3em;color:#aaa}
+.emoji-title{font-size:3em;margin-bottom:8px}
+.btn{background:linear-gradient(135deg,#e94560,#c23152);color:#fff;border:none;padding:16px 40px;font-size:1.2em;border-radius:50px;cursor:pointer;font-weight:700;transition:all .2s;width:100%;max-width:320px;touch-action:manipulation}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.4;transform:none}
+.btn-secondary{background:linear-gradient(135deg,#0f3460,#16213e);border:2px solid #e94560}
+.btn-small{padding:10px 20px;font-size:1em}
+.input{background:#16213e;border:2px solid #0f3460;color:#eee;padding:14px 18px;font-size:1.1em;border-radius:16px;width:100%;max-width:320px;text-align:center;outline:none;transition:border .2s}
+.input:focus{border-color:#e94560}
+.player-list{list-style:none;width:100%;max-width:320px;max-height:240px;overflow-y:auto}
+.player-list li{background:#16213e;margin:4px 0;padding:10px 16px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;font-size:1.05em}
+.player-list li .remove{color:#e94560;cursor:pointer;font-size:1.3em;padding:0 4px}
+.theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px}
+.theme-btn{background:#16213e;border:2px solid transparent;color:#eee;padding:14px 10px;border-radius:16px;font-size:1em;cursor:pointer;transition:all .2s;text-align:center}
+.theme-btn.selected{border-color:#e94560;background:#0f3460}
+.theme-btn:active{transform:scale(.95)}
+.word-display{font-size:2.2em;font-weight:800;color:#00d2ff;padding:20px;background:#16213e;border-radius:20px;width:100%;max-width:340px;margin:10px 0}
+.impostor-display{color:#e94560;font-size:1.8em;font-weight:800;padding:20px;background:#16213e;border-radius:20px;width:100%;max-width:340px;margin:10px 0}
+.impostor-display .hint{font-size:.6em;color:#aaa;margin-top:8px;font-weight:400}
+.clue-list{width:100%;max-width:360px;max-height:300px;overflow-y:auto}
+.clue-item{background:#16213e;margin:4px 0;padding:10px 14px;border-radius:12px;display:flex;justify-content:space-between;font-size:1em}
+.clue-item .name{color:#e94560;font-weight:600}
+.clue-item .clue{color:#00d2ff;font-weight:700}
+.vote-grid{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;max-height:320px;overflow-y:auto}
+.vote-btn{background:#16213e;border:2px solid #0f3460;color:#eee;padding:14px;border-radius:14px;font-size:1.1em;cursor:pointer;transition:all .2s;text-align:center}
+.vote-btn:active{transform:scale(.95)}
+.vote-btn.selected{border-color:#e94560;background:#0f3460}
+.result-card{background:#16213e;border-radius:20px;padding:24px;width:100%;max-width:360px;margin:10px 0}
+.win{color:#4ade80}
+.lose{color:#e94560}
+.pass-screen{background:#1a1a2e;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:10}
+.player-count{color:#e94560;font-weight:700}
+.confetti-piece{position:fixed;width:10px;height:10px;top:-10px;animation:confettiFall 3s linear forwards;pointer-events:none;z-index:100}
+.round-badge{background:#e94560;color:#fff;padding:6px 18px;border-radius:20px;font-weight:700;font-size:.95em}
+.group-section{width:100%;max-width:320px}
+.group-bar{display:flex;gap:6px;margin-bottom:6px}
+.group-bar select{flex:1;background:#16213e;border:2px solid #0f3460;color:#eee;padding:10px 12px;border-radius:12px;font-size:1em;outline:none}
+.group-bar button{background:#16213e;border:2px solid #0f3460;color:#e94560;padding:10px 12px;border-radius:12px;font-size:1em;cursor:pointer;white-space:nowrap}
+.group-bar button:active{transform:scale(.95)}
+.exit-bar{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:50}
+.exit-btn{background:rgba(22,33,62,.85);border:1px solid #e94560;color:#e94560;padding:8px 14px;border-radius:12px;font-size:.85em;cursor:pointer;font-weight:600;backdrop-filter:blur(8px)}
+.exit-btn:active{transform:scale(.95)}
+.timer{font-size:2.5em;font-weight:800;color:#00d2ff;font-variant-numeric:tabular-nums;margin:4px 0;transition:color .3s}
+.timer.warning{color:#fbbf24}
+.timer.danger{color:#e94560;animation:pulse .5s infinite}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="exit-bar" id="exitBar" style="display:none">
+<button class="exit-btn" onclick="newRound()">🔄 New Round</button>
+<button class="exit-btn" onclick="exitGame()">✕ Exit</button>
+</div>
+
+<!-- LOBBY -->
+<div class="screen active" id="lobby">
+<div class="emoji-title">🕵️</div>
+<h1>Word Impostor</h1>
+<div class="group-section" id="groupSection">
+<h3>Load a group</h3>
+<div class="group-bar">
+<select id="groupSelect"><option value="">— select group —</option></select>
+<button onclick="loadGroup()">Load</button>
+<button onclick="deleteGroup()">🗑️</button>
+</div>
+</div>
+<h3>Add 3–10 players</h3>
+<div style="display:flex;gap:8px;width:100%;max-width:320px">
+<input class="input" id="nameInput" placeholder="Player name" maxlength="16" style="flex:1">
+<button class="btn btn-small" style="width:auto;min-width:60px" onclick="addPlayer()">Add</button>
+</div>
+<ul class="player-list" id="playerList"></ul>
+<p class="player-count" id="playerCount">0 players</p>
+<div style="display:flex;gap:8px;width:100%;max-width:320px">
+<input class="input" id="groupNameInput" placeholder="Group name" maxlength="20" style="flex:1">
+<button class="btn btn-small" style="width:auto;min-width:80px" onclick="saveGroup()">💾 Save</button>
+</div>
+<h3 style="margin-top:8px">Pick a theme</h3>
+<div class="theme-grid" id="themeGrid"></div>
+<button class="btn" id="startBtn" disabled onclick="startGame()">Start Game</button>
+</div>
+
+<!-- PASS PHONE -->
+<div class="screen" id="passPhone">
+<div class="emoji-title">📱</div>
+<h2 id="passName"></h2>
+<h3>Pass the phone to this player</h3>
+<button class="btn" id="passBtn" onclick="showTurn()">I'm ready — show my word!</button>
+</div>
+
+<!-- PLAYER TURN (see word) -->
+<div class="screen" id="turnReveal">
+<h3 id="turnRound"></h3>
+<h2 id="turnName"></h2>
+<div id="turnWord"></div>
+<div id="prevClues" style="width:100%"></div>
+<div class="timer" id="clueTimer"></div>
+<input class="input" id="clueInput" placeholder="One-word clue" maxlength="30">
+<button class="btn" id="clueBtn" onclick="submitClue()">Submit Clue</button>
+</div>
+
+<!-- ROUND SUMMARY -->
+<div class="screen" id="roundSummary">
+<span class="round-badge">Round 1 Clues</span>
+<h3 style="margin-top:8px">Discuss before Round 2!</h3>
+<div class="clue-list" id="roundSummaryClues"></div>
+<button class="btn" onclick="beginRound()">Start Round 2 ➡️</button>
+<button class="btn btn-secondary" onclick="skipToVoting()">Skip to Voting ⏩</button>
+</div>
+
+<!-- ALL CLUES SUMMARY -->
+<div class="screen" id="allCluesSummary">
+<span class="round-badge">All Clues</span>
+<h3 style="margin-top:8px">Discuss before voting! 🗣️</h3>
+<div class="clue-list" id="summaryAllClues"></div>
+<button class="btn" onclick="startVoting()">Start Voting 🗳️</button>
+</div>
+
+<!-- VOTING PASS -->
+<div class="screen" id="votePass">
+<div class="emoji-title">🗳️</div>
+<h2 id="votePassName"></h2>
+<h3>Pass the phone to vote</h3>
+<button class="btn" onclick="showVote()">I'm ready — let me vote!</button>
+</div>
+
+<!-- VOTING -->
+<div class="screen" id="voteScreen">
+<h2 id="voterName"></h2>
+<h3>Who is the impostor?</h3>
+<div class="clue-list" id="allClues"></div>
+<div class="vote-grid" id="voteGrid"></div>
+<div class="timer" id="voteTimer"></div>
+<button class="btn" id="voteBtn" disabled onclick="submitVote()">Cast Vote</button>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="results">
+<div class="emoji-title" id="resultEmoji"></div>
+<h2 id="resultTitle"></h2>
+<div class="result-card">
+<p style="margin-top:8px">The two words were:</p>
+<p style="margin-top:4px;font-size:1.3em"><strong id="secretWord" style="color:#00d2ff"></strong> &amp; <strong id="impostorWordReveal" style="color:#e94560"></strong></p>
+<div id="voteBreakdown" style="margin-top:12px"></div>
+<div id="impostorRevealSection" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #0f3460">
+<p>The impostor was <strong id="impostorName" style="color:#e94560"></strong></p>
+<p style="margin-top:4px">They had the word <strong id="impostorWordName" style="color:#e94560"></strong></p>
+</div>
+</div>
+<h3 id="guessPrompt" style="color:#aaa">Can you guess who had the different word? 🤔</h3>
+<button class="btn" id="revealBtn" onclick="revealImpostor()">Reveal Impostor 👁️</button>
+<button class="btn" onclick="playAgain()" style="margin-top:8px">Play Again 🔄</button>
+<button class="btn btn-secondary" onclick="backToLobby()">New Players</button>
+</div>
+
+</div>
+
+<script>
+const THEMES={
+'🍔 Food & Drinks':[
+['coffee','tea'],['pizza','flatbread'],['sushi','sashimi'],['burger','sandwich'],['pasta','noodles'],
+['tacos','burrito'],['ice cream','frozen yogurt'],['chocolate','caramel'],['pancakes','waffles'],
+['biryani','pulao'],['smoothie','milkshake'],['popcorn','chips'],['donut','bagel'],['ramen','pho'],
+['croissant','muffin']
+],
+'🏟️ Sports':[
+['cricket','baseball'],['tennis','badminton'],['football','rugby'],['basketball','volleyball'],
+['swimming','diving'],['boxing','wrestling'],['golf','cricket'],['hockey','lacrosse'],
+['skiing','snowboarding'],['skateboarding','surfing'],['marathon','sprint'],['fencing','archery'],
+['polo','equestrian'],['table tennis','squash'],['karate','taekwondo']
+],
+'🎬 Movies & TV':[
+['Titanic','Poseidon'],['Batman','Spider-Man'],['Friends','Seinfeld'],['Avengers','Justice League'],
+['Frozen','Tangled'],['Jaws','Piranha'],['Matrix','Inception'],['Shrek','Monsters Inc'],
+['Simpsons','Family Guy'],['Godfather','Scarface'],['Avatar','Avatar: Airbender'],['Rocky','Creed'],
+['Jurassic Park','King Kong'],['SpongeBob','Phineas and Ferb'],['Star Wars','Star Trek']
+],
+'🌍 Places':[
+['Paris','Rome'],['Tokyo','Seoul'],['London','Dublin'],['Egypt','Morocco'],['Hawaii','Bahamas'],
+['Dubai','Abu Dhabi'],['Venice','Amsterdam'],['Amazon','Congo'],['Sahara','Gobi'],
+['Hollywood','Bollywood'],['Everest','K2'],['Sydney','Melbourne'],['Bali','Phuket'],
+['Niagara','Victoria Falls'],['New York','Chicago']
+],
+'🏠 Everyday Objects':[
+['toothbrush','comb'],['umbrella','raincoat'],['pillow','cushion'],['mirror','window'],
+['scissors','knife'],['candle','lamp'],['remote','controller'],['wallet','purse'],
+['headphones','earbuds'],['backpack','suitcase'],['blanket','towel'],['doorbell','alarm'],
+['charger','cable'],['microwave','oven'],['sunglasses','glasses']
+],
+'🎵 Music':[
+['guitar','ukulele'],['drums','bongo'],['piano','keyboard'],['violin','cello'],['trumpet','trombone'],
+['flute','clarinet'],['DJ','producer'],['karaoke','choir'],['concert','festival'],['rap','hip-hop'],
+['jazz','blues'],['opera','musical'],['Beatles','Rolling Stones'],['Bollywood','K-pop'],
+['reggae','ska']
+],
+'🎬 Bollywood':[
+['DDLJ','Hum Aapke Hain Koun'],['Sholay','Deewar'],['3 Idiots','Munna Bhai'],['Lagaan','Chak De India'],
+['Dangal','Sultan'],['Bahubali','RRR'],['Jab We Met','Yeh Jawaani Hai Deewani'],['Dil Chahta Hai','Zindagi Na Milegi Dobara'],
+['Gangs of Wasseypur','Sacred Games'],['PK','OMG'],['Kabhi Khushi Kabhie Gham','Kal Ho Naa Ho'],
+['Devdas','Bajirao Mastani'],['Andaz Apna Apna','Hera Pheri'],['Rang De Basanti','Swades'],
+['Gadar','Border']
+],
+'🍛 Indian Food':[
+['biryani','pulao'],['samosa','kachori'],['dosa','uttapam'],['paneer tikka','malai kofta'],
+['chole bhature','puri sabzi'],['butter chicken','kadai chicken'],['gulab jamun','rasgulla'],
+['jalebi','imarti'],['dal makhani','dal tadka'],['pav bhaji','misal pav'],
+['vada pav','dabeli'],['naan','roti'],['kheer','phirni'],['idli','medu vada'],
+['paratha','kulcha']
+],
+'👗 Indian Wear':[
+['saree','lehenga'],['kurta','sherwani'],['salwar kameez','anarkali'],['dhoti','lungi'],
+['dupatta','chunni'],['bindi','sindoor'],['juttis','kolhapuri'],['bangles','chooda'],
+['pagdi','topi'],['nehru jacket','waistcoat'],['ghagra','pattu pavadai'],
+['mekhela chador','mundum neriyathum'],['phulkari','bandhani'],['pathani suit','achkan'],
+['mojari','peshawari']
+],
+'🏏 Cricket':[
+['Sachin','Virat'],['Dhoni','Ganguly'],['Bumrah','Shami'],['IPL','World Cup'],
+['yorker','bouncer'],['six','four'],['LBW','caught behind'],['spin','pace'],
+['Mumbai Indians','Chennai Super Kings'],['Wankhede','Eden Gardens'],
+['test match','ODI'],['powerplay','death overs'],['hat-trick','century'],
+['Dravid','Laxman'],['Kapil Dev','Gavaskar']
+],
+'🇮🇳 Indian Cities':[
+['Mumbai','Delhi'],['Jaipur','Udaipur'],['Varanasi','Haridwar'],['Goa','Kerala'],
+['Bangalore','Hyderabad'],['Kolkata','Chennai'],['Agra','Fatehpur Sikri'],['Amritsar','Chandigarh'],
+['Shimla','Manali'],['Darjeeling','Ooty'],['Rishikesh','Dehradun'],['Jodhpur','Jaisalmer'],
+['Mysore','Hampi'],['Pondicherry','Kochi'],['Lucknow','Allahabad']
+],
+'🎶 Desi Music':[
+['tabla','dholak'],['sitar','veena'],['harmonium','tanpura'],['Arijit Singh','Atif Aslam'],
+['AR Rahman','Pritam'],['ghazal','qawwali'],['bhangra','garba'],['Kishore Kumar','Rafi'],
+['Lata Mangeshkar','Asha Bhosle'],['Honey Singh','Badshah'],['Shankar Mahadevan','Sonu Nigam'],
+['shehnai','bansuri'],['dandiya','lavani'],['sufi','folk'],['bollywood remix','indie']
+],
+'🎉 Indian Festivals':[
+['Diwali','Dussehra'],['Holi','Lohri'],['Eid','Bakrid'],['Ganesh Chaturthi','Janmashtami'],
+['Navratri','Durga Puja'],['Raksha Bandhan','Bhai Dooj'],['Pongal','Makar Sankranti'],
+['Onam','Baisakhi'],['Karwa Chauth','Chhath Puja'],['Republic Day','Independence Day'],
+['Christmas','New Year'],['Basant Panchami','Ram Navami'],['Guru Nanak Jayanti','Buddha Purnima'],
+['Rath Yatra','Kumbh Mela'],['Bihu','Ugadi']
+],
+'🌉 Desi in the Bay':[
+['Chettinad','Dosa Point'],['Vik\'s Chaat','Chaat Bhavan'],['Shalimar','Pakwan'],
+['Curry Up Now','Kasa Indian'],['Banana Leaf','Tharavadu'],['Swad','Namaste Madras'],
+['Devon Ave','University Ave'],['Fremont','Sunnyvale'],['Milpitas','Santa Clara'],
+['Niles','Artesia'],['Apple','Google'],['Facebook','LinkedIn'],
+['BART','Caltrain'],['Golden Gate','Bay Bridge'],['Diwali at Cupertino','India Day Parade'],
+],
+'💄 Makeup & Cosmetics':[
+['mascara','eyeliner'],['lipstick','lip gloss'],['foundation','concealer'],['blush','bronzer'],
+['eyeshadow','eye primer'],['kajal','kohl'],['nail polish','gel nails'],['highlighter','contour'],
+['setting spray','primer'],['brow pencil','brow gel'],['false lashes','lash extensions'],
+['compact powder','loose powder'],['toner','serum'],['moisturizer','sunscreen'],['bb cream','cc cream']
+],
+'🌟 Bollywood Stars':[
+['Shah Rukh Khan','Aamir Khan'],['Salman Khan','Akshay Kumar'],['Amitabh Bachchan','Dharmendra'],
+['Ranbir Kapoor','Ranveer Singh'],['Hrithik Roshan','Tiger Shroff'],['Varun Dhawan','Sidharth Malhotra'],
+['Deepika Padukone','Priyanka Chopra'],['Alia Bhatt','Shraddha Kapoor'],['Katrina Kaif','Anushka Sharma'],
+['Kareena Kapoor','Karisma Kapoor'],['Aishwarya Rai','Madhuri Dixit'],['Kajol','Rani Mukerji'],
+['Govinda','Johnny Lever'],['Sanjay Dutt','Suniel Shetty'],['Rajkummar Rao','Ayushmann Khurrana']
+],
+'🐾 Animals':[
+['elephant','rhino'],['penguin','puffin'],['dolphin','whale'],['eagle','hawk'],['lion','tiger'],
+['panda','polar bear'],['shark','barracuda'],['octopus','squid'],['giraffe','llama'],
+['koala','sloth'],['monkey','gorilla'],['butterfly','moth'],['crocodile','alligator'],
+['flamingo','pelican'],['chameleon','iguana']
+]
+};
+
+let players=[],selectedTheme=null,secretWord='',impostorWord='',impostorIdx=-1;
+let round=1,currentPlayer=0,cluesR1=[],cluesR2=[],votes=[],currentVoter=0,selectedVote=-1;
+let usedPairs=[];
+let timerInterval=null,timeLeft=0;
+
+function startTimer(seconds,timerEl,onExpire){
+clearInterval(timerInterval);
+timeLeft=seconds;
+const el=document.getElementById(timerEl);
+el.textContent=timeLeft;el.className='timer';
+timerInterval=setInterval(()=>{
+timeLeft--;
+el.textContent=timeLeft;
+if(timeLeft<=10)el.className='timer danger';
+else if(timeLeft<=20)el.className='timer warning';
+else el.className='timer';
+if(timeLeft<=0){clearInterval(timerInterval);onExpire();}
+},1000);
+}
+function stopTimer(){clearInterval(timerInterval);}
+function addBonusTime(sec,timerEl){
+timeLeft+=sec;
+document.getElementById(timerEl).textContent=timeLeft;
+}
+
+// ─── Groups (localStorage) ───
+function getGroups(){return JSON.parse(localStorage.getItem('impostor_groups')||'{}');}
+function saveGroups(g){localStorage.setItem('impostor_groups',JSON.stringify(g));}
+function refreshGroupSelect(){
+const sel=document.getElementById('groupSelect');
+const groups=getGroups();
+sel.innerHTML='<option value="">— select group —</option>';
+Object.keys(groups).sort().forEach(name=>{
+const o=document.createElement('option');o.value=name;o.textContent=`${name} (${groups[name].length})`;sel.appendChild(o);
+});
+}
+function saveGroup(){
+const nameInp=document.getElementById('groupNameInput');
+const name=nameInp.value.trim();
+if(!name){nameInp.placeholder='Enter a group name!';nameInp.style.borderColor='#e94560';setTimeout(()=>{nameInp.style.borderColor='';nameInp.placeholder='Group name'},2000);return;}
+if(players.length<2){return;}
+const groups=getGroups();
+if(groups[name]&&!confirm(`Overwrite "${name}"?`))return;
+groups[name]=[...players];
+saveGroups(groups);
+nameInp.value='';
+refreshGroupSelect();
+document.getElementById('groupSelect').value=name;
+}
+function loadGroup(){
+const name=document.getElementById('groupSelect').value;
+if(!name)return;
+const groups=getGroups();
+if(!groups[name])return;
+players=[...groups[name]];
+renderPlayers();checkReady();
+}
+function deleteGroup(){
+const name=document.getElementById('groupSelect').value;
+if(!name)return;
+if(!confirm(`Delete group "${name}"?`))return;
+const groups=getGroups();
+delete groups[name];
+saveGroups(groups);
+refreshGroupSelect();
+}
+refreshGroupSelect();
+
+// Init theme grid
+const tg=document.getElementById('themeGrid');
+Object.keys(THEMES).forEach(t=>{
+const b=document.createElement('button');
+b.className='theme-btn';b.textContent=t;
+b.onclick=()=>{document.querySelectorAll('.theme-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');if(selectedTheme!==t)usedPairs=[];selectedTheme=t;checkReady()};
+tg.appendChild(b);
+});
+
+document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')addPlayer()});
+
+function addPlayer(){
+const inp=document.getElementById('nameInput'),name=inp.value.trim();
+if(!name||players.length>=10||players.includes(name))return;
+players.push(name);inp.value='';renderPlayers();checkReady();inp.focus();
+}
+function renderPlayers(){
+const ul=document.getElementById('playerList');
+ul.innerHTML=players.map((p,i)=>`<li>${p}<span class="remove" onclick="removePlayer(${i})">✕</span></li>`).join('');
+document.getElementById('playerCount').textContent=players.length+' player'+(players.length!==1?'s':'');
+}
+function removePlayer(i){players.splice(i,1);renderPlayers();checkReady()}
+function checkReady(){document.getElementById('startBtn').disabled=!(players.length>=3&&selectedTheme)}
+
+function show(id){
+document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+document.getElementById('exitBar').style.display=id==='lobby'||id==='results'?'none':'flex';
+}
+function newRound(){if(confirm('Start a new round with the same players?')){stopTimer();startGame()}}
+function exitGame(){if(confirm('Exit to lobby?')){stopTimer();backToLobby()}}
+
+function startGame(){
+const pairs=THEMES[selectedTheme];
+let available=pairs.filter((_,i)=>!usedPairs.includes(i));
+if(!available.length){usedPairs=[];available=pairs;}
+const pairIdx=pairs.indexOf(available[Math.floor(Math.random()*available.length)]);
+usedPairs.push(pairIdx);
+const pair=pairs[pairIdx];
+const flip=Math.random()>.5?0:1;
+secretWord=pair[flip];impostorWord=pair[1-flip];
+impostorIdx=Math.floor(Math.random()*players.length);
+round=1;currentPlayer=0;cluesR1=[];cluesR2=[];votes=[];
+// Shuffle player order each game
+for(let i=players.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[players[i],players[j]]=[players[j],players[i]];}
+beginRound();
+}
+
+function showRoundSummary(){
+document.getElementById('roundSummaryClues').innerHTML=cluesR1.map(c=>`<div class="clue-item"><span class="name">${c.name}</span><span class="clue">${c.clue}</span></div>`).join('');
+round=2;
+show('roundSummary');
+}
+
+function skipToVoting(){showAllCluesSummary()}
+
+function beginRound(){
+currentPlayer=0;passPhone();
+}
+
+function passPhone(){
+document.getElementById('passName').textContent=players[currentPlayer];
+show('passPhone');
+}
+
+function showTurn(){
+const isImpostor=currentPlayer===impostorIdx;
+document.getElementById('turnRound').innerHTML=`<span class="round-badge">Round ${round}</span>`;
+document.getElementById('turnName').textContent=players[currentPlayer];
+const wd=document.getElementById('turnWord');
+if(isImpostor){
+wd.innerHTML=`<div class="word-display">${impostorWord}</div>`;
+}else{
+wd.innerHTML=`<div class="word-display">${secretWord}</div>`;
+}
+// Show round 1 clues if round 2
+const pc=document.getElementById('prevClues');
+if(round===2&&cluesR1.length){
+pc.innerHTML='<h3 style="margin:8px 0 4px">Round 1 Clues</h3><div class="clue-list">'+cluesR1.map(c=>`<div class="clue-item"><span class="name">${c.name}</span><span class="clue">${c.clue}</span></div>`).join('')+'</div>';
+}else pc.innerHTML='';
+document.getElementById('clueInput').value='';
+document.getElementById('clueBtn').disabled=false;
+show('turnReveal');
+document.getElementById('clueInput').focus();
+const secs=round===1?45:55;
+startTimer(secs,'clueTimer',()=>{
+// Time's up — skip with no clue
+const arr=round===1?cluesR1:cluesR2;
+arr.push({name:players[currentPlayer],clue:'⏰ (skipped)'});
+currentPlayer++;
+if(currentPlayer<players.length){passPhone()}
+else if(round===1){showRoundSummary()}
+else{showAllCluesSummary()}
+});
+}
+
+document.getElementById('clueInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitClue()});
+
+function submitClue(){
+let clue=document.getElementById('clueInput').value.trim().split(/\s+/)[0];
+if(!clue)return;
+const allClues=[...cluesR1,...cluesR2];
+const arr=round===1?cluesR1:cluesR2;
+allClues.push(...arr);
+if(allClues.some(c=>c.clue.toLowerCase()===clue.toLowerCase())){
+const inp=document.getElementById('clueInput');
+inp.value='';inp.placeholder='Already taken! +10s bonus';inp.focus();
+inp.style.borderColor='#e94560';setTimeout(()=>{inp.style.borderColor='';inp.placeholder='One-word clue'},2000);
+addBonusTime(10,'clueTimer');
+return;
+}
+stopTimer();
+arr.push({name:players[currentPlayer],clue});
+currentPlayer++;
+if(currentPlayer<players.length){passPhone()}
+else if(round===1){showRoundSummary()}
+else{showAllCluesSummary()}
+}
+
+function showAllCluesSummary(){
+const el=document.getElementById('summaryAllClues');
+const r2Map={};
+cluesR2.forEach(c=>{r2Map[c.name]=c.clue});
+let html='<table style="width:100%;border-collapse:collapse;text-align:left">';
+html+='<tr style="border-bottom:2px solid #0f3460"><th style="padding:8px;color:#aaa">Player</th><th style="padding:8px;color:#aaa">R1</th>'+(cluesR2.length?'<th style="padding:8px;color:#aaa">R2</th>':'')+'</tr>';
+cluesR1.forEach(c=>{
+html+=`<tr style="border-bottom:1px solid #0f3460"><td style="padding:8px;color:#e94560;font-weight:600">${c.name}</td><td style="padding:8px;color:#00d2ff;font-weight:700">${c.clue}</td>`+(cluesR2.length?`<td style="padding:8px;color:#00d2ff;font-weight:700">${r2Map[c.name]||'—'}</td>`:'')+'</tr>';
+});
+html+='</table>';
+el.innerHTML=html;
+show('allCluesSummary');
+}
+
+function startVoting(){currentVoter=0;selectedVote=-1;votePass()}
+function votePass(){
+document.getElementById('votePassName').textContent=players[currentVoter];
+show('votePass');
+}
+function showVote(){
+document.getElementById('voterName').textContent=players[currentVoter];
+// all clues
+const ac=document.getElementById('allClues');
+ac.innerHTML='<h3 style="margin:4px 0">Round 1</h3>'+cluesR1.map(c=>`<div class="clue-item"><span class="name">${c.name}</span><span class="clue">${c.clue}</span></div>`).join('')
++'<h3 style="margin:8px 0 4px">Round 2</h3>'+cluesR2.map(c=>`<div class="clue-item"><span class="name">${c.name}</span><span class="clue">${c.clue}</span></div>`).join('');
+// vote buttons
+const vg=document.getElementById('voteGrid');
+selectedVote=-1;
+vg.innerHTML=players.map((p,i)=>i===currentVoter?'':`<button class="vote-btn" onclick="selectVote(${i})">${p}</button>`).join('');
+document.getElementById('voteBtn').disabled=true;
+show('voteScreen');
+startTimer(30,'voteTimer',()=>{
+// Time's up — random vote if none selected
+if(selectedVote===-1){
+const options=players.map((_,i)=>i).filter(i=>i!==currentVoter);
+selectedVote=options[Math.floor(Math.random()*options.length)];
+}
+votes.push({voter:currentVoter,target:selectedVote});
+currentVoter++;
+if(currentVoter<players.length){selectedVote=-1;votePass()}
+else showResults();
+});
+}
+function selectVote(i){
+selectedVote=i;
+document.querySelectorAll('.vote-btn').forEach(b=>b.classList.remove('selected'));
+document.querySelectorAll('.vote-btn').forEach(b=>{if(b.textContent===players[i])b.classList.add('selected')});
+document.getElementById('voteBtn').disabled=false;
+}
+function submitVote(){
+stopTimer();
+votes.push({voter:currentVoter,target:selectedVote});
+currentVoter++;
+if(currentVoter<players.length){selectedVote=-1;votePass()}
+else showResults();
+}
+
+function showResults(){
+const tally={};
+votes.forEach(v=>{tally[v.target]=(tally[v.target]||0)+1});
+const maxVotes=Math.max(...Object.values(tally));
+const majority=maxVotes>players.length/2;
+const topVoted=parseInt(Object.entries(tally).find(([k,v])=>v===maxVotes)[0]);
+const groupWins=majority&&topVoted===impostorIdx;
+
+document.getElementById('resultEmoji').textContent=groupWins?'🗳️':'🗳️';
+document.getElementById('resultTitle').innerHTML='<span style="color:#aaa">Voting Complete!</span>';
+document.getElementById('secretWord').textContent=secretWord;
+document.getElementById('impostorWordReveal').textContent=impostorWord;
+document.getElementById('impostorName').textContent=players[impostorIdx];
+document.getElementById('impostorWordName').textContent=impostorWord;
+
+// Hide impostor reveal, show guess prompt
+document.getElementById('impostorRevealSection').style.display='none';
+document.getElementById('guessPrompt').style.display='';
+document.getElementById('revealBtn').style.display='';
+
+const bd=document.getElementById('voteBreakdown');
+bd.innerHTML='<h3 style="margin-bottom:6px">Votes</h3>'+players.map((p,i)=>{
+const cnt=tally[i]||0;
+return cnt?`<div style="margin:2px 0">${p}: ${cnt} vote${cnt!==1?'s':''}</div>`:'';
+}).join('');
+
+show('results');
+}
+
+function revealImpostor(){
+const tally={};
+votes.forEach(v=>{tally[v.target]=(tally[v.target]||0)+1});
+const maxVotes=Math.max(...Object.values(tally));
+const topVoted=parseInt(Object.entries(tally).find(([k,v])=>v===maxVotes)[0]);
+const groupWins=maxVotes>players.length/2&&topVoted===impostorIdx;
+
+document.getElementById('resultEmoji').textContent=groupWins?'🎉':'😈';
+document.getElementById('resultTitle').innerHTML=groupWins?'<span class="win">Group Wins!</span>':'<span class="lose">Impostor Wins!</span>';
+document.getElementById('impostorRevealSection').style.display='block';
+document.getElementById('guessPrompt').style.display='none';
+document.getElementById('revealBtn').style.display='none';
+
+// Add spy emoji to vote breakdown
+const bd=document.getElementById('voteBreakdown');
+bd.innerHTML='<h3 style="margin-bottom:6px">Votes</h3>'+players.map((p,i)=>{
+const cnt=tally[i]||0;
+return cnt?`<div style="margin:2px 0">${p}: ${cnt} vote${cnt!==1?'s':''} ${i===impostorIdx?'🕵️':''}</div>`:'';
+}).join('');
+
+if(groupWins)launchConfetti();
+}
+
+function playAgain(){startGame()}
+function backToLobby(){players=[];selectedTheme=null;usedPairs=[];renderPlayers();checkReady();document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('selected'));show('lobby')}
+
+function launchConfetti(){
+const colors=['#e94560','#00d2ff','#4ade80','#fbbf24','#a78bfa','#fb7185'];
+for(let i=0;i<80;i++){
+const el=document.createElement('div');
+el.className='confetti-piece';
+el.style.left=Math.random()*100+'vw';
+el.style.background=colors[Math.floor(Math.random()*colors.length)];
+el.style.animationDuration=(2+Math.random()*2)+'s';
+el.style.animationDelay=Math.random()+'s';
+el.style.borderRadius=Math.random()>.5?'50%':'0';
+el.style.width=(6+Math.random()*8)+'px';
+el.style.height=(6+Math.random()*8)+'px';
+document.body.appendChild(el);
+setTimeout(()=>el.remove(),5000);
+}
+}
+</script>
+</body>
+</html>

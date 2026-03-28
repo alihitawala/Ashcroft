@@ -102,6 +102,7 @@
     let currentPlant = null;
     let currentTimeline = [];
     let currentLogs = [];
+    let currentHealthHistory = [];
     let activeTimelineIdx = 0;
     let sortMode = 'attention'; // attention | alpha | health
     let wateringData = null;
@@ -506,12 +507,14 @@
 
         // Fetch data in parallel
         try {
-            const [timeline, logs] = await Promise.all([
+            const [timeline, logs, healthHistory] = await Promise.all([
                 API.get(`/garden/plants/${plant.id}/timeline`).catch(() => []),
                 API.get(`/garden/plants/${plant.id}/logs`).catch(() => []),
+                API.get(`/garden/plants/${plant.id}/health-history`).catch(() => []),
             ]);
             currentTimeline = timeline || [];
             currentLogs = logs || [];
+            currentHealthHistory = healthHistory || [];
             activeTimelineIdx = 0;
             renderDetail();
         } catch (err) {
@@ -595,9 +598,9 @@
         let aiHTML = '';
         if (assessment?.ai_summary) {
             aiHTML = `
-                <div class="ai-summary">
-                    <div class="ai-summary-label"><i data-lucide="sparkles"></i> AI Analysis</div>
-                    ${esc(assessment.ai_summary)}
+                <div class="ai-summary bittu-take">
+                    <div class="ai-summary-label">🐢 Bittu's Take</div>
+                    <div class="bittu-quote">${esc(assessment.ai_summary)}</div>
                 </div>
             `;
         }
@@ -725,6 +728,7 @@
             <div class="detail-body">
                 ${aiHTML}
                 ${healthHTML}
+                ${renderHealthTrendChart(currentHealthHistory)}
                 ${recsHTML}
                 ${timelineHTML}
                 ${logHTML}
@@ -744,6 +748,7 @@
         lucide.createIcons();
         bindDetailEvents();
         animateHealthGauge();
+        drawHealthTrendCanvas();
     }
 
     function renderDimensions(assessment) {
@@ -777,6 +782,135 @@
         });
         html += '</div>';
         return html;
+    }
+
+    // ─── Health Trend Chart ───
+    function renderHealthTrendChart(history) {
+        if (!history || history.length < 2) return '';
+        return `
+            <div class="detail-section health-trend-section">
+                <div class="detail-section-header">
+                    <span class="detail-section-title"><i data-lucide="trending-up"></i> Health Trend</span>
+                </div>
+                <div class="health-trend-chart-wrap">
+                    <canvas id="healthTrendCanvas"></canvas>
+                    <div class="health-trend-tooltip" id="healthTrendTooltip"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function drawHealthTrendCanvas() {
+        const canvas = document.getElementById('healthTrendCanvas');
+        if (!canvas || !currentHealthHistory || currentHealthHistory.length < 2) return;
+
+        const data = currentHealthHistory;
+        const wrap = canvas.parentElement;
+        const dpr = window.devicePixelRatio || 1;
+        const W = wrap.clientWidth;
+        const H = 180;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const pad = { top: 16, right: 16, bottom: 32, left: 36 };
+        const chartW = W - pad.left - pad.right;
+        const chartH = H - pad.top - pad.bottom;
+
+        // Axes
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        // Y-axis gridlines & labels
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        for (let v = 0; v <= 100; v += 25) {
+            const y = pad.top + chartH - (v / 100) * chartH;
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(W - pad.right, y);
+            ctx.stroke();
+            ctx.fillText(v.toString(), pad.left - 6, y + 3);
+        }
+
+        // Points
+        const points = data.map((d, i) => {
+            const x = pad.left + (i / (data.length - 1)) * chartW;
+            const score = d.overall_score ?? 0;
+            const y = pad.top + chartH - (score / 100) * chartH;
+            return { x, y, score, date: d.date || d.assessed_at };
+        });
+
+        // X-axis labels
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        const maxLabels = Math.min(data.length, Math.floor(chartW / 50));
+        const step = Math.max(1, Math.floor(data.length / maxLabels));
+        points.forEach((p, i) => {
+            if (i % step === 0 || i === points.length - 1) {
+                const d = new Date(p.date);
+                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                ctx.fillText(label, p.x, H - 6);
+            }
+        });
+
+        // Draw line segments colored by score
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        for (let i = 0; i < points.length - 1; i++) {
+            const avg = (points[i].score + points[i + 1].score) / 2;
+            ctx.strokeStyle = avg > 80 ? '#22c55e' : avg >= 50 ? '#eab308' : '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(points[i].x, points[i].y);
+            ctx.lineTo(points[i + 1].x, points[i + 1].y);
+            ctx.stroke();
+        }
+
+        // Dots
+        points.forEach(p => {
+            const color = p.score > 80 ? '#22c55e' : p.score >= 50 ? '#eab308' : '#ef4444';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+
+        // Tooltip interaction
+        const tooltip = document.getElementById('healthTrendTooltip');
+        if (!tooltip) return;
+
+        function handlePointer(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const my = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            let closest = null, minDist = Infinity;
+            points.forEach(p => {
+                const dist = Math.hypot(p.x - mx, p.y - my);
+                if (dist < minDist) { minDist = dist; closest = p; }
+            });
+            if (closest && minDist < 30) {
+                const d = new Date(closest.date);
+                const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                tooltip.textContent = `${label}: ${closest.score}`;
+                tooltip.style.left = Math.min(Math.max(closest.x, 40), W - 40) + 'px';
+                tooltip.style.top = (closest.y - 28) + 'px';
+                tooltip.classList.add('visible');
+            } else {
+                tooltip.classList.remove('visible');
+            }
+        }
+        canvas.addEventListener('mousemove', handlePointer);
+        canvas.addEventListener('touchstart', handlePointer, { passive: true });
+        canvas.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+        canvas.addEventListener('touchend', () => setTimeout(() => tooltip.classList.remove('visible'), 1500));
     }
 
     // ─── Animate Health Gauge ───

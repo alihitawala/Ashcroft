@@ -65,6 +65,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/notes.html" data-page="notes"><i data-lucide="file-text" class="nav-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? '<a href="/app/kanban.html" data-page="kanban"><i data-lucide="kanban" class="nav-icon"></i> Kanban</a>' : ''}
                     <a href="/app/tasks.html" data-page="tasks"><i data-lucide="check-square" class="nav-icon"></i> Tasks</a>
+                    <a href="/app/impostor/" data-page="impostor"><i data-lucide="ghost" class="nav-icon"></i> Impostor</a>
                     <a href="/app/settings.html" data-page="settings"><i data-lucide="settings" class="nav-icon"></i> Settings</a>
                 </nav>
                 <div class="sidebar-bottom">
@@ -116,6 +117,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/notes.html" class="bottom-nav-menu-item${activePage==='notes'?' active':''}"><i data-lucide="file-text" class="menu-icon"></i> Notes</a>
                     ${currentUser?.role === 'admin' ? `<a href="/app/kanban.html" class="bottom-nav-menu-item${activePage==='kanban'?' active':''}"><i data-lucide="kanban" class="menu-icon"></i> Kanban</a>` : ''}
                     <a href="/app/tasks.html" class="bottom-nav-menu-item${activePage==='tasks'?' active':''}"><i data-lucide="check-square" class="menu-icon"></i> Tasks</a>
+                    <a href="/app/impostor/" class="bottom-nav-menu-item${activePage==='impostor'?' active':''}"><i data-lucide="ghost" class="menu-icon"></i> Impostor</a>
                     <a href="/app/settings.html" class="bottom-nav-menu-item${activePage==='settings'?' active':''}"><i data-lucide="settings" class="menu-icon"></i> Settings</a>
                     <a href="#" class="bottom-nav-menu-item" onclick="event.preventDefault();clearCacheReload()"><i data-lucide="refresh-cw" class="menu-icon"></i> Clear Cache</a>
                 </div>

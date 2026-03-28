@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eid Invite Tracker — Ashcroft</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.tracker-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.tracker-header h1{font-size:22px;font-weight:600}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.stat-card{flex:1;min-width:120px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:700;line-height:1}
+.stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card.attending .stat-num{color:#22c55e}
+.stat-card.maybe .stat-num{color:#f59e0b}
+.stat-card.declined .stat-num{color:#ef4444}
+.stat-card.pending .stat-num{color:var(--text-secondary)}
+
+.guest-table{width:100%;border-collapse:collapse;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.guest-table th{text-align:left;padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);border-bottom:1px solid var(--border);background:var(--hover-bg)}
+.guest-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:14px}
+.guest-table tr:last-child td{border-bottom:none}
+.guest-table tr:hover td{background:var(--hover-bg)}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge.attending{background:#dcfce7;color:#166534}
+.badge.maybe{background:#fef3c7;color:#92400e}
+.badge.declined{background:#fee2e2;color:#991b1b}
+.badge.pending{background:var(--hover-bg);color:var(--text-secondary)}
+
+.link-cell{font-size:12px;font-family:monospace;color:var(--text-secondary)}
+.link-cell a{color:var(--primary);text-decoration:none}
+.link-cell a:hover{text-decoration:underline}
+.copy-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--text-secondary);margin-left:6px}
+.copy-btn:hover{background:var(--hover-bg)}
+
+.add-form{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
+.add-form h3{margin-bottom:12px;font-size:16px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.form-row .field{flex:1;min-width:150px}
+.form-row label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.form-row input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text-primary)}
+.add-btn{padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.add-btn:hover{opacity:.9}
+
+.msg-note{font-size:12px;color:var(--text-secondary);font-style:italic;margin-top:2px}
+.sent-badge{font-size:11px;color:#22c55e}
+
+.empty{text-align:center;padding:40px;color:var(--text-secondary)}
+
+@media(max-width:700px){
+  .guest-table{font-size:13px}
+  .guest-table th,.guest-table td{padding:8px 10px}
+  .link-cell{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav"></nav>
+  <main class="container">
+    <div class="tracker-header">
+      <h1>🌙 Eid ul-Fitr Invites</h1>
+      <span style="color:var(--text-secondary);font-size:14px">Sunday, April 5 · 12PM · 1160 Ashcroft Way</span>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="add-form">
+      <h3>Add Guest</h3>
+      <div class="form-row">
+        <div class="field"><label>Name *</label><input type="text" id="gName" placeholder="Akash & Nemi"></div>
+        <div class="field"><label>Phone</label><input type="text" id="gPhone" placeholder="+1..."></div>
+        <div class="field"><label>Email</label><input type="email" id="gEmail" placeholder="optional"></div>
+        <button class="add-btn" onclick="addGuest()">Add & Get Link</button>
+      </div>
+    </div>
+
+    <table class="guest-table">
+      <thead><tr><th>Guest</th><th>Status</th><th>Guests</th><th>Message</th><th>Link</th><th>Sent</th></tr></thead>
+      <tbody id="guestBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </main>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const EID_EVENT_ID = 16;
+const BASE = 'https://ashcroft.cloud';
+const API = `${BASE}/api/iftar`;
+
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, { credentials: 'include', ...opts });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function loadGuests() {
+  const data = await apiFetch(`${API}/events`);
+  const event = data.find(e => e.id === EID_EVENT_ID);
+  const guests = event ? event.invites : [];
+  renderStats(guests);
+  renderTable(guests);
+}
+
+function renderStats(guests) {
+  const c = { attending: 0, maybe: 0, declined: 0, pending: 0, totalGuests: 0 };
+  guests.forEach(g => {
+    c[g.rsvp_status || 'pending']++;
+    if (g.rsvp_status === 'attending') c.totalGuests += (g.guest_count || 1);
+  });
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${guests.length}</div><div class="stat-label">Invited</div></div>
+    <div class="stat-card attending"><div class="stat-num">${c.attending}</div><div class="stat-label">Attending (${c.totalGuests})</div></div>
+    <div class="stat-card maybe"><div class="stat-num">${c.maybe}</div><div class="stat-label">Maybe</div></div>
+    <div class="stat-card declined"><div class="stat-num">${c.declined}</div><div class="stat-label">Declined</div></div>
+    <div class="stat-card pending"><div class="stat-num">${c.pending}</div><div class="stat-label">Pending</div></div>
+  `;
+}
+
+function renderTable(guests) {
+  const tbody = document.getElementById('guestBody');
+  if (!guests.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No guests yet. Add some above!</td></tr>'; return; }
+  tbody.innerHTML = guests.map(g => {
+    const link = `${BASE}/eid-party/?t=${g.token}`;
+    const status = g.rsvp_status || 'pending';
+    return `<tr>
+      <td><strong>${g.guest_name}</strong>${g.guest_phone ? '<br><span style="font-size:12px;color:var(--text-secondary)">'+g.guest_phone+'</span>' : ''}</td>
+      <td><span class="badge ${status}">${status}</span>${g.rsvp_at ? '<br><span style="font-size:11px;color:var(--text-secondary)">'+new Date(g.rsvp_at).toLocaleDateString()+'</span>' : ''}</td>
+      <td>${g.guest_count || '-'}</td>
+      <td>${g.message_to_host ? '<span class="msg-note">"'+g.message_to_host+'"</span>' : '-'}</td>
+      <td class="link-cell"><a href="${link}" target="_blank">${g.token}</a><button class="copy-btn" onclick="copyLink('${link}',this)">Copy</button></td>
+      <td>${g.link_sent ? '<span class="sent-badge">✓ Sent</span>' : '<button class="copy-btn" onclick="markSent(${g.id},this)">Mark Sent</button>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function addGuest() {
+  const name = document.getElementById('gName').value.trim();
+  if (!name) return alert('Name is required');
+  const phone = document.getElementById('gPhone').value.trim();
+  const email = document.getElementById('gEmail').value.trim();
+  
+  const data = await apiFetch(`${API}/events/${EID_EVENT_ID}/invites`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guests: [{ name, phone: phone || null, email: email || null }] })
+  });
+  
+  document.getElementById('gName').value = '';
+  document.getElementById('gPhone').value = '';
+  document.getElementById('gEmail').value = '';
+  
+  const inv = Array.isArray(data) ? data[0] : data;
+  const link = `${BASE}/eid-party/?t=${inv.token}`;
+  try { await navigator.clipboard.writeText(link); alert(`✅ Added ${name}!\nLink copied: ${link}`); }
+  catch { alert(`✅ Added ${name}!\nLink: ${link}`); }
+  
+  loadGuests();
+}
+
+async function markSent(id, btn) {
+  await apiFetch(`${API}/invites/${id}/sent`, { method: 'PUT' });
+  btn.outerHTML = '<span class="sent-badge">✓ Sent</span>';
+}
+
+function copyLink(link, btn) {
+  navigator.clipboard.writeText(link).then(() => {
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+loadGuests();
+</script>
+</body>
+</html>

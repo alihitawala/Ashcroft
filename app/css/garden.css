@@ -1142,6 +1142,24 @@
 }
 .ai-summary-label svg { width: 12px; height: 12px; }
 
+/* ─── Bittu's Take ─── */
+.ai-summary.bittu-take {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+}
+.ai-summary.bittu-take .ai-summary-label {
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--accent);
+}
+.bittu-quote {
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
 /* ─── No-health state in detail ─── */
 .no-health-state {
     text-align: center;
@@ -1760,3 +1778,32 @@
 }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
+/* ─── Health Trend Chart ─── */
+.health-trend-section { margin-top: 4px; }
+.health-trend-chart-wrap {
+    position: relative;
+    width: 100%;
+    padding: 8px 0;
+}
+.health-trend-chart-wrap canvas {
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+}
+.health-trend-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface-2, #2a2a3e);
+    color: var(--text, #fff);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.health-trend-tooltip.visible { opacity: 1; }

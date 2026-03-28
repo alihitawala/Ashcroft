@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Eid ul-Fitr — You're Invited!</title>
+<meta property="og:title" content="Eid ul-Fitr Lunch Party — You're Invited!">
+<meta property="og:description" content="Join us to celebrate Eid ul-Fitr!">
+<meta property="og:image" content="https://ashcroft.cloud/eid-party/assets/blue-mosque.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500&family=Amiri:wght@400;700&family=Great+Vibes&family=Pinyon+Script&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#b8860b;
+  --gold-light:#d4a843;
+  --gold-shimmer:#e8c55a;
+  --gold-pale:#f0dca0;
+  --cream:#faf5eb;
+  --cream-dark:#f0e6d3;
+  --warm-white:#fefcf7;
+  --text-dark:#3a302a;
+  --text-mid:#6b5d52;
+}
+
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;
+  background:var(--cream);
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  font-family:'Playfair Display',serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+.card-wrapper{
+  width:100%;max-width:500px;margin:0 auto;
+  position:relative;overflow:hidden;
+}
+
+/* === HERO — Full viewport === */
+.hero{
+  min-height:auto;
+  position:relative;
+  display:flex;flex-direction:column;
+  align-items:center;
+  background:var(--cream);
+  overflow:hidden;
+}
+.hero::after{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:100%;
+  background:url('assets/hosts.jpg') center 20%/cover no-repeat;
+  background-attachment:scroll;
+  opacity:0.20;
+  filter:sepia(0.3) saturate(0.4) brightness(1.2);
+  z-index:0;
+  mask-image:radial-gradient(ellipse 70% 50% at 50% 40%, black 20%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse 70% 50% at 50% 40%, black 20%, transparent 70%);
+}
+.hero>*{position:relative;z-index:1;}
+.hero{
+  background-image:
+    /* Corner washes — warm parchment stains */
+    radial-gradient(ellipse 60% 50% at 0% 0%, rgba(200,170,125,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(195,165,120,0.3) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(205,175,130,0.3) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 55% at 100% 100%, rgba(200,170,125,0.35) 0%, transparent 70%),
+    /* Edge washes */
+    radial-gradient(ellipse 40% 30% at 50% 0%, rgba(210,180,135,0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 40% at 0% 50%, rgba(195,165,120,0.15) 0%, transparent 65%),
+    radial-gradient(ellipse 35% 40% at 100% 50%, rgba(195,165,120,0.15) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(205,175,130,0.2) 0%, transparent 70%),
+    /* Scattered mid-area splotches */
+    radial-gradient(ellipse 25% 20% at 20% 25%, rgba(210,185,140,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 20% 25% at 75% 35%, rgba(200,175,130,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 20% at 30% 70%, rgba(205,178,135,0.1) 0%, transparent 65%),
+    radial-gradient(ellipse 25% 20% at 80% 75%, rgba(210,182,138,0.12) 0%, transparent 65%);
+}
+
+/* Hanging lanterns */
+.lantern{
+  position:absolute;top:0;z-index:3;
+  width:40px;
+  opacity:.6;
+  animation:sway 4s ease-in-out infinite;
+  transform-origin:top center;
+}
+.lantern-left{left:24px;animation-delay:0s}
+.lantern-right{right:24px;animation-delay:1s}
+.lantern-string{
+  width:1px;height:20px;
+  background:var(--gold-pale);
+  margin:0 auto 2px;
+}
+.lantern-body{
+  width:28px;height:40px;margin:0 auto;
+  border:1.5px solid var(--gold-pale);
+  border-radius:4px 4px 8px 8px;
+  background:linear-gradient(180deg,rgba(232,197,90,.15),rgba(232,197,90,.05));
+  position:relative;
+}
+.lantern-body::before{
+  content:'';position:absolute;
+  top:-6px;left:50%;transform:translateX(-50%);
+  width:14px;height:6px;
+  border:1.5px solid var(--gold-pale);
+  border-bottom:none;
+  border-radius:6px 6px 0 0;
+}
+.lantern-body::after{
+  content:'';position:absolute;
+  bottom:-4px;left:50%;transform:translateX(-50%);
+  width:8px;height:4px;
+  background:var(--gold-pale);
+  border-radius:0 0 4px 4px;
+}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+
+/* Stars */
+.stars{position:absolute;top:60px;left:0;right:0;height:80px;pointer-events:none;z-index:2}
+.star{
+  position:absolute;
+  color:var(--gold-pale);
+  animation:twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:.8}}
+.st1{top:10px;left:35%;font-size:14px;animation-delay:0s}
+.st2{top:30px;left:45%;font-size:10px;animation-delay:.6s}
+.st3{top:5px;left:55%;font-size:12px;animation-delay:1.2s}
+.st4{top:25px;left:62%;font-size:8px;animation-delay:.3s}
+.st5{top:50px;left:40%;font-size:9px;animation-delay:.9s}
+.st6{top:45px;left:58%;font-size:11px;animation-delay:1.5s}
+
+/* Corner art — top left */
+.corner-art{
+  position:absolute;
+  top:0;left:0;right:0;
+  width:100%;
+  z-index:1;
+  pointer-events:none;
+}
+.corner-art img{
+  width:100%;display:block;
+  opacity:.5;
+  mask-image:linear-gradient(to bottom, black 50%, transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom, black 50%, transparent 100%);
+}
+
+/* Hero text */
+.hero-text{
+  position:relative;z-index:2;
+  text-align:center;
+  padding:40px 24px 40px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-start;
+}
+
+.join-text{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(11px,2.6vw,14px);
+  color:var(--text-dark);
+  letter-spacing:4px;text-transform:uppercase;
+  margin-bottom:2px;
+}
+
+/* Crescent moon — centered */
+.crescent-star{
+  margin-bottom:8px;
+}
+.crescent-star svg{
+  filter:drop-shadow(0 2px 12px rgba(184,134,11,.25));
+}
+
+.eid-title{
+  font-family:'Pinyon Script',cursive;
+  font-size:clamp(60px,16vw,90px);
+  font-weight:400;
+  color:var(--gold);
+  line-height:1;
+  margin-bottom:0;
+  text-shadow:0 2px 12px rgba(184,134,11,.12);
+}
+
+.dinner-party{
+  font-family:'Great Vibes',cursive;
+  font-size:clamp(28px,7vw,40px);
+  color:var(--gold-light);
+  margin-top:-4px;
+  margin-bottom:16px;
+}
+
+.hosted-by{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(11px,2.4vw,13px);
+  color:var(--text-mid);
+  letter-spacing:3px;text-transform:uppercase;
+  margin-top:20px;
+  margin-bottom:2px;
+}
+
+.host-name{
+  font-family:'Great Vibes',cursive;
+  font-size:clamp(32px,8vw,44px);
+  font-weight:700;
+  color:#5b8fa8;
+  margin-bottom:20px;
+}
+
+/* Date block — 3 column layout */
+.date-block{
+  display:flex;align-items:center;
+  gap:0;margin-bottom:20px;
+}
+.date-side{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(12px,2.6vw,14px);
+  color:var(--text-dark);
+  letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;
+  padding:0 6px;
+}
+.date-center{
+  text-align:center;
+  border-left:1.5px solid var(--gold-pale);
+  border-right:1.5px solid var(--gold-pale);
+  padding:2px 14px;
+}
+.date-month{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(12px,2.6vw,14px);
+  color:var(--text-dark);
+  letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;
+  display:block;
+}
+.date-num{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(24px,6vw,34px);
+  font-weight:700;
+  color:var(--gold);
+  line-height:1.1;
+  display:block;
+}
+.date-year{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(12px,2.8vw,15px);
+  color:var(--text-mid);
+  letter-spacing:2px;
+  display:block;
+}
+
+/* Address block */
+.address-block{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(11px,2.4vw,13px);
+  color:var(--text-mid);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  line-height:1.8;
+  margin-bottom:16px;
+}
+/* Dress code */
+.dress-code{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(13px,3vw,15px);
+  color:var(--gold);
+  font-style:italic;
+  margin-bottom:12px;
+  letter-spacing:1px;
+}
+
+/* Mosque — bottom of hero */
+.hero-mosque{
+  position:relative;
+  width:100%;
+  margin-top:auto;
+  z-index:1;
+}
+.hero-mosque img{
+  width:100%;
+  display:block;
+  opacity:.55;
+  filter:sepia(0.3) saturate(0.6) brightness(1.1);
+}
+/* Smooth gradient blend into parchment */
+.hero-mosque::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:50%;
+  background:linear-gradient(180deg,
+    rgba(250,245,235,1) 0%,
+    rgba(250,245,235,0.8) 30%,
+    rgba(250,245,235,0.3) 60%,
+    transparent 100%
+  );
+  z-index:1;
+}
+
+/* Scroll hint */
+.scroll-hint{
+  text-align:center;z-index:4;
+  margin-top:12px;
+  font-family:'Inter',sans-serif;font-size:11px;
+  color:var(--text-mid);letter-spacing:1px;opacity:.6;
+}
+.scroll-arrow{display:block;font-size:14px;animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+/* === CONTENT (RSVP) === */
+.content{
+  background:var(--warm-white);
+  padding:32px 36px 40px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+/* removed - moved to hero */
+
+.divider{
+  display:flex;align-items:center;gap:12px;
+  margin:0 auto 20px;max-width:280px;
+}
+.divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-pale),transparent)}
+.divider-dot{color:var(--gold-light);font-size:10px}
+
+.guest-name{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(18px,4vw,22px);
+  color:var(--text-dark);
+  margin-bottom:4px;font-style:italic;
+}
+.warmth{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(13px,2.8vw,15px);
+  color:var(--text-mid);
+  margin-bottom:24px;font-style:italic;
+}
+
+/* RSVP */
+.rsvp-section{margin-top:4px}
+.rsvp-prompt{
+  font-family:'Playfair Display',serif;
+  color:var(--text-mid);
+  margin-bottom:18px;font-size:clamp(15px,3.5vw,18px);
+  font-style:italic;
+}
+.rsvp-buttons{
+  display:flex;gap:10px;
+  justify-content:center;flex-wrap:wrap;
+  margin-bottom:16px;
+}
+.rsvp-btn{
+  font-family:'Playfair Display',serif;
+  font-size:13px;font-weight:600;
+  padding:11px 22px;border-radius:24px;
+  border:1.5px solid var(--gold-pale);
+  background:transparent;color:var(--gold);
+  cursor:pointer;transition:all .3s ease;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.rsvp-btn:hover{background:var(--gold-pale);border-color:var(--gold-light)}
+.rsvp-btn.active{
+  background:var(--gold);color:white;
+  border-color:var(--gold);
+  box-shadow:0 4px 16px rgba(184,134,11,.2);
+}
+.rsvp-btn.decline{border-color:var(--cream-dark);color:var(--text-mid)}
+.rsvp-btn.decline:hover{background:var(--cream-dark)}
+.rsvp-btn.decline.active{background:var(--text-mid);color:white;border-color:var(--text-mid)}
+
+.rsvp-extra{max-height:0;overflow:hidden;transition:max-height .5s ease,opacity .4s;opacity:0}
+.rsvp-extra.show{max-height:300px;opacity:1}
+.rsvp-extra label{
+  display:block;font-size:13px;color:var(--text-mid);
+  margin:16px 0 6px;text-align:left;
+  font-family:'Inter',sans-serif;font-weight:400;letter-spacing:.3px;
+}
+.rsvp-extra input,.rsvp-extra textarea{
+  width:100%;padding:11px 14px;
+  background:var(--cream);
+  border:1.5px solid var(--gold-pale);border-radius:10px;
+  color:var(--text-dark);
+  font-family:'Playfair Display',serif;font-size:15px;
+  outline:none;transition:border-color .3s;
+}
+.rsvp-extra input:focus,.rsvp-extra textarea:focus{border-color:var(--gold)}
+.rsvp-extra textarea{resize:vertical;min-height:56px}
+.submit-btn{
+  margin-top:20px;padding:14px 44px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-light));
+  color:white;
+  font-family:'Playfair Display',serif;
+  font-size:15px;font-weight:700;border:none;cursor:pointer;
+  letter-spacing:2px;text-transform:uppercase;border-radius:28px;
+  transition:transform .2s,box-shadow .3s;
+}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(184,134,11,.25)}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.footer{text-align:center;padding:24px 0 8px}
+.footer-line{width:120px;height:1px;margin:0 auto;background:linear-gradient(90deg,transparent,var(--gold-pale),transparent)}
+.footer-quote{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(12px,2.8vw,14px);
+  color:var(--text-mid);
+  font-style:italic;
+  margin:12px 0 8px;
+  line-height:1.5;
+}
+.footer-star{color:var(--gold-light);opacity:.4;font-size:14px;display:block;margin-top:8px}
+
+/* States */
+.loading-state,.error-state,.thank-you{display:none;text-align:center}
+.loading-state.visible,.error-state.visible,.thank-you.visible{display:block}
+.invite-content{display:none}.invite-content.visible{display:block}
+
+.spinner{
+  width:32px;height:32px;
+  border:2px solid var(--cream-dark);border-top-color:var(--gold);
+  border-radius:50%;animation:spin 1s linear infinite;
+  margin:60px auto 16px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state p{
+  color:var(--text-mid);font-family:'Playfair Display',serif;
+  font-size:16px;letter-spacing:1px;padding-bottom:60px;
+}
+
+.thank-you{padding:40px 0}
+.thank-you .emoji{font-size:32px;display:block;margin-bottom:12px}
+.thank-you h2{
+  font-family:'Playfair Display',serif;font-size:32px;
+  color:var(--gold);margin-bottom:12px;font-weight:700;
+}
+.thank-you p{color:var(--text-mid);font-family:'Playfair Display',serif;font-size:16px}
+
+.error-state{padding:60px 0}
+.error-state h2{font-family:'Playfair Display',serif;color:var(--gold);margin-bottom:10px}
+.error-state p{color:var(--text-mid);font-size:14px;font-family:'Inter',sans-serif}
+
+@media(max-width:500px){
+  body{padding:0}
+  .card-wrapper{max-width:100%}
+  .content{padding:28px 24px 36px}
+  .rsvp-buttons{flex-direction:column;align-items:center}
+  .rsvp-btn{width:100%;max-width:220px}
+}
+@media(min-width:501px){
+  body{padding:20px 12px}
+  .card-wrapper{border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.06)}
+}
+</style>
+</head>
+<body>
+<div class="card-wrapper">
+
+  <!-- HERO — Full screen -->
+  <div class="hero">
+
+    <div class="hero-text">
+      <div class="crescent-star">
+        <svg viewBox="0 0 100 100" width="90" height="90" style="transform:rotate(-30deg)">
+          <mask id="crescentMask">
+            <rect width="100" height="100" fill="white"/>
+            <circle cx="58" cy="45" r="32" fill="black"/>
+          </mask>
+          <circle cx="45" cy="45" r="36" fill="#5b8fa8" mask="url(#crescentMask)"/>
+          <polygon points="62,36 64.5,42 71,42.5 66,46.5 67.5,53 62,49 56.5,53 58,46.5 53,42.5 59.5,42" fill="#5b8fa8" transform="rotate(30,62,44)"/>
+        </svg>
+      </div>
+
+      <p class="join-text">Join us to celebrate</p>
+
+      <h1 class="eid-title">Eid ul-Fitr</h1>
+      <p class="hosted-by">Hosted By</p>
+      <p class="host-name">Saba &amp; Ali</p>
+
+      <div class="date-block">
+        <span class="date-side">Sunday</span>
+        <span class="date-center">
+          <span class="date-month">April</span>
+          <span class="date-num">5</span>
+          <span class="date-year">2026</span>
+        </span>
+        <span class="date-side">At 12PM</span>
+      </div>
+
+      <div class="address-block">
+        <span id="addressHero">1160 Ashcroft Way</span><br>
+        Sunnyvale, CA
+      </div>
+
+      <div class="scroll-hint">
+        <span>RSVP below</span>
+        <span class="scroll-arrow">↓</span>
+      </div>
+    </div>
+
+    <!-- Mosque at bottom -->
+    <!-- mosque removed -->
+  </div>
+
+  <!-- RSVP Section -->
+  <div class="content">
+
+    <div class="loading-state visible" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading your invitation…</p>
+    </div>
+
+    <div class="error-state" id="errorState">
+      <h2>Oops!</h2>
+      <p id="errorMsg">Something went wrong loading your invitation.</p>
+    </div>
+
+    <div class="invite-content" id="inviteContent">
+      <div class="divider">
+        <span class="divider-line"></span>
+        <span class="divider-dot">✦</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <p class="guest-name"><span id="guestName">Friend</span>,</p>
+      <p class="warmth">We warmly invite you to share in our joy</p>
+
+      <div class="rsvp-section" id="rsvpSection">
+        <p class="rsvp-prompt">Kindly let us know if you can make it</p>
+        <div class="rsvp-buttons" id="rsvpButtons">
+          <button class="rsvp-btn" data-status="attending">🎉 Attending</button>
+          <button class="rsvp-btn" data-status="maybe">🤔 Maybe</button>
+          <button class="rsvp-btn decline" data-status="declined">Can't Make It</button>
+        </div>
+        <div class="rsvp-extra" id="rsvpExtra">
+          <label for="guestCount">Number of Guests</label>
+          <input type="number" id="guestCount" min="1" max="20" value="1">
+          <label for="rsvpMsg">Message to Host <span style="opacity:.4;font-size:11px">(optional)</span></label>
+          <textarea id="rsvpMsg" rows="2" placeholder="Any dietary needs or a note…"></textarea>
+          <button class="submit-btn" id="submitBtn" onclick="submitRSVP()">Confirm RSVP</button>
+        </div>
+      </div>
+
+      <div class="divider" style="margin-top:24px">
+        <span class="divider-line"></span>
+        <span class="divider-dot">✦</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <p class="dress-code">Dress Code: Indian Traditional</p>
+
+      <div class="footer">
+        <div class="footer-line"></div>
+        <p class="footer-quote">Celebrating the blessings of togetherness ☽</p>
+        <span class="footer-star">☽ ✦ ☽</span>
+      </div>
+    </div>
+
+    <div class="email-step" id="emailStep" style="display:none;text-align:center">
+      <span class="emoji">📧</span>
+      <h2 style="font-family:'Playfair Display',serif;color:var(--text-dark);font-size:22px;margin:12px 0 8px">One More Thing!</h2>
+      <p style="font-family:'Inter',sans-serif;font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:20px">
+        Leave your email and we'll send you a reminder before the event.
+      </p>
+      <input type="email" id="reminderEmail" placeholder="your@email.com"
+        style="width:100%;padding:11px 14px;border:1px solid var(--cream-dark);border-radius:8px;font-family:'Inter',sans-serif;font-size:15px;background:var(--cream);outline:none;margin-bottom:12px">
+      <button id="emailBtn" onclick="submitEmail()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:white;border:none;border-radius:10px;font-family:'Playfair Display',serif;font-size:16px;font-weight:600;cursor:pointer">
+        Send Me a Reminder
+      </button>
+      <button onclick="skipEmail()"
+        style="background:none;border:none;color:var(--text-mid);font-family:'Inter',sans-serif;font-size:13px;margin-top:12px;cursor:pointer;text-decoration:underline">
+        Skip
+      </button>
+      <div class="footer" style="margin-top:24px">
+        <div class="footer-line"></div>
+        <span class="footer-star">☽ ✦ ☽</span>
+      </div>
+    </div>
+
+    <div class="thank-you" id="thankYou" style="display:none">
+      <span class="emoji" id="thankEmoji">🌙</span>
+      <h2>Thank You!</h2>
+      <p id="thankMsg">We look forward to celebrating with you.</p>
+      <button onclick="changeRSVP()"
+        style="background:none;border:none;color:var(--text-mid);font-family:'Inter',sans-serif;font-size:13px;margin-top:16px;cursor:pointer;text-decoration:underline">
+        Change my RSVP
+      </button>
+      <div class="footer" style="margin-top:24px">
+        <div class="footer-line"></div>
+        <span class="footer-star">☽ ✦ ☽</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('t');
+  const API=`https://ashcroft.cloud/api/iftar/invite/${token}`;
+  const loadingEl=document.getElementById('loadingState');
+  const errorEl=document.getElementById('errorState');
+  const contentEl=document.getElementById('inviteContent');
+  const errorMsg=document.getElementById('errorMsg');
+  function show(el){el.classList.add('visible')}
+  function hide(el){el.classList.remove('visible')}
+
+  if(!token){hide(loadingEl);show(errorEl);errorMsg.textContent='No invitation token found.';return}
+  if(token==='eid-preview'){
+    hide(loadingEl);show(contentEl);
+    document.getElementById('guestName').textContent='Friend';
+    return;
+  }
+
+  let rsvpStatus=null;
+  const stateKey='eid-rsvp-'+token;
+
+  function getState(){try{return JSON.parse(localStorage.getItem(stateKey))||{};}catch(e){return {};}}
+  function setState(obj){localStorage.setItem(stateKey,JSON.stringify({...getState(),...obj}));}
+
+  function showStep(step, status){
+    document.getElementById('rsvpSection').style.display=step==='rsvp'?'':'none';
+    document.getElementById('emailStep').style.display=step==='email'?'block':'none';
+    document.getElementById('thankYou').style.display=step==='thanks'?'block':'none';
+    const footer=document.querySelector('.invite-content .footer');
+    if(footer)footer.style.display=step==='rsvp'?'':'none';
+    if(step==='thanks'&&status){
+      const msgs={attending:["🎉","We can't wait to celebrate with you!"],maybe:["🤞","We hope you can make it!"],declined:["💛","We'll miss you! Maybe next time."]};
+      const [emoji,msg]=msgs[status]||["🌙","Your response has been recorded."];
+      document.getElementById('thankEmoji').textContent=emoji;
+      document.getElementById('thankMsg').textContent=msg;
+    }
+  }
+
+  fetch(API).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+  .then(data=>{
+    hide(loadingEl);show(contentEl);
+    document.getElementById('guestName').textContent=data.guest_name||'Friend';
+    if(data.address)document.getElementById('addressHero').textContent=data.address;
+    rsvpStatus=data.rsvp_status;
+
+    if(rsvpStatus&&rsvpStatus!=='pending'){
+      const saved=getState();
+      // If they RSVP'd but haven't done the email step yet (and not declined)
+      if(saved.step==='email'&&rsvpStatus!=='declined'){
+        showStep('email');
+      } else if(!data.guest_email&&rsvpStatus!=='declined'&&saved.step!=='thanks'){
+        // RSVP'd but no email saved and haven't explicitly skipped — show email step
+        showStep('email');
+        setState({step:'email',status:rsvpStatus});
+      } else {
+        showStep('thanks',rsvpStatus);
+      }
+    }
+  }).catch(e=>{
+    hide(loadingEl);show(errorEl);
+    errorMsg.textContent=e.message==='404'?'Invitation not found.':'Could not load invitation.';
+  });
+
+  document.querySelectorAll('.rsvp-btn').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.rsvp-btn').forEach(b=>b.classList.remove('active'));
+      this.classList.add('active');rsvpStatus=this.dataset.status;
+      const extra=document.getElementById('rsvpExtra');
+      rsvpStatus==='declined'?extra.classList.remove('show'):extra.classList.add('show');
+    });
+  });
+
+  window.submitRSVP=function(){
+    if(!rsvpStatus)return;
+    const btn=document.getElementById('submitBtn');
+    btn.disabled=true;btn.textContent='Sending…';
+    const body={rsvp_status:rsvpStatus};
+    if(rsvpStatus!=='declined')body.guest_count=parseInt(document.getElementById('guestCount').value)||1;
+    const msg=document.getElementById('rsvpMsg').value.trim();
+    if(msg)body.message_to_host=msg;
+    fetch(API+'/rsvp',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(r=>{if(!r.ok)throw new Error();return r.json()})
+    .then(()=>{
+      setState({status:rsvpStatus});
+      if(rsvpStatus==='declined'){
+        setState({step:'thanks'});
+        showStep('thanks',rsvpStatus);
+      } else {
+        setState({step:'email'});
+        showStep('email');
+      }
+    })
+    .catch(()=>{btn.disabled=false;btn.textContent='Confirm RSVP';alert('Something went wrong.');});
+  };
+
+  window.submitEmail=function(){
+    const email=document.getElementById('reminderEmail').value.trim();
+    if(!email||!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)){alert('Please enter a valid email.');return}
+    const btn=document.getElementById('emailBtn');
+    btn.disabled=true;btn.textContent='Saving…';
+    fetch(API+'/email',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
+    .then(r=>{if(!r.ok)throw new Error();return r.json()})
+    .then(()=>{setState({step:'thanks'});showStep('thanks',rsvpStatus);})
+    .catch(()=>{btn.disabled=false;btn.textContent='Send Me a Reminder';alert('Something went wrong.');});
+  };
+
+  window.skipEmail=function(){
+    setState({step:'thanks'});
+    showStep('thanks',rsvpStatus);
+  };
+
+  window.changeRSVP=function(){
+    localStorage.removeItem(stateKey);
+    rsvpStatus=null;
+    document.querySelectorAll('.rsvp-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('rsvpExtra').classList.remove('show');
+    document.getElementById('submitBtn').disabled=false;
+    document.getElementById('submitBtn').textContent='Confirm RSVP';
+    showStep('rsvp');
+  };
+})();
+</script>
+</body>
+</html>

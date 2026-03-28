@@ -279,7 +279,7 @@ function getMapsUrl(evt) {
 }
 
 function getInviteUrl(token) {
-    return window.location.origin + '/iftar/?t=' + token;
+    return window.location.origin + '/eid-party/?t=' + token;
 }
 
 function renderHostedTab() {
