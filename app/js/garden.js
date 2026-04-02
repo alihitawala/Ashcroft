@@ -1188,6 +1188,18 @@
                         credentials: 'same-origin',
                         body: fd,
                     });
+                    // Auto-trigger AI health assessment
+                    try {
+                        const aiForm = new FormData();
+                        aiForm.append('photo', selectedFile);
+                        aiForm.append('mode', 'assess');
+                        aiForm.append('plant_id', newPlant.id);
+                        fetch('/api/garden/ai/analyze', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            body: aiForm,
+                        }); // fire-and-forget — assessment runs in background
+                    } catch (e) { console.warn('Auto-assess failed:', e); }
                 }
                 showToast('Plant added! 🌱');
                 await loadPlants();
