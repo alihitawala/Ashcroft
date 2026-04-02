@@ -74,7 +74,7 @@ router.get('/validate/:code', async (req, res) => {
 // Sign up with invite code (public)
 router.post('/signup', async (req, res) => {
   try {
-    const { code, name, email, password } = req.body;
+    const { code, name, email, password, household_name } = req.body;
     if (!code || !name || !email || !password) {
       return res.status(400).json({ error: 'code, name, email, and password required' });
     }
@@ -97,10 +97,11 @@ router.post('/signup', async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Create household
+      // Create household (use user-provided name if given, fallback to invite's)
+      const finalHouseholdName = (household_name && household_name.trim()) || inv.household_name;
       const household = await client.query(
         `INSERT INTO households (name) VALUES ($1) RETURNING id`,
-        [inv.household_name]
+        [finalHouseholdName]
       );
       const household_id = household.rows[0].id;
 

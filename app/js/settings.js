@@ -29,13 +29,13 @@ let householdMembers = [];
         try { allUsers = await API.get('/auth/users'); } catch {}
     }
 
-    // For now, use simple household info
+    // Use household name from /auth/me response
     if (userInfo.household_id) {
-        householdInfo = { name: 'Ashcroft' }; // Temporary - will be dynamic later
+        householdInfo = { name: userInfo.household_name || 'Unknown' };
         if (userInfo.role === 'admin') {
             householdMembers = allUsers.filter(u => u.household_id === userInfo.household_id);
         } else {
-            householdMembers = [userInfo]; // Non-admin users can only see themselves
+            householdMembers = [userInfo];
         }
     }
 
@@ -105,9 +105,12 @@ function render() {
 
         <div class="settings-section">
             <h2><i data-lucide="home"></i> Household</h2>
-            <div class="settings-row">
-                <div><div class="settings-row-label">Household Name</div></div>
-                <div class="settings-row-value">${householdInfo?.name || 'Unknown'}</div>
+            <div class="form-group" style="margin-bottom:12px">
+                <label>Household Name</label>
+                <div style="display:flex;gap:8px;align-items:center;max-width:400px">
+                    <input class="form-input" id="householdNameInput" value="${esc(householdInfo?.name || '')}" style="flex:1">
+                    <button class="btn btn-primary" onclick="saveHouseholdName()" style="white-space:nowrap">Save</button>
+                </div>
             </div>
             <div class="settings-row">
                 <div><div class="settings-row-label">Your Role</div></div>
@@ -151,6 +154,16 @@ function renderUserManagement() {
             <button class="btn" style="flex:1;background:var(--red-bg,#fee);color:var(--red,#e74c3c);border:1px solid var(--red,#e74c3c);padding:12px;border-radius:10px;font-size:14px;cursor:pointer" onclick="logout()"><i data-lucide="log-out" style="width:14px;height:14px;vertical-align:-2px"></i> Sign Out</button>
         </div>
     </div>`;
+}
+
+async function saveHouseholdName() {
+    const name = document.getElementById('householdNameInput').value.trim();
+    if (!name) return showToast('Household name cannot be empty', 'error');
+    try {
+        await API.put('/auth/me', { household_name: name });
+        householdInfo.name = name;
+        showToast('Household name updated ✓');
+    } catch (err) { showToast(err.message, 'error'); }
 }
 
 async function saveName() {

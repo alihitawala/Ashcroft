@@ -83,9 +83,13 @@ async function generateThumbnail(filename) {
 // ─── Zones CRUD ───
 router.get('/zones', async (req, res) => {
   try {
+    // Filter zones: only show zones owned by users in the same household
     const result = await pool.query(
       `SELECT gz.*, (SELECT COUNT(*) FROM garden_plants gp WHERE gp.zone_id = gz.id) AS plant_count
-       FROM garden_zones gz ORDER BY gz.sort_order, gz.name`
+       FROM garden_zones gz
+       WHERE gz.owner_id IN (SELECT id FROM users WHERE household_id = $1)
+       ORDER BY gz.sort_order, gz.name`,
+      [req.user.household_id]
     );
     res.json(result.rows);
   } catch (err) {

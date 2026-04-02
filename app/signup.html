@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#635BFF">
-    <link rel="stylesheet" href="/app/css/shared.css?v=1775105850">
+    <link rel="stylesheet" href="/app/css/shared.css?v=1775107407">
     <style>
         body {
             min-height: 100vh;
@@ -54,19 +54,72 @@
             font-weight: 500;
         }
         .login-footer a:hover { text-decoration: underline; }
-        .login-form .btn-primary {
-            width: 100%;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            min-height: 44px;
+
+        /* Form styling */
+        .login-form .form-group {
+            margin-bottom: 18px;
         }
+        .login-form .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.01em;
+        }
+        .login-form .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            outline: none;
+        }
+        .login-form .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-bg);
+        }
+        .login-form .form-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* CTA button */
+        .signup-cta {
+            width: 100%;
+            padding: 13px;
+            font-size: 15px;
+            font-weight: 600;
+            min-height: 48px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+            margin-top: 8px;
+        }
+        .signup-cta:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        .signup-cta:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .signup-cta:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Invite status badges */
         .invite-status {
             display: none;
             align-items: center;
             gap: 8px;
             font-size: 13px;
-            margin-top: 6px;
+            margin-top: 8px;
             padding: 8px 12px;
             border-radius: 8px;
             animation: slideUp 0.2s ease;
@@ -87,6 +140,8 @@
             display: flex;
             color: var(--text-tertiary);
         }
+
+        /* Signup fields reveal */
         .signup-fields {
             display: none;
         }
@@ -94,9 +149,28 @@
             display: block;
             animation: slideUp 0.3s ease;
         }
-        .signup-fields .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+
+        /* Password hint */
+        .password-hint {
+            font-size: 12px;
+            margin-top: 6px;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .password-hint.met {
+            color: #22c55e;
+        }
+        .password-hint.unmet {
+            color: var(--text-tertiary);
+        }
+
+        /* Divider between invite and fields */
+        .signup-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -125,10 +199,17 @@
             </div>
 
             <div class="signup-fields" id="signupFields">
+                <div class="signup-divider"></div>
+
                 <div class="form-group">
-                    <label for="name">Name</label>
+                    <label for="householdName">Household Name</label>
+                    <input class="form-input" id="householdName" name="household_name" type="text"
+                           placeholder="e.g. The Smiths" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="name">Your Name</label>
                     <input class="form-input" id="name" name="name" type="text"
-                           placeholder="Your name" autocomplete="name" required>
+                           placeholder="Your full name" autocomplete="name" required>
                 </div>
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -139,8 +220,10 @@
                     <label for="password">Password</label>
                     <input class="form-input" id="password" name="password" type="password"
                            placeholder="••••••••" autocomplete="new-password" required minlength="8">
+                    <div class="password-hint unmet" id="passwordHint">🔒 At least 8 characters</div>
                 </div>
-                <button type="submit" class="btn btn-primary" id="signupBtn" disabled>Create Account</button>
+
+                <button type="submit" class="signup-cta" id="signupBtn" disabled>Create Account</button>
             </div>
         </form>
 
@@ -149,8 +232,9 @@
         </div>
     </div>
 
-    <script src="/app/js/shared/api.js?v=1775105850"></script>
-    <script src="/app/js/shared/auth.js?v=1775105850"></script>
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
+    <script src="/app/js/shared/api.js?v=1775107407"></script>
+    <script src="/app/js/shared/auth.js?v=1775107407"></script>
     <script>
         (async () => {
             // If already logged in, go to dashboard
@@ -171,6 +255,29 @@
             const submitBtn = document.getElementById('signupBtn');
             const errEl = document.getElementById('signupError');
             const errMsg = document.getElementById('signupErrorMsg');
+            const passwordInput = document.getElementById('password');
+            const passwordHint = document.getElementById('passwordHint');
+            const householdInput = document.getElementById('householdName');
+
+            // Password validation hint
+            passwordInput.addEventListener('input', () => {
+                const len = passwordInput.value.length;
+                if (len >= 8) {
+                    passwordHint.textContent = '✅ Password length OK';
+                    passwordHint.className = 'password-hint met';
+                } else if (len > 0) {
+                    passwordHint.textContent = `🔒 ${8 - len} more character${8 - len !== 1 ? 's' : ''} needed`;
+                    passwordHint.className = 'password-hint unmet';
+                } else {
+                    passwordHint.textContent = '🔒 At least 8 characters';
+                    passwordHint.className = 'password-hint unmet';
+                }
+                updateSubmitState();
+            });
+
+            function updateSubmitState() {
+                submitBtn.disabled = !(codeValid && passwordInput.value.length >= 8);
+            }
 
             codeInput.addEventListener('input', () => {
                 codeValid = false;
@@ -208,7 +315,11 @@
                         ? `Valid — joining ${res.household_name}`
                         : 'Valid invite code';
                     fields.classList.add('visible');
-                    submitBtn.disabled = false;
+                    // Prefill household name from invite
+                    if (res.household_name && !householdInput.value) {
+                        householdInput.value = res.household_name;
+                    }
+                    updateSubmitState();
                 } catch (err) {
                     codeValid = false;
                     statusEl.className = 'invite-status invalid';
@@ -229,6 +340,11 @@
             document.getElementById('signupForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!codeValid) return;
+                if (passwordInput.value.length < 8) {
+                    errMsg.textContent = 'Password must be at least 8 characters';
+                    errEl.classList.add('visible');
+                    return;
+                }
 
                 errEl.classList.remove('visible');
                 submitBtn.disabled = true;
@@ -239,7 +355,8 @@
                         code: codeInput.value.trim(),
                         name: document.getElementById('name').value.trim(),
                         email: document.getElementById('email').value.trim(),
-                        password: document.getElementById('password').value,
+                        password: passwordInput.value,
+                        household_name: householdInput.value.trim(),
                     });
                     window.location.href = '/app/dashboard.html';
                 } catch (err) {

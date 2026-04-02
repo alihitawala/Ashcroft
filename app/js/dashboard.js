@@ -137,31 +137,35 @@ function renderGreeting(gardenAlerts, sportsNext, weather) {
 
 // ─── Quick Actions ───
 function renderQuickActions() {
-    document.getElementById('quickActions').innerHTML = `
-        <div class="quick-actions-grid dash-quick-actions">
-            <button class="btn quick-action-btn qa-tasks" onclick="openAddTaskModal()"><span class="qa-emoji">✅</span><span>Task</span></button>
-            <button class="btn quick-action-btn qa-events" onclick="openAddEventModal()"><span class="qa-emoji">📅</span><span>Event</span></button>
-            <button class="btn quick-action-btn qa-grocery" onclick="openAddGroceryModal()"><span class="qa-emoji">🛒</span><span>Grocery</span></button>
-            <button class="btn quick-action-btn qa-notes" onclick="openAddNoteModal()"><span class="qa-emoji">📝</span><span>Note</span></button>
-            <a href="/app/captures.html" class="btn quick-action-btn qa-capture"><span class="qa-emoji">📸</span><span>Capture</span></a>
-        </div>
-    `;
+    const vp = currentUser?.visible_pages || [];
+    const canSee = (page) => !vp.length || vp.includes(page);
+    const actions = [];
+    if (canSee('tasks')) actions.push('<button class="btn quick-action-btn qa-tasks" onclick="openAddTaskModal()"><span class="qa-emoji">✅</span><span>Task</span></button>');
+    if (canSee('events')) actions.push('<button class="btn quick-action-btn qa-events" onclick="openAddEventModal()"><span class="qa-emoji">📅</span><span>Event</span></button>');
+    if (canSee('grocery')) actions.push('<button class="btn quick-action-btn qa-grocery" onclick="openAddGroceryModal()"><span class="qa-emoji">🛒</span><span>Grocery</span></button>');
+    if (canSee('notes')) actions.push('<button class="btn quick-action-btn qa-notes" onclick="openAddNoteModal()"><span class="qa-emoji">📝</span><span>Note</span></button>');
+    if (canSee('captures')) actions.push('<a href="/app/captures.html" class="btn quick-action-btn qa-capture"><span class="qa-emoji">📸</span><span>Capture</span></a>');
+    document.getElementById('quickActions').innerHTML = `<div class="quick-actions-grid dash-quick-actions">${actions.join('')}</div>`;
 }
 
 // ─── Summary Strip (pills) ───
 function renderSummaryStrip(taskCount, eventCount, groceryCount, gardenCount) {
-    document.getElementById('summaryStrip').innerHTML = `
-        <div class="summary-strip">
-            <a href="/app/tasks.html" class="summary-pill pill-tasks" style="animation-delay:0s">✅ ${taskCount} task${taskCount !== 1 ? 's' : ''}</a>
-            <a href="/app/events.html" class="summary-pill pill-events" style="animation-delay:0.05s">📅 ${eventCount} event${eventCount !== 1 ? 's' : ''}</a>
-            <a href="/app/grocery.html" class="summary-pill pill-grocery" style="animation-delay:0.1s">🛒 ${groceryCount} item${groceryCount !== 1 ? 's' : ''}</a>
-            <a href="/app/garden.html" class="summary-pill pill-garden" style="animation-delay:0.15s">🌱 ${gardenCount} alert${gardenCount !== 1 ? 's' : ''}</a>
-        </div>
-    `;
+    const vp = currentUser?.visible_pages || [];
+    const canSee = (page) => !vp.length || vp.includes(page);
+    const pills = [];
+    let i = 0;
+    if (canSee('tasks')) pills.push(`<a href="/app/tasks.html" class="summary-pill pill-tasks" style="animation-delay:${i++ * 0.05}s">✅ ${taskCount} task${taskCount !== 1 ? 's' : ''}</a>`);
+    if (canSee('events')) pills.push(`<a href="/app/events.html" class="summary-pill pill-events" style="animation-delay:${i++ * 0.05}s">📅 ${eventCount} event${eventCount !== 1 ? 's' : ''}</a>`);
+    if (canSee('grocery')) pills.push(`<a href="/app/grocery.html" class="summary-pill pill-grocery" style="animation-delay:${i++ * 0.05}s">🛒 ${groceryCount} item${groceryCount !== 1 ? 's' : ''}</a>`);
+    if (canSee('garden')) pills.push(`<a href="/app/garden.html" class="summary-pill pill-garden" style="animation-delay:${i++ * 0.05}s">🌱 ${gardenCount} alert${gardenCount !== 1 ? 's' : ''}</a>`);
+    document.getElementById('summaryStrip').innerHTML = `<div class="summary-strip">${pills.join('')}</div>`;
 }
 
 // ─── Widgets ───
 function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recentCaptures, travelTrips, photoCaptures, groceryItems) {
+    const vp = currentUser?.visible_pages || [];
+    const canSee = (page) => !vp.length || vp.includes(page);
+
     const hasTasks = todayTasks.length > 0;
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -172,27 +176,27 @@ function renderWidgets(events, watering, gardenDash, allTasks, sportsNext, recen
     const delay = () => `style="animation-delay:${(widgetIdx++) * 0.08}s"`;
 
     document.getElementById('widgets').innerHTML = `
-        ${renderPhotoCarousel(photoCaptures)}
+        ${canSee('captures') ? renderPhotoCarousel(photoCaptures) : ''}
         ${renderWeatherCard()}
         ${renderSportsNextUp(sportsNext)}
-        ${renderGroceryWidget(groceryItems)}
-        ${hasTasks ? `<div class="card widget-card widget-tasks" ${delay()}>
+        ${canSee('grocery') ? renderGroceryWidget(groceryItems) : ''}
+        ${hasTasks && canSee('tasks') ? `<div class="card widget-card widget-tasks" ${delay()}>
             <div class="card-header"><h3>📋 Today's Tasks</h3><a href="/app/tasks.html" class="link">View All →</a></div>
             <div class="card-body" id="tasksList">${renderTodayTasks()}</div>
         </div>` : ''}
-        ${hasEvents ? `<div class="card widget-card widget-events" ${delay()}>
+        ${hasEvents && canSee('events') ? `<div class="card widget-card widget-events" ${delay()}>
             <div class="card-header"><h3>📅 Upcoming Events</h3><a href="/app/events.html" class="link">View All →</a></div>
             <div class="card-body">${renderEvents(events)}</div>
         </div>` : ''}
-        ${renderTravelWidget(travelTrips)}
-        <div class="card widget-card widget-garden" ${delay()}>
+        ${canSee('travel') ? renderTravelWidget(travelTrips) : ''}
+        ${canSee('garden') ? `<div class="card widget-card widget-garden" ${delay()}>
             <div class="card-header"><h3>🌿 Garden Overview</h3><a href="/app/garden.html" class="link">View All →</a></div>
             <div class="card-body">${renderGarden(watering, gardenDash)}</div>
-        </div>
-        <div class="card widget-card widget-captures" ${delay()}>
+        </div>` : ''}
+        ${canSee('captures') ? `<div class="card widget-card widget-captures" ${delay()}>
             <div class="card-header"><h3>⚡ Recent Captures</h3><a href="/app/captures.html" class="link">View All →</a></div>
             <div class="card-body">${renderRecentCaptures(recentCaptures)}</div>
-        </div>
+        </div>` : ''}
         <div class="card widget-card widget-activity" ${delay()}>
             <div class="card-header"><h3>📊 Recent Activity</h3></div>
             <div class="card-body">${renderActivity(allTasks, events)}</div>

@@ -80,7 +80,10 @@ router.post('/logout', (req, res) => {
 router.get('/me', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, role, theme, settings, household_id, household_role, created_at FROM users WHERE id = $1',
+      `SELECT u.id, u.email, u.name, u.role, u.theme, u.settings, u.household_id, u.household_role, u.created_at,
+              h.name AS household_name
+       FROM users u LEFT JOIN households h ON h.id = u.household_id
+       WHERE u.id = $1`,
       [req.user.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
@@ -127,7 +130,7 @@ router.post('/refresh', async (req, res) => {
 // Update profile
 router.put('/me', authenticate, async (req, res) => {
   try {
-    const { name, theme, password, currentPassword } = req.body;
+    const { name, theme, password, currentPassword, household_name } = req.body;
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
     const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -147,6 +150,14 @@ router.put('/me', authenticate, async (req, res) => {
         'UPDATE users SET name = COALESCE($1, name), theme = COALESCE($2, theme) WHERE id = $3',
         [name || null, theme || null, req.user.id]
       );
+    }
+
+    // Update household name (head of household or admin can change)
+    if (household_name !== undefined && household_name.trim()) {
+      const canEdit = user.household_role === 'head' || user.role === 'admin';
+      if (canEdit && user.household_id) {
+        await pool.query('UPDATE households SET name = $1 WHERE id = $2', [household_name.trim(), user.household_id]);
+      }
     }
 
     const updated = await pool.query(
