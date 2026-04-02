@@ -599,9 +599,10 @@
         // AI Summary
         let aiHTML = '';
         if (assessment?.ai_summary) {
+            const isAshcroft = user?.household_id === 1;
             aiHTML = `
                 <div class="ai-summary bittu-take">
-                    <div class="ai-summary-label">🐢 Bittu's Take</div>
+                    <div class="ai-summary-label">${isAshcroft ? '🐢 Bittu\'s Take' : '🌱 Health Summary'}</div>
                     <div class="bittu-quote">${esc(assessment.ai_summary)}</div>
                 </div>
             `;
@@ -2626,7 +2627,10 @@
     function renderPlansTab() {
         const inner = document.getElementById('plansInner');
         if (!plansData.length) {
-            inner.innerHTML = '<div class="plans-empty"><i data-lucide="clipboard-list"></i><div>No garden plans yet. Bittu will create plans based on your plants and supplies.</div></div>';
+            const plansMsg = user?.household_id === 1 
+              ? 'No garden plans yet. Bittu will create plans based on your plants and supplies.'
+              : 'No garden plans yet. Plans will be created based on your plants and supplies.';
+            inner.innerHTML = `<div class="plans-empty"><i data-lucide="clipboard-list"></i><div>${plansMsg}</div></div>`;
             lucide.createIcons();
             return;
         }

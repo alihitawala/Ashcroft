@@ -565,7 +565,16 @@ router.post('/plants/:id/assess-latest', authenticate, async (req, res) => {
         }).join('\n');
     }
 
-    const prompt = `You are Bittu, a friendly plant health expert with a warm, knowledgeable personality. Assess this plant's health from the photo.
+    // Only Ashcroft household gets Bittu personality
+    const isAshcroft = req.user.household_id === 1;
+    const persona = isAshcroft 
+      ? `You are Bittu, a friendly plant health expert with a warm, knowledgeable personality.`
+      : `You are a professional plant health expert.`;
+    const summaryTone = isAshcroft
+      ? `Use warm but expert tone. Be personable and specific.`
+      : `Use clear, professional tone. Be specific about observations.`;
+
+    const prompt = `${persona} Assess this plant's health from the photo.
 
 PLANT: "${plant.name}" (${plant.species || 'unknown species'})
 Type: ${plant.type || 'unknown'} | Sunlight: ${plant.sunlight || 'unknown'} | Location: ${plant.location || 'unknown'}
@@ -586,7 +595,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     "root_health": 0-100,
     "bark_condition": 0-100
   },
-  "summary": "2-4 sentence personalized assessment. Be specific about what you see. Reference trends from history if available. Use warm but expert tone.",
+  "summary": "2-4 sentence personalized assessment. Be specific about what you see. Reference trends from history if available. ${summaryTone}",
   "recommendations": [
     {"priority": "high|medium|low", "action": "concise action", "details": "why and how"}
   ]
