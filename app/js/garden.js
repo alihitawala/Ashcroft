@@ -712,6 +712,14 @@
         if (plant.sunlight) metaParts.push(`<span><i data-lucide="sun"></i> ${esc(plant.sunlight)}</span>`);
 
         panel.innerHTML = `
+            <div class="detail-sticky-bar" id="detailStickyBar">
+                <button class="detail-sticky-back" id="detailStickyBackBtn"><i data-lucide="arrow-left"></i></button>
+                <div class="detail-sticky-name">${esc(plant.name)}</div>
+                <div class="detail-sticky-actions">
+                    <button id="stickyEditBtn" title="Edit"><i data-lucide="pencil"></i></button>
+                    <button id="stickyDeleteBtn" title="Delete"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>
             <div class="detail-hero">
                 ${heroImgHTML}
                 <button class="detail-back" id="detailBackBtn"><i data-lucide="arrow-left"></i></button>
@@ -821,11 +829,16 @@
         const chartW = W - pad.left - pad.right;
         const chartH = H - pad.top - pad.bottom;
 
+        // Detect theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const axisColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
         // Axes
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         // Y-axis gridlines & labels
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = axisColor;
         ctx.font = '10px -apple-system, sans-serif';
         ctx.textAlign = 'right';
         for (let v = 0; v <= 100; v += 25) {
@@ -847,7 +860,7 @@
 
         // X-axis labels
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = axisColor;
         const maxLabels = Math.min(data.length, Math.floor(chartW / 50));
         const step = Math.max(1, Math.floor(data.length / maxLabels));
         points.forEach((p, i) => {
@@ -956,7 +969,31 @@
     // ─── Detail Event Bindings ───
     function bindDetailEvents() {
         document.getElementById('detailBackBtn')?.addEventListener('click', closeDetail);
+        document.getElementById('detailStickyBackBtn')?.addEventListener('click', closeDetail);
         document.getElementById('detailBackdrop')?.addEventListener('click', closeDetail);
+
+        // Sticky bar edit/delete mirror the hero buttons
+        document.getElementById('stickyEditBtn')?.addEventListener('click', () => {
+            document.getElementById('editPlantBtn')?.click();
+        });
+        document.getElementById('stickyDeleteBtn')?.addEventListener('click', () => {
+            document.getElementById('deletePlantBtn')?.click();
+        });
+
+        // Sticky header on scroll
+        const panel = document.getElementById('detailPanel');
+        const stickyBar = document.getElementById('detailStickyBar');
+        const hero = panel?.querySelector('.detail-hero');
+        if (panel && stickyBar && hero) {
+            panel.addEventListener('scroll', () => {
+                const heroBottom = hero.offsetHeight - 56;
+                if (panel.scrollTop > heroBottom) {
+                    stickyBar.classList.add('visible');
+                } else {
+                    stickyBar.classList.remove('visible');
+                }
+            }, { passive: true });
+        }
 
         // Timeline photo clicks — open lightbox
         document.querySelectorAll('.timeline-photo').forEach(el => {
@@ -998,28 +1035,14 @@
         document.getElementById('growthBtn')?.addEventListener('click', openGrowthAnimation);
     }
 
-    // ─── Photo Upload ───
+    // ─── Photo Upload (now with AI health check) ───
     function triggerPhotoUpload() {
         const input = document.getElementById('photoUploadInput');
         input.onchange = async () => {
             const file = input.files[0];
             if (!file || !currentPlant) return;
-            const fd = new FormData();
-            fd.append('photo', file);
-            try {
-                showToast('Uploading photo...', 'success');
-                const res = await fetch(`/api/garden/plants/${currentPlant.id}/photos`, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    body: fd,
-                });
-                if (!res.ok) throw new Error('Upload failed');
-                showToast('Photo uploaded! ✓');
-                // Refresh
-                await refreshPlantDetail();
-            } catch (err) {
-                showToast(err.message, 'error');
-            }
+            // Use AI health check flow
+            await triggerAIHealthCheck(file);
             input.value = '';
         };
         input.click();
@@ -1314,8 +1337,457 @@
         renderPlantGrid();
     });
 
+    // ─── AI Identify Plant ───
+    function openAIIdentifyFlow() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'environment';
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Show loading overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'ai-analyze-overlay';
+            overlay.innerHTML = `
+                <div class="ai-analyze-card">
+                    <div class="ai-analyze-preview">
+                        <img id="aiPreviewImg" src="" alt="Preview">
+                    </div>
+                    <div class="ai-analyze-loading" id="aiLoadingState">
+                        <div class="ai-pulse-emoji">🌱</div>
+                        <div class="ai-loading-text">Analyzing your plant...</div>
+                    </div>
+                    <div class="ai-analyze-results hidden" id="aiResultsState"></div>
+                    <div class="ai-analyze-error hidden" id="aiErrorState"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('aiPreviewImg').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Upload for AI analysis
+            try {
+                const fd = new FormData();
+                fd.append('photo', file);
+                fd.append('mode', 'identify');
+                const res = await fetch('/api/garden/ai/analyze', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: fd,
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Analysis failed');
+                }
+                const data = await res.json();
+                showAIIdentifyResults(overlay, data, file);
+            } catch (err) {
+                document.getElementById('aiLoadingState').classList.add('hidden');
+                const errorEl = document.getElementById('aiErrorState');
+                errorEl.classList.remove('hidden');
+                errorEl.innerHTML = `
+                    <div class="ai-error-icon">😕</div>
+                    <div class="ai-error-text">${esc(err.message || "Couldn't identify this plant. Try a clearer photo?")}</div>
+                    <div class="ai-error-actions">
+                        <button class="btn btn-secondary" id="aiRetryBtn">📸 Try Again</button>
+                        <button class="btn btn-ghost" id="aiCancelBtn">Cancel</button>
+                    </div>
+                `;
+                document.getElementById('aiRetryBtn')?.addEventListener('click', () => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => { overlay.remove(); openAIIdentifyFlow(); }, 300);
+                });
+                document.getElementById('aiCancelBtn')?.addEventListener('click', () => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.remove(), 300);
+                });
+            }
+        };
+        input.click();
+    }
+
+    function showAIIdentifyResults(overlay, data, file) {
+        document.getElementById('aiLoadingState').classList.add('hidden');
+        const resultsEl = document.getElementById('aiResultsState');
+        resultsEl.classList.remove('hidden');
+
+        const ai = data;
+        const commonName = ai.common_name || ai.name || 'Unknown Plant';
+        const sciName = ai.scientific_name || ai.species || '';
+        const score = ai.overall_score ?? ai.health_score;
+        const summary = ai.summary || ai.ai_summary || '';
+        const recs = ai.recommendations || ai.ai_recommendations || [];
+
+        // Health gauge
+        let gaugeHTML = '';
+        if (score != null) {
+            const color = getScoreColor(score);
+            const circumference = 2 * Math.PI * 36;
+            gaugeHTML = `
+                <div class="ai-health-mini">
+                    <svg viewBox="0 0 80 80" width="60" height="60">
+                        <circle cx="40" cy="40" r="36" fill="none" stroke="var(--border)" stroke-width="5"></circle>
+                        <circle cx="40" cy="40" r="36" fill="none" stroke="${color}" stroke-width="5"
+                            stroke-dasharray="${(score / 100) * circumference} ${circumference}"
+                            stroke-linecap="round" transform="rotate(-90 40 40)"></circle>
+                    </svg>
+                    <span class="ai-health-score" style="color:${color}">${score}</span>
+                </div>
+            `;
+        }
+
+        resultsEl.innerHTML = `
+            <div class="ai-identify-header">
+                <div>
+                    <div class="ai-identify-title">I think this is a <strong>${esc(commonName)}</strong></div>
+                    ${sciName ? `<div class="ai-identify-species"><em>${esc(sciName)}</em></div>` : ''}
+                </div>
+                ${gaugeHTML}
+            </div>
+            ${summary ? `<div class="ai-summary-text">${esc(summary)}</div>` : ''}
+            ${recs.length ? `<div class="ai-recs-mini">${recs.slice(0, 3).map(r => `<div class="ai-rec-item">• ${esc(r.action || r.text || r.description || '')}</div>`).join('')}</div>` : ''}
+            <div class="ai-form-section">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input class="form-input" id="aiPlantName" value="${esc(commonName)}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Species</label>
+                        <input class="form-input" id="aiPlantSpecies" value="${esc(sciName)}">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select class="form-input" id="aiPlantType">
+                            <option value="">Select...</option>
+                            ${['fruit_tree','vegetable','herb','flower','succulent','shrub','vine','houseplant','other'].map(t =>
+                                `<option value="${t}" ${(ai.type || '').toLowerCase() === t ? 'selected' : ''}>${t === 'fruit_tree' ? 'Fruit Tree' : capitalize(t)}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sunlight</label>
+                        <select class="form-input" id="aiPlantSunlight">
+                            <option value="">Select...</option>
+                            ${['Full Sun','Partial Sun','Partial Shade','Full Shade'].map(s =>
+                                `<option value="${s}" ${(ai.sunlight || '') === s ? 'selected' : ''}>${s}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Zone</label>
+                        <select class="form-input" id="aiPlantZone">
+                            <option value="">No zone</option>
+                            ${zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-action-buttons">
+                <button class="btn btn-primary" id="aiAddPlantBtn">🌱 Add to Garden</button>
+                <button class="btn btn-ghost" id="aiDismissBtn">Cancel</button>
+            </div>
+        `;
+
+        document.getElementById('aiAddPlantBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('aiAddPlantBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Adding...';
+            try {
+                const zoneVal = document.getElementById('aiPlantZone').value;
+                const body = {
+                    name: document.getElementById('aiPlantName').value.trim() || commonName,
+                    species: document.getElementById('aiPlantSpecies').value.trim() || undefined,
+                    type: document.getElementById('aiPlantType').value || undefined,
+                    sunlight: document.getElementById('aiPlantSunlight').value || undefined,
+                    zone_id: zoneVal ? parseInt(zoneVal) : undefined,
+                };
+                const newPlant = await API.post('/garden/plants', body);
+                // Upload photo + assess
+                if (newPlant?.id) {
+                    const fd = new FormData();
+                    fd.append('photo', file);
+                    await fetch(`/api/garden/plants/${newPlant.id}/photos/upload-and-assess`, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd,
+                    });
+                }
+                showToast('Plant added with AI analysis! 🌱✨');
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+                await loadPlants();
+            } catch (err) {
+                showToast(err.message || 'Failed to add plant', 'error');
+                btn.disabled = false;
+                btn.textContent = '🌱 Add to Garden';
+            }
+        });
+
+        document.getElementById('aiDismissBtn')?.addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.remove(), 300);
+        });
+    }
+
+    // ─── AI Health Check (for existing plant) ───
+    async function triggerAIHealthCheck(file) {
+        if (!currentPlant || !file) return;
+
+        // Show AI analysis overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-analyze-overlay';
+        overlay.innerHTML = `
+            <div class="ai-analyze-card">
+                <div class="ai-analyze-preview">
+                    <img id="aiAssessPreviewImg" src="" alt="Preview">
+                </div>
+                <div class="ai-analyze-loading" id="aiAssessLoading">
+                    <div class="ai-pulse-emoji">🌱</div>
+                    <div class="ai-loading-text">Checking health...</div>
+                </div>
+                <div class="ai-analyze-results hidden" id="aiAssessResults"></div>
+                <div class="ai-analyze-error hidden" id="aiAssessError"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('visible'));
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('aiAssessPreviewImg').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        try {
+            const fd = new FormData();
+            fd.append('photo', file);
+            fd.append('mode', 'assess');
+            fd.append('plant_id', currentPlant.id);
+            const res = await fetch('/api/garden/ai/analyze', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: fd,
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Analysis failed');
+            }
+            const data = await res.json();
+            showAIAssessResults(overlay, data, file);
+        } catch (err) {
+            document.getElementById('aiAssessLoading').classList.add('hidden');
+            const errorEl = document.getElementById('aiAssessError');
+            errorEl.classList.remove('hidden');
+            errorEl.innerHTML = `
+                <div class="ai-error-icon">😕</div>
+                <div class="ai-error-text">${esc(err.message || "Couldn't analyze this photo. Try again?")}</div>
+                <div class="ai-error-actions">
+                    <button class="btn btn-secondary ai-close-btn">Close</button>
+                </div>
+            `;
+            errorEl.querySelector('.ai-close-btn')?.addEventListener('click', () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+            });
+        }
+    }
+
+    function showAIAssessResults(overlay, data, file) {
+        document.getElementById('aiAssessLoading').classList.add('hidden');
+        const resultsEl = document.getElementById('aiAssessResults');
+        resultsEl.classList.remove('hidden');
+
+        const newScore = data.overall_score ?? data.health_score;
+        const prevScore = currentPlant.overall_health_score;
+        const summary = data.summary || data.ai_summary || '';
+        const recs = data.recommendations || data.ai_recommendations || [];
+
+        let comparisonHTML = '';
+        if (newScore != null && prevScore != null) {
+            const diff = newScore - prevScore;
+            const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+            const cls = diff > 0 ? 'improving' : diff < 0 ? 'declining' : 'stable';
+            comparisonHTML = `<div class="ai-score-comparison ${cls}">${prevScore} → ${newScore} <span>${arrow}</span></div>`;
+        } else if (newScore != null) {
+            comparisonHTML = `<div class="ai-score-comparison">Health Score: <strong>${newScore}</strong></div>`;
+        }
+
+        // Dimensions
+        const dims = ['leaf_health','hydration_level','pest_damage','disease_signs','growth_vigor','fruit_status'];
+        let dimsHTML = '';
+        const changedDims = dims.filter(d => data[d] != null);
+        if (changedDims.length) {
+            dimsHTML = '<div class="ai-dims-mini">' + changedDims.map(d => {
+                const val = data[d];
+                const color = getScoreColor(val);
+                const label = d.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                return `<div class="ai-dim-row"><span>${label}</span><span style="color:${color};font-weight:600">${val}</span></div>`;
+            }).join('') + '</div>';
+        }
+
+        resultsEl.innerHTML = `
+            ${comparisonHTML}
+            ${summary ? `<div class="ai-summary-text">${esc(summary)}</div>` : ''}
+            ${dimsHTML}
+            ${recs.length ? `<div class="ai-recs-mini">${recs.slice(0, 3).map(r => `<div class="ai-rec-item">• ${esc(r.action || r.text || r.description || '')}</div>`).join('')}</div>` : ''}
+            <div class="ai-action-buttons">
+                <button class="btn btn-primary" id="aiSaveAssessBtn">💾 Save Assessment</button>
+                <button class="btn btn-ghost" id="aiAssessDismissBtn">Dismiss</button>
+            </div>
+        `;
+
+        document.getElementById('aiSaveAssessBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('aiSaveAssessBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Saving...';
+            try {
+                const fd = new FormData();
+                fd.append('photo', file);
+                await fetch(`/api/garden/plants/${currentPlant.id}/photos/upload-and-assess`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: fd,
+                });
+                showToast('Assessment saved! ✓');
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+                await refreshPlantDetail();
+            } catch (err) {
+                showToast(err.message || 'Failed to save', 'error');
+                btn.disabled = false;
+                btn.textContent = '💾 Save Assessment';
+            }
+        });
+
+        document.getElementById('aiAssessDismissBtn')?.addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.remove(), 300);
+        });
+    }
+
+    // ─── AI Scan Supply ───
+    function openAIScanSupply() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'environment';
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'ai-analyze-overlay';
+            overlay.innerHTML = `
+                <div class="ai-analyze-card">
+                    <div class="ai-analyze-preview">
+                        <img id="aiSupplyPreviewImg" src="" alt="Preview">
+                    </div>
+                    <div class="ai-analyze-loading" id="aiSupplyLoading">
+                        <div class="ai-pulse-emoji">📦</div>
+                        <div class="ai-loading-text">Identifying product...</div>
+                    </div>
+                    <div class="ai-analyze-results hidden" id="aiSupplyResults"></div>
+                    <div class="ai-analyze-error hidden" id="aiSupplyError"></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('aiSupplyPreviewImg').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            try {
+                const fd = new FormData();
+                fd.append('photo', file);
+                fd.append('product_photo', 'true');
+                const res = await fetch('/api/garden/ai/analyze', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: fd,
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Could not identify product');
+                }
+                const data = await res.json();
+                // Close overlay and open add supply modal prefilled
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 300);
+                addSupply({
+                    name: data.name || data.product_name || '',
+                    category: data.category || 'other',
+                    brand: data.brand || '',
+                    product_image_url: data.product_image_url || '',
+                    notes: data.description || '',
+                });
+            } catch (err) {
+                document.getElementById('aiSupplyLoading').classList.add('hidden');
+                const errorEl = document.getElementById('aiSupplyError');
+                errorEl.classList.remove('hidden');
+                errorEl.innerHTML = `
+                    <div class="ai-error-icon">😕</div>
+                    <div class="ai-error-text">${esc(err.message || "Couldn't identify this product.")}</div>
+                    <div class="ai-error-actions">
+                        <button class="btn btn-secondary ai-close-btn">Close</button>
+                    </div>
+                `;
+                errorEl.querySelector('.ai-close-btn')?.addEventListener('click', () => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => overlay.remove(), 300);
+                });
+            }
+        };
+        input.click();
+    }
+
+    // ─── Add Plant Chooser (AI vs Manual) ───
+    function openAddPlantChooser() {
+        createModal({
+            title: '🌱 Add New Plant',
+            bodyHTML: `
+                <div class="add-plant-chooser">
+                    <button class="chooser-option" id="chooserAI">
+                        <span class="chooser-icon">📸</span>
+                        <span class="chooser-label">Identify with AI</span>
+                        <span class="chooser-desc">Take a photo and let AI identify your plant</span>
+                    </button>
+                    <button class="chooser-option" id="chooserManual">
+                        <span class="chooser-icon">✏️</span>
+                        <span class="chooser-label">Add Manually</span>
+                        <span class="chooser-desc">Fill in plant details yourself</span>
+                    </button>
+                </div>
+            `,
+            hideSubmit: true,
+        });
+        setTimeout(() => {
+            document.getElementById('chooserAI')?.addEventListener('click', () => {
+                document.querySelector('.modal-backdrop')?.click();
+                setTimeout(() => openAIIdentifyFlow(), 200);
+            });
+            document.getElementById('chooserManual')?.addEventListener('click', () => {
+                document.querySelector('.modal-backdrop')?.click();
+                setTimeout(() => openAddPlantModal(), 200);
+            });
+        }, 100);
+    }
+
     // ─── Add Plant Button ───
-    document.getElementById('addPlantBtnTop')?.addEventListener('click', openAddPlantModal);
+    document.getElementById('addPlantBtnTop')?.addEventListener('click', openAddPlantChooser);
 
     // ─── Keyboard shortcut: Escape to close detail ───
     document.addEventListener('keydown', (e) => {
@@ -2358,6 +2830,7 @@
         let html = `<div class="supplies-section">
             <div class="supplies-section-header">
                 <span class="supplies-section-title"><i data-lucide="warehouse"></i> My Supplies</span>
+                <button class="add-plant-btn" id="scanSupplyBtn" style="margin-right:8px"><i data-lucide="camera"></i><span>📸 Scan</span></button>
                 <button class="add-plant-btn" id="addSupplyBtn"><i data-lucide="plus"></i><span>Add Supply</span></button>
             </div>`;
 
@@ -2372,6 +2845,7 @@
             const catClass = (s.category || 'other').toLowerCase().replace(/\s+/g, '_');
             html += `<div class="supply-card">
                 <button class="supply-card-delete" data-supply-id="${s.id}" title="Delete"><i data-lucide="x"></i></button>
+                ${s.product_image_url ? `<img class="supply-card-img" src="${esc(s.product_image_url)}" alt="${esc(s.name)}" onerror="this.style.display='none'">` : ''}
                 <span class="supply-category ${catClass}">${esc((s.category || 'other').replace(/_/g, ' '))}</span>
                 <div class="supply-card-name">${esc(s.name)}</div>
                 ${s.brand ? `<div class="supply-card-brand">${esc(s.brand)}</div>` : ''}
@@ -2422,6 +2896,10 @@
                     <input class="form-input" name="purchase_date" type="date" value="${new Date().toISOString().slice(0,10)}">
                 </div>
                 <div class="form-group">
+                    <label>Product Image URL</label>
+                    <input class="form-input" name="product_image_url" value="${esc(prefilled.product_image_url || '')}" placeholder="/uploads/supplies/supply-8.jpg">
+                </div>
+                <div class="form-group">
                     <label>Home Depot URL</label>
                     <input class="form-input" name="home_depot_url" value="${esc(prefilled.home_depot_url || '')}" placeholder="https://...">
                 </div>
@@ -2442,6 +2920,7 @@
                     quantity_remaining: parseFloat(modal.querySelector('[name="quantity"]').value) || undefined,
                     unit: modal.querySelector('[name="unit"]').value.trim() || undefined,
                     purchase_date: modal.querySelector('[name="purchase_date"]').value || undefined,
+                    product_image_url: modal.querySelector('[name="product_image_url"]').value.trim() || undefined,
                     home_depot_url: modal.querySelector('[name="home_depot_url"]').value.trim() || undefined,
                     notes: modal.querySelector('[name="notes"]').value.trim() || undefined,
                 };
@@ -2456,6 +2935,7 @@
     // ─── Bind Supply Events ───
     function bindSupplyEvents() {
         document.getElementById('addSupplyBtn')?.addEventListener('click', () => addSupply());
+        document.getElementById('scanSupplyBtn')?.addEventListener('click', () => openAIScanSupply());
 
         document.querySelectorAll('.supply-bought-btn').forEach(btn => {
             btn.addEventListener('click', () => {

@@ -84,7 +84,13 @@ router.get('/me', authenticate, async (req, res) => {
       [req.user.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    // Determine visible pages based on household
+    const isAshcroft = user.household_id === 1;
+    const visible_pages = isAshcroft 
+      ? ['dashboard', 'grocery', 'gallery', 'garden', 'captures', 'travel', 'flights', 'events', 'notes', 'kanban', 'tasks', 'settings']
+      : ['dashboard', 'garden', 'grocery', 'tasks', 'settings'];
+    res.json({ user: { ...user, visible_pages } });
   } catch (err) {
     console.error('Me error:', err);
     res.status(500).json({ error: 'Internal server error' });

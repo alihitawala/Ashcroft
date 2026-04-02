@@ -624,6 +624,8 @@ body{
     document.getElementById('rsvpSection').style.display=step==='rsvp'?'':'none';
     document.getElementById('emailStep').style.display=step==='email'?'block':'none';
     document.getElementById('thankYou').style.display=step==='thanks'?'block':'none';
+    // Reset email button state when showing email step
+    if(step==='email'){const eb=document.getElementById('emailBtn');eb.disabled=false;eb.textContent='Send Me a Reminder';}
     const footer=document.querySelector('.invite-content .footer');
     if(footer)footer.style.display=step==='rsvp'?'':'none';
     if(step==='thanks'&&status){
@@ -696,10 +698,12 @@ body{
     if(!email||!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)){alert('Please enter a valid email.');return}
     const btn=document.getElementById('emailBtn');
     btn.disabled=true;btn.textContent='Saving…';
-    fetch(API+'/email',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
-    .then(r=>{if(!r.ok)throw new Error();return r.json()})
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    fetch(API+'/email',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email}),signal:controller.signal})
+    .then(r=>{clearTimeout(timeout);if(!r.ok)throw new Error();return r.json()})
     .then(()=>{setState({step:'thanks'});showStep('thanks',rsvpStatus);})
-    .catch(()=>{btn.disabled=false;btn.textContent='Send Me a Reminder';alert('Something went wrong.');});
+    .catch(()=>{clearTimeout(timeout);btn.disabled=false;btn.textContent='Send Me a Reminder';alert('Something went wrong. Please try again.');});
   };
 
   window.skipEmail=function(){

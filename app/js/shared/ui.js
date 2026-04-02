@@ -27,7 +27,7 @@ function showToast(message, type = 'success') {
 }
 
 // ─── Modal ───
-function createModal({ title, bodyHTML, onSubmit, submitLabel = 'Save' }) {
+function createModal({ title, bodyHTML, onSubmit, submitLabel = 'Save', hideSubmit = false }) {
     document.querySelector('.modal-backdrop')?.remove();
 
     const backdrop = document.createElement('div');
@@ -40,9 +40,9 @@ function createModal({ title, bodyHTML, onSubmit, submitLabel = 'Save' }) {
                 <button class="modal-close" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">${bodyHTML}</div>
-            <div class="modal-footer">
+            <div class="modal-footer"${hideSubmit ? ' style="justify-content:flex-end"' : ''}>
                 <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
-                <button class="btn btn-primary modal-submit-btn">${submitLabel}</button>
+                ${hideSubmit ? '' : `<button class="btn btn-primary modal-submit-btn">${submitLabel}</button>`}
             </div>
         </div>
     `;
@@ -60,7 +60,7 @@ function createModal({ title, bodyHTML, onSubmit, submitLabel = 'Save' }) {
     });
 
     const submitBtn = backdrop.querySelector('.modal-submit-btn');
-    submitBtn.onclick = async () => {
+    if (submitBtn) submitBtn.onclick = async () => {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner"></span>';
         try {

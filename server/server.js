@@ -132,6 +132,7 @@ app.get('/api/travel/public/:token', async (req, res) => {
 app.use('/api/auth', authRoutes);
 const iftarRoutes = require('./routes/iftar');
 app.use('/api/iftar', iftarRoutes);  // Public routes handle their own auth — must be before taskRoutes
+app.use('/api/invite', require('./routes/invite'));
 app.use('/api', taskRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api', groceryRoutes);

@@ -980,4 +980,145 @@ router.delete('/plans/:id', async (req, res) => {
   }
 });
 
+// ─── AI Plant Analysis ───
+router.post('/ai/analyze', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No photo uploaded' });
+
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    if (!GROQ_API_KEY) return res.status(503).json({ error: 'AI service not configured' });
+
+    const imageBase64 = fs.readFileSync(req.file.path).toString('base64');
+    const mimeType = req.file.mimetype;
+    const mode = req.body.mode || 'identify';
+    const isProduct = req.body.product_photo === 'true' || req.body.product_photo === true;
+
+    let prompt;
+
+    if (isProduct) {
+      prompt = `Analyze this garden product/supply photo. Return ONLY valid JSON (no markdown, no explanation) with this structure:
+{
+  "name": "product name",
+  "brand": "brand name or null",
+  "category": "fertilizer|pesticide|soil|tool|other",
+  "npk_ratio": "N-P-K string or null",
+  "instructions": "brief usage instructions",
+  "suggested_quantity_unit": "unit of measurement"
+}`;
+    } else if (mode === 'assess') {
+      let plantContext = '';
+      if (req.body.plant_id) {
+        const plant = await pool.query('SELECT name, species, overall_health_score FROM garden_plants WHERE id=$1', [req.body.plant_id]);
+        if (plant.rows[0]) {
+          const p = plant.rows[0];
+          plantContext = `\nThis is "${p.name}" (${p.species || 'unknown species'}). Previous health score: ${p.overall_health_score || 'none'}.`;
+        }
+      }
+      prompt = `You are a plant health expert. Assess this plant's health.${plantContext}
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "health": {
+    "overall_score": 0-100,
+    "dimensions": {
+      "leaf_health": 0-100, "hydration_level": 0-100, "pest_damage": 0-100,
+      "disease_signs": 0-100, "growth_vigor": 0-100, "fruit_status": 0-100,
+      "root_health": 0-100, "bark_condition": 0-100
+    },
+    "summary": "2-3 sentence assessment",
+    "recommendations": [{"priority": "high|medium|low", "action": "short action", "details": "explanation"}]
+  }
+}`;
+    } else {
+      prompt = `You are a plant identification and health expert. Identify this plant and assess its health.
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "species": "Scientific name",
+  "common_name": "Common name",
+  "type": "fruit_tree|flower|shrub|herb|vegetable|succulent",
+  "health": {
+    "overall_score": 0-100,
+    "dimensions": {
+      "leaf_health": 0-100, "hydration_level": 0-100, "pest_damage": 0-100,
+      "disease_signs": 0-100, "growth_vigor": 0-100, "fruit_status": 0-100,
+      "root_health": 0-100, "bark_condition": 0-100
+    },
+    "summary": "2-3 sentence assessment",
+    "recommendations": [{"priority": "high|medium|low", "action": "short action", "details": "explanation"}]
+  },
+  "sunlight": "full_sun|partial_sun|partial_shade|full_shade",
+  "usda_zone": "zone string e.g. 9b"
+}`;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+              { type: 'text', text: prompt }
+            ]
+          }],
+          temperature: 0.3,
+          max_tokens: 1500,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error('Groq API error:', response.status, errBody);
+        return res.status(503).json({ error: 'AI analysis failed', details: `Groq returned ${response.status}` });
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) return res.status(503).json({ error: 'AI returned empty response' });
+
+      // Parse JSON robustly - strip markdown code blocks
+      let jsonStr = content.trim();
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+      // Try to find JSON object
+      const firstBrace = jsonStr.indexOf('{');
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        console.error('Failed to parse AI response:', content);
+        return res.status(503).json({ error: 'AI returned invalid JSON', raw: content });
+      }
+
+      res.json(parsed);
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(503).json({ error: 'AI analysis timed out (15s)' });
+      }
+      throw fetchErr;
+    } finally {
+      // Clean up uploaded file
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+  } catch (err) {
+    console.error('AI analyze error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

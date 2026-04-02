@@ -43,8 +43,65 @@ window.addEventListener('resize', () => {
     }
 });
 
+// ─── Nav Page Definitions ───
+const ALL_SIDEBAR_PAGES = [
+    { page: 'dashboard', href: '/app/dashboard.html', icon: 'home', label: 'Dashboard' },
+    { page: 'grocery', href: '/app/grocery.html', icon: 'shopping-cart', label: 'Grocery' },
+    { page: 'gallery', href: '/app/gallery.html', icon: 'camera', label: 'Gallery' },
+    { page: 'garden', href: '/app/garden.html', icon: 'flower-2', label: 'Garden' },
+    { page: 'sports', href: '/app/sports.html', icon: 'trophy', label: 'Sports' },
+    { page: 'flights', href: '/app/flights.html', icon: 'plane', label: 'Flights' },
+    { page: 'events', href: '/app/events.html', icon: 'calendar', label: 'Events' },
+    { page: 'captures', href: '/app/captures.html', icon: 'sparkles', label: 'Captures' },
+    { page: 'travel', href: '/app/travel.html', icon: 'map-pin', label: 'Travel' },
+    { page: 'notes', href: '/app/notes.html', icon: 'file-text', label: 'Notes' },
+    { page: 'kanban', href: '/app/kanban.html', icon: 'kanban', label: 'Kanban', adminOnly: true },
+    { page: 'tasks', href: '/app/tasks.html', icon: 'check-square', label: 'Tasks' },
+    { page: 'impostor', href: '/app/impostor/', icon: 'ghost', label: 'Impostor' },
+    { page: 'settings', href: '/app/settings.html', icon: 'settings', label: 'Settings' },
+];
+
+// Bottom nav: first 5 are shown directly, rest go in "More" menu
+const ALL_BOTTOM_NAV_PAGES = [
+    { page: 'dashboard', href: '/app/dashboard.html', icon: 'home', label: 'Home' },
+    { page: 'grocery', href: '/app/grocery.html', icon: 'shopping-cart', label: 'Grocery' },
+    { page: 'gallery', href: '/app/gallery.html', icon: 'camera', label: 'Gallery' },
+    { page: 'garden', href: '/app/garden.html', icon: 'flower-2', label: 'Garden' },
+    { page: 'sports', href: '/app/sports.html', icon: 'trophy', label: 'Sports' },
+    { page: 'flights', href: '/app/flights.html', icon: 'plane', label: 'Flights' },
+    { page: 'events', href: '/app/events.html', icon: 'calendar', label: 'Events' },
+    { page: 'captures', href: '/app/captures.html', icon: 'sparkles', label: 'Captures' },
+    { page: 'travel', href: '/app/travel.html', icon: 'map-pin', label: 'Travel' },
+    { page: 'notes', href: '/app/notes.html', icon: 'file-text', label: 'Notes' },
+    { page: 'kanban', href: '/app/kanban.html', icon: 'kanban', label: 'Kanban', adminOnly: true },
+    { page: 'tasks', href: '/app/tasks.html', icon: 'check-square', label: 'Tasks' },
+    { page: 'impostor', href: '/app/impostor/', icon: 'ghost', label: 'Impostor' },
+    { page: 'settings', href: '/app/settings.html', icon: 'settings', label: 'Settings' },
+];
+
+function _filterNavPages(pages) {
+    const vp = currentUser?.visible_pages;
+    let filtered = pages;
+    if (Array.isArray(vp)) {
+        // Always show dashboard and settings
+        filtered = pages.filter(p => p.page === 'dashboard' || p.page === 'settings' || vp.includes(p.page));
+    }
+    // Admin-only filter
+    filtered = filtered.filter(p => !p.adminOnly || currentUser?.role === 'admin');
+    return filtered;
+}
+
 // ─── Render App Shell HTML ───
 function renderAppShell(pageTitle, activePage) {
+    const sidebarPages = _filterNavPages(ALL_SIDEBAR_PAGES);
+    const bottomPages = _filterNavPages(ALL_BOTTOM_NAV_PAGES);
+
+    // Decide bottom nav layout: if <=5 pages, show all directly (no More menu)
+    const MAX_DIRECT = 5;
+    const needsMore = bottomPages.length > MAX_DIRECT;
+    const directPages = needsMore ? bottomPages.slice(0, MAX_DIRECT) : bottomPages;
+    const morePages = needsMore ? bottomPages.slice(MAX_DIRECT) : [];
+
     return {
         sidebar: `
             <div class="sidebar-backdrop"></div>
@@ -53,20 +110,7 @@ function renderAppShell(pageTitle, activePage) {
                     <a href="/app/dashboard.html" class="sidebar-logo">ashcroft<span class="dot">.</span>cloud</a>
                 </div>
                 <nav class="sidebar-nav">
-                    <a href="/app/dashboard.html" data-page="dashboard"><i data-lucide="home" class="nav-icon"></i> Dashboard</a>
-                    <a href="/app/grocery.html" data-page="grocery"><i data-lucide="shopping-cart" class="nav-icon"></i> Grocery</a>
-                    <a href="/app/gallery.html" data-page="gallery"><i data-lucide="camera" class="nav-icon"></i> Gallery</a>
-                    <a href="/app/garden.html" data-page="garden"><i data-lucide="flower-2" class="nav-icon"></i> Garden</a>
-                    <a href="/app/sports.html" data-page="sports"><i data-lucide="trophy" class="nav-icon"></i> Sports</a>
-                    <a href="/app/flights.html" data-page="flights"><i data-lucide="plane" class="nav-icon"></i> Flights</a>
-                    <a href="/app/events.html" data-page="events"><i data-lucide="calendar" class="nav-icon"></i> Events</a>
-                    <a href="/app/captures.html" data-page="captures"><i data-lucide="sparkles" class="nav-icon"></i> Captures</a>
-                    <a href="/app/travel.html" data-page="travel"><i data-lucide="map-pin" class="nav-icon"></i> Travel</a>
-                    <a href="/app/notes.html" data-page="notes"><i data-lucide="file-text" class="nav-icon"></i> Notes</a>
-                    ${currentUser?.role === 'admin' ? '<a href="/app/kanban.html" data-page="kanban"><i data-lucide="kanban" class="nav-icon"></i> Kanban</a>' : ''}
-                    <a href="/app/tasks.html" data-page="tasks"><i data-lucide="check-square" class="nav-icon"></i> Tasks</a>
-                    <a href="/app/impostor/" data-page="impostor"><i data-lucide="ghost" class="nav-icon"></i> Impostor</a>
-                    <a href="/app/settings.html" data-page="settings"><i data-lucide="settings" class="nav-icon"></i> Settings</a>
+                    ${sidebarPages.map(p => `<a href="${p.href}" data-page="${p.page}"><i data-lucide="${p.icon}" class="nav-icon"></i> ${p.label}</a>`).join('\n                    ')}
                 </nav>
                 <div class="sidebar-bottom">
                     <div class="user-info">
@@ -91,36 +135,16 @@ function renderAppShell(pageTitle, activePage) {
         `,
         bottomNav: `
             <nav class="bottom-nav">
-                <a href="/app/dashboard.html" class="bottom-nav-item${activePage==='dashboard'?' active':''}" data-page="dashboard">
-                    <i data-lucide="home" class="bottom-nav-icon"></i><span class="bottom-nav-label">Home</span>
-                </a>
-                <a href="/app/grocery.html" class="bottom-nav-item${activePage==='grocery'?' active':''}" data-page="grocery">
-                    <i data-lucide="shopping-cart" class="bottom-nav-icon"></i><span class="bottom-nav-label">Grocery</span>
-                </a>
-                <a href="/app/gallery.html" class="bottom-nav-item${activePage==='gallery'?' active':''}" data-page="gallery">
-                    <i data-lucide="camera" class="bottom-nav-icon"></i><span class="bottom-nav-label">Gallery</span>
-                </a>
-                <a href="/app/garden.html" class="bottom-nav-item${activePage==='garden'?' active':''}" data-page="garden">
-                    <i data-lucide="flower-2" class="bottom-nav-icon"></i><span class="bottom-nav-label">Garden</span>
-                </a>
-                <a href="/app/sports.html" class="bottom-nav-item${activePage==='sports'?' active':''}" data-page="sports">
-                    <i data-lucide="trophy" class="bottom-nav-icon"></i><span class="bottom-nav-label">Sports</span>
-                </a>
-                <a href="#" class="bottom-nav-item bottom-nav-more" data-page="more">
+                ${directPages.map(p => `<a href="${p.href}" class="bottom-nav-item${activePage===p.page?' active':''}" data-page="${p.page}">
+                    <i data-lucide="${p.icon}" class="bottom-nav-icon"></i><span class="bottom-nav-label">${p.label}</span>
+                </a>`).join('\n                ')}
+                ${needsMore ? `<a href="#" class="bottom-nav-item bottom-nav-more" data-page="more">
                     <i data-lucide="more-horizontal" class="bottom-nav-icon"></i><span class="bottom-nav-label">More</span>
                 </a>
                 <div class="bottom-nav-menu">
-                    <a href="/app/flights.html" class="bottom-nav-menu-item${activePage==='flights'?' active':''}"><i data-lucide="plane" class="menu-icon"></i> Flights</a>
-                    <a href="/app/events.html" class="bottom-nav-menu-item${activePage==='events'?' active':''}"><i data-lucide="calendar" class="menu-icon"></i> Events</a>
-                    <a href="/app/captures.html" class="bottom-nav-menu-item${activePage==='captures'?' active':''}"><i data-lucide="sparkles" class="menu-icon"></i> Captures</a>
-                    <a href="/app/travel.html" class="bottom-nav-menu-item${activePage==='travel'?' active':''}"><i data-lucide="map-pin" class="menu-icon"></i> Travel</a>
-                    <a href="/app/notes.html" class="bottom-nav-menu-item${activePage==='notes'?' active':''}"><i data-lucide="file-text" class="menu-icon"></i> Notes</a>
-                    ${currentUser?.role === 'admin' ? `<a href="/app/kanban.html" class="bottom-nav-menu-item${activePage==='kanban'?' active':''}"><i data-lucide="kanban" class="menu-icon"></i> Kanban</a>` : ''}
-                    <a href="/app/tasks.html" class="bottom-nav-menu-item${activePage==='tasks'?' active':''}"><i data-lucide="check-square" class="menu-icon"></i> Tasks</a>
-                    <a href="/app/impostor/" class="bottom-nav-menu-item${activePage==='impostor'?' active':''}"><i data-lucide="ghost" class="menu-icon"></i> Impostor</a>
-                    <a href="/app/settings.html" class="bottom-nav-menu-item${activePage==='settings'?' active':''}"><i data-lucide="settings" class="menu-icon"></i> Settings</a>
+                    ${morePages.map(p => `<a href="${p.href}" class="bottom-nav-menu-item${activePage===p.page?' active':''}"><i data-lucide="${p.icon}" class="menu-icon"></i> ${p.label}</a>`).join('\n                    ')}
                     <a href="#" class="bottom-nav-menu-item" onclick="event.preventDefault();clearCacheReload()"><i data-lucide="refresh-cw" class="menu-icon"></i> Clear Cache</a>
-                </div>
+                </div>` : ''}
             </nav>
         `,
     };
@@ -170,7 +194,10 @@ function initAppShell(activePage) {
         });
     }
 
-    if (['notes','kanban','settings'].includes(activePage)) {
+    // Highlight "More" button if active page is in the overflow menu
+    const moreMenuEl = document.querySelector('.bottom-nav-menu');
+    const hasActiveInMore = moreMenuEl?.querySelector('.bottom-nav-menu-item.active');
+    if (hasActiveInMore || ['notes','kanban','settings'].includes(activePage)) {
         const moreEl = document.querySelector('.bottom-nav-more');
         if (moreEl) moreEl.classList.add('active');
     }
