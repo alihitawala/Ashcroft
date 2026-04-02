@@ -71,12 +71,21 @@ async function checkPlantAccess(plantId, req) {
 }
 
 // Helper: generate thumbnail
+async function autoRotate(filename) {
+  if (!sharp) return;
+  const src = path.join(UPLOAD_DIR, filename);
+  const tmp = src + '.tmp';
+  await sharp(src).rotate().toFile(tmp);
+  const fs2 = require('fs');
+  fs2.renameSync(tmp, src);
+}
+
 async function generateThumbnail(filename) {
   if (!sharp) return null;
   const src = path.join(UPLOAD_DIR, filename);
   const thumbName = filename.replace(/\.[^.]+$/, '.jpg');
   const dest = path.join(THUMB_DIR, thumbName);
-  await sharp(src).resize(400, null, { withoutEnlargement: true }).jpeg({ quality: 80 }).toFile(dest);
+  await sharp(src).rotate().resize(400, null, { withoutEnlargement: true }).jpeg({ quality: 80 }).toFile(dest);
   return `/uploads/garden/thumbnails/${thumbName}`;
 }
 
@@ -162,6 +171,7 @@ router.delete('/zones/:id', async (req, res) => {
 router.post('/zones/:id/photo', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    await autoRotate(req.file.filename);
     const photoUrl = `/uploads/garden/${req.file.filename}`;
     const thumbnailUrl = await generateThumbnail(req.file.filename);
     const result = await pool.query(
@@ -432,6 +442,7 @@ router.post('/plants/:id/logs', async (req, res) => {
 router.post('/upload', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    await autoRotate(req.file.filename);
     const photoUrl = `/uploads/garden/${req.file.filename}`;
     const thumbnailUrl = await generateThumbnail(req.file.filename);
     res.json({ url: photoUrl, thumbnail_url: thumbnailUrl });
@@ -445,6 +456,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 router.post('/plants/:id/photos', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    await autoRotate(req.file.filename);
     
     const plant = await checkPlantAccess(req.params.id, req);
     if (!plant) return res.status(404).json({ error: 'Plant not found' });

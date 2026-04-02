@@ -1166,6 +1166,14 @@
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
+.form-row .form-group {
+    min-width: 0;
+    overflow: hidden;
+}
+.form-row .form-input {
+    min-width: 0;
+    box-sizing: border-box;
+}
 
 /* Photo upload area in add modal */
 .photo-upload-area {
