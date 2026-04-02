@@ -629,7 +629,7 @@ select.form-input {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 1100;
+    z-index: 10100;
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.15s ease;
@@ -880,6 +880,7 @@ select.form-input {
         left: 0;
         right: 0;
         animation: slideUpMobile 0.25s ease;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .modal-backdrop.visible {
         align-items: flex-end;
