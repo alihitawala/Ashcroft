@@ -495,6 +495,114 @@ router.post('/plants/:id/photos', upload.single('photo'), async (req, res) => {
   }
 });
 
+// ─── Assess Latest Photo ───
+router.post('/plants/:id/assess-latest', authenticate, async (req, res) => {
+  try {
+    const plant = await checkPlantAccess(req.params.id, req);
+    if (!plant) return res.status(404).json({ error: 'Plant not found' });
+
+    // Get latest photo
+    const photoRes = await pool.query(
+      'SELECT * FROM garden_plant_photos WHERE plant_id = $1 ORDER BY taken_at DESC LIMIT 1',
+      [req.params.id]
+    );
+    if (!photoRes.rows[0]) return res.status(400).json({ error: 'No photos uploaded yet' });
+    const photo = photoRes.rows[0];
+
+    // If photo already has an assessment, return it
+    if (photo.assessment_id) {
+      const existing = await pool.query(
+        'SELECT * FROM garden_health_assessments WHERE id = $1', [photo.assessment_id]
+      );
+      if (existing.rows[0]) {
+        return res.json({ cached: true, assessment: existing.rows[0], photo });
+      }
+    }
+
+    // Run AI assessment
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    if (!GROQ_API_KEY) return res.status(503).json({ error: 'AI service not configured' });
+
+    const filePath = path.join('/home/ashcroft/www/public', photo.photo_url);
+    if (!fs.existsSync(filePath)) return res.status(400).json({ error: 'Photo file not found' });
+
+    const imageBase64 = fs.readFileSync(filePath).toString('base64');
+    const prompt = `You are a plant health expert. Assess this plant's health.
+This is "${plant.name}" (${plant.species || 'unknown species'}). Previous health score: ${plant.overall_health_score || 'none'}.
+Return ONLY valid JSON: {"overall_score":0-100,"dimensions":{"leaf_health":0-100,"hydration_level":0-100,"pest_damage":0-100,"disease_signs":0-100,"growth_vigor":0-100,"fruit_status":0-100,"root_health":0-100,"bark_condition":0-100},"summary":"2-3 sentence assessment","recommendations":[{"priority":"high|medium|low","action":"short action","details":"explanation"}]}`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{ role: 'user', content: [
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+          { type: 'text', text: prompt }
+        ]}],
+        temperature: 0.3, max_tokens: 1500,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!aiRes.ok) {
+      console.error('Groq error:', aiRes.status);
+      return res.status(503).json({ error: 'AI analysis failed' });
+    }
+
+    const aiData = await aiRes.json();
+    const content = aiData.choices?.[0]?.message?.content || '';
+    let jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const fb = jsonStr.indexOf('{'), lb = jsonStr.lastIndexOf('}');
+    if (fb === -1) return res.status(503).json({ error: 'AI returned invalid response' });
+    const parsed = JSON.parse(jsonStr.slice(fb, lb + 1));
+
+    const h = parsed;
+    const d = h.dimensions || {};
+    const score = h.overall_score;
+    const healthStatus = score > 80 ? 'healthy' : score >= 50 ? 'needs_attention' : 'sick';
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const assess = await client.query(
+        `INSERT INTO garden_health_assessments 
+         (plant_id, photo_url, thumbnail_url, overall_score, overall_trend,
+          leaf_health, hydration_level, pest_damage, disease_signs, growth_vigor,
+          fruit_status, root_health, bark_condition,
+          ai_summary, ai_recommendations, assessed_by)
+         VALUES ($1,$2,$3,$4,'stable',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+        [req.params.id, photo.photo_url, photo.thumbnail_url, score,
+         d.leaf_health, d.hydration_level, d.pest_damage, d.disease_signs, d.growth_vigor,
+         d.fruit_status, d.root_health, d.bark_condition,
+         h.summary, JSON.stringify(h.recommendations || []), req.user.id]
+      );
+      const assessmentId = assess.rows[0].id;
+
+      // Link photo to assessment
+      await client.query('UPDATE garden_plant_photos SET assessment_id=$1 WHERE id=$2', [assessmentId, photo.id]);
+      // Update plant
+      await client.query(
+        `UPDATE garden_plants SET latest_assessment_id=$1, overall_health_score=$2, health_status=$3, updated_at=NOW() WHERE id=$4`,
+        [assessmentId, score, healthStatus, req.params.id]
+      );
+      await client.query('COMMIT');
+      res.json({ cached: false, assessment: assess.rows[0], photo });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Assess-latest error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── Upload and Assess (combined) ───
 router.post('/plants/:id/photos/upload-and-assess', upload.single('photo'), async (req, res) => {
   try {

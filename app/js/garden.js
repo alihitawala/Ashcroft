@@ -585,11 +585,13 @@
                 </div>
             `;
         } else {
+            const hasPhotos = currentTimeline && currentTimeline.length > 0;
             healthHTML = `
                 <div class="no-health-state">
                     <i data-lucide="scan-line"></i>
                     <h3>No Health Data Yet</h3>
-                    <p>Upload a photo to get an AI health assessment</p>
+                    <p>${hasPhotos ? 'Run an AI health check on your latest photo' : 'Upload a photo to get an AI health assessment'}</p>
+                    ${hasPhotos ? `<button class="btn btn-primary" id="runAssessBtn" style="margin-top:12px"><i data-lucide="sparkles" style="width:16px;height:16px"></i> Run Health Check</button>` : ''}
                 </div>
             `;
         }
@@ -1033,6 +1035,27 @@
 
         // Growth animation
         document.getElementById('growthBtn')?.addEventListener('click', openGrowthAnimation);
+
+        // Run Assessment button
+        document.getElementById('runAssessBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('runAssessBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+            try {
+                const res = await API.post(`/garden/plants/${currentPlant.id}/assess-latest`);
+                if (res.cached) {
+                    showToast('Assessment already exists ✓');
+                } else {
+                    showToast(`Health score: ${res.assessment.overall_score} ✓`);
+                }
+                await refreshPlantDetail();
+            } catch (err) {
+                showToast(err.message || 'Assessment failed', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="sparkles" style="width:16px;height:16px"></i> Run Health Check';
+                lucide.createIcons();
+            }
+        });
     }
 
     // ─── Photo Upload (now with AI health check) ───
@@ -1192,6 +1215,7 @@
                     // Auto-trigger AI health assessment (background)
                     (async () => {
                         try {
+                            console.log('[Auto-assess] Starting for plant', newPlant.id);
                             const aiForm = new FormData();
                             aiForm.append('photo', selectedFile);
                             aiForm.append('mode', 'assess');
@@ -1199,8 +1223,10 @@
                             const aiRes = await fetch('/api/garden/ai/analyze', {
                                 method: 'POST', credentials: 'same-origin', body: aiForm,
                             });
+                            console.log('[Auto-assess] AI response status:', aiRes.status);
                             if (aiRes.ok) {
                                 const aiData = await aiRes.json();
+                                console.log('[Auto-assess] AI data:', JSON.stringify(aiData).substring(0, 200));
                                 const h = aiData.health || aiData;
                                 const d = h.dimensions || {};
                                 const assessment = {
@@ -1211,14 +1237,18 @@
                                     root_health: d.root_health, bark_condition: d.bark_condition,
                                     ai_summary: h.summary, ai_recommendations: h.recommendations,
                                 };
+                                console.log('[Auto-assess] Saving assessment:', JSON.stringify(assessment).substring(0, 200));
                                 const saveFd = new FormData();
                                 saveFd.append('photo', selectedFile);
                                 saveFd.append('assessment', JSON.stringify(assessment));
-                                await fetch(`/api/garden/plants/${newPlant.id}/photos/upload-and-assess`, {
+                                const saveRes = await fetch(`/api/garden/plants/${newPlant.id}/photos/upload-and-assess`, {
                                     method: 'POST', credentials: 'same-origin', body: saveFd,
                                 });
+                                console.log('[Auto-assess] Save response:', saveRes.status, await saveRes.text());
+                            } else {
+                                console.warn('[Auto-assess] AI failed:', aiRes.status, await aiRes.text());
                             }
-                        } catch (e) { console.warn('Auto-assess failed:', e); }
+                        } catch (e) { console.warn('[Auto-assess] Error:', e); }
                     })();
                 }
                 showToast('Plant added! 🌱');
