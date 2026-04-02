@@ -1152,6 +1152,7 @@
                         <select class="form-input" name="zone_id">
                             <option value="">No zone</option>
                             ${zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join('')}
+                            <option value="__new__">+ New Zone</option>
                         </select>
                     </div>
                 </div>
@@ -1206,8 +1207,9 @@
             },
         });
 
-        // Photo upload binding
+        // Zone select + Photo upload binding
         setTimeout(() => {
+            bindZoneSelect(document.querySelector('[name="zone_id"]'));
             const area = document.getElementById('addPlantPhotoArea');
             const input = document.getElementById('addPlantPhotoInput');
             if (area && input) {
@@ -1270,6 +1272,7 @@
                     <select class="form-input" name="zone_id">
                         <option value="">No zone</option>
                         ${zones.map(z => `<option value="${z.id}" ${p.zone_id === z.id ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}
+                        <option value="__new__">+ New Zone</option>
                     </select>
                 </div>
             `,
@@ -1295,6 +1298,7 @@
                 renderDetail();
             },
         });
+        setTimeout(() => bindZoneSelect(document.querySelector('[name="zone_id"]')), 50);
     }
 
     // ─── Delete Plant ───
@@ -1501,6 +1505,7 @@
                         <select class="form-input" id="aiPlantZone">
                             <option value="">No zone</option>
                             ${zones.map(z => `<option value="${z.id}">${esc(z.name)}</option>`).join('')}
+                            <option value="__new__">+ New Zone</option>
                         </select>
                     </div>
                 </div>
@@ -1511,6 +1516,7 @@
             </div>
         `;
 
+        bindZoneSelect(document.getElementById('aiPlantZone'));
         document.getElementById('aiAddPlantBtn')?.addEventListener('click', async () => {
             const btn = document.getElementById('aiAddPlantBtn');
             btn.disabled = true;
@@ -2351,7 +2357,26 @@
         }, 100);
     }
 
-    function openAddZoneModal() {
+    // Handle "+ New Zone" option in any zone select
+    function bindZoneSelect(selectEl) {
+        if (!selectEl) return;
+        selectEl.addEventListener('change', () => {
+            if (selectEl.value !== '__new__') return;
+            selectEl.value = ''; // reset to "No zone"
+            openAddZoneModal((newZone) => {
+                // After zone created, update this select and select the new zone
+                const opt = document.createElement('option');
+                opt.value = newZone.id;
+                opt.textContent = newZone.name;
+                opt.selected = true;
+                // Insert before the "+ New Zone" option
+                const newOpt = selectEl.querySelector('option[value="__new__"]');
+                selectEl.insertBefore(opt, newOpt);
+            });
+        });
+    }
+
+    function openAddZoneModal(onCreated) {
         createModal({
             title: '➕ Add Zone',
             bodyHTML: `
@@ -2368,10 +2393,11 @@
             async onSubmit(modal) {
                 const name = modal.querySelector('[name="name"]').value.trim();
                 if (!name) throw new Error('Name is required');
-                await API.post('/garden/zones', { name, description: modal.querySelector('[name="description"]').value.trim() || undefined });
+                const newZone = await API.post('/garden/zones', { name, description: modal.querySelector('[name="description"]').value.trim() || undefined });
                 showToast('Zone added ✓');
                 await loadZones();
                 renderPlantGrid();
+                if (onCreated && newZone) onCreated(newZone);
             },
         });
     }
