@@ -770,8 +770,8 @@ body {
     .bottom-nav {
         position: fixed !important;
         bottom: 0 !important;
-        left: 0;
-        right: 0;
+        left: 0 !important;
+        right: 0 !important;
         display: flex;
         align-items: center;
         justify-content: space-around;
@@ -779,9 +779,9 @@ body {
         border-top: 1px solid var(--border);
         height: calc(44px + env(safe-area-inset-bottom, 0px));
         padding-bottom: env(safe-area-inset-bottom, 0px);
-        z-index: 1000;
-        backface-visibility: hidden;
+        z-index: 10000;
         -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
     }
     .bottom-nav-item {
         display: flex;
