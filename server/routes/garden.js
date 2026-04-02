@@ -359,12 +359,29 @@ router.put('/plants/:id', async (req, res) => {
 
 router.delete('/plants/:id', async (req, res) => {
   try {
+    // Collect photo files before deletion (CASCADE will remove DB rows)
+    const photos = await pool.query(
+      `SELECT photo_url, thumbnail_url FROM garden_plant_photos WHERE plant_id = $1
+       UNION SELECT photo_url, thumbnail_url FROM garden_health_assessments WHERE plant_id = $1 AND photo_url IS NOT NULL`,
+      [req.params.id]
+    );
+
     const result = await pool.query(
       `DELETE FROM garden_plants WHERE id=$1 AND ${accessWhere(2)} RETURNING *`,
       [req.params.id, ...accessParams(req)]
     );
     
     if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+
+    // Clean up photo files from disk (best-effort, don't fail the request)
+    for (const row of photos.rows) {
+      for (const url of [row.photo_url, row.thumbnail_url]) {
+        if (!url) continue;
+        const filePath = path.join('/home/ashcroft/www/public', url);
+        try { fs.unlinkSync(filePath); } catch (e) {}
+      }
+    }
+
     res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
