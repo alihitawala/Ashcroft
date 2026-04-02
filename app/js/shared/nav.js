@@ -130,6 +130,7 @@ function renderAppShell(pageTitle, activePage) {
                     <span class="topbar-title">${pageTitle}</span>
                 </div>
                 <div class="topbar-right">
+                    <button class="topbar-btn" onclick="clearCacheReload()" aria-label="Refresh" title="Clear cache & refresh"><i data-lucide="refresh-cw"></i></button>
                 </div>
             </div>
         `,

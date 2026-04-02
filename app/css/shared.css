@@ -268,6 +268,9 @@ a:hover { text-decoration: underline; }
 }
 
 .topbar-right { display: flex; align-items: center; gap: 8px; }
+.topbar-btn { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 6px; border-radius: 6px; display: flex; align-items: center; }
+.topbar-btn:hover { color: var(--text); background: var(--surface2); }
+.topbar-btn i { width: 18px; height: 18px; }
 
 /* ─── Main Content ─── */
 .main-content {
