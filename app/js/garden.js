@@ -1189,18 +1189,37 @@
                         credentials: 'same-origin',
                         body: fd,
                     });
-                    // Auto-trigger AI health assessment
-                    try {
-                        const aiForm = new FormData();
-                        aiForm.append('photo', selectedFile);
-                        aiForm.append('mode', 'assess');
-                        aiForm.append('plant_id', newPlant.id);
-                        fetch('/api/garden/ai/analyze', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            body: aiForm,
-                        }); // fire-and-forget — assessment runs in background
-                    } catch (e) { console.warn('Auto-assess failed:', e); }
+                    // Auto-trigger AI health assessment (background)
+                    (async () => {
+                        try {
+                            const aiForm = new FormData();
+                            aiForm.append('photo', selectedFile);
+                            aiForm.append('mode', 'assess');
+                            aiForm.append('plant_id', newPlant.id);
+                            const aiRes = await fetch('/api/garden/ai/analyze', {
+                                method: 'POST', credentials: 'same-origin', body: aiForm,
+                            });
+                            if (aiRes.ok) {
+                                const aiData = await aiRes.json();
+                                const h = aiData.health || aiData;
+                                const d = h.dimensions || {};
+                                const assessment = {
+                                    overall_score: h.overall_score, overall_trend: 'stable',
+                                    leaf_health: d.leaf_health, hydration_level: d.hydration_level,
+                                    pest_damage: d.pest_damage, disease_signs: d.disease_signs,
+                                    growth_vigor: d.growth_vigor, fruit_status: d.fruit_status,
+                                    root_health: d.root_health, bark_condition: d.bark_condition,
+                                    ai_summary: h.summary, ai_recommendations: h.recommendations,
+                                };
+                                const saveFd = new FormData();
+                                saveFd.append('photo', selectedFile);
+                                saveFd.append('assessment', JSON.stringify(assessment));
+                                await fetch(`/api/garden/plants/${newPlant.id}/photos/upload-and-assess`, {
+                                    method: 'POST', credentials: 'same-origin', body: saveFd,
+                                });
+                            }
+                        } catch (e) { console.warn('Auto-assess failed:', e); }
+                    })();
                 }
                 showToast('Plant added! 🌱');
                 await loadPlants();
@@ -1670,8 +1689,26 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span> Saving...';
             try {
+                // Build assessment data from AI response
+                const health = data.health || data;
+                const dims = health.dimensions || {};
+                const assessment = {
+                    overall_score: health.overall_score ?? newScore,
+                    overall_trend: health.overall_trend || 'stable',
+                    leaf_health: dims.leaf_health ?? health.leaf_health,
+                    hydration_level: dims.hydration_level ?? health.hydration_level,
+                    pest_damage: dims.pest_damage ?? health.pest_damage,
+                    disease_signs: dims.disease_signs ?? health.disease_signs,
+                    growth_vigor: dims.growth_vigor ?? health.growth_vigor,
+                    fruit_status: dims.fruit_status ?? health.fruit_status,
+                    root_health: dims.root_health ?? health.root_health,
+                    bark_condition: dims.bark_condition ?? health.bark_condition,
+                    ai_summary: health.summary || summary,
+                    ai_recommendations: health.recommendations || recs,
+                };
                 const fd = new FormData();
                 fd.append('photo', file);
+                fd.append('assessment', JSON.stringify(assessment));
                 await fetch(`/api/garden/plants/${currentPlant.id}/photos/upload-and-assess`, {
                     method: 'POST',
                     credentials: 'same-origin',

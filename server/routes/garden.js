@@ -499,6 +499,7 @@ router.post('/plants/:id/photos', upload.single('photo'), async (req, res) => {
 router.post('/plants/:id/photos/upload-and-assess', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    await autoRotate(req.file.filename);
     
     const plant = await checkPlantAccess(req.params.id, req);
     if (!plant) return res.status(404).json({ error: 'Plant not found' });
