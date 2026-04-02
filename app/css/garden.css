@@ -1902,13 +1902,13 @@
 .ai-analyze-overlay {
     position: fixed;
     inset: 0;
-    z-index: 9999;
+    z-index: 10200;
     background: rgba(0,0,0,0.6);
     backdrop-filter: blur(8px);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    padding: 16px;
+    padding: 0;
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -1917,13 +1917,19 @@
 .ai-analyze-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 16px 16px 0 0;
     width: 100%;
     max-width: 440px;
-    max-height: 90vh;
+    max-height: 92vh;
     overflow-y: auto;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-    animation: slideUp 0.3s ease;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -4px 40px rgba(0,0,0,0.3);
+    animation: slideUpMobile 0.3s ease;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 641px) {
+    .ai-analyze-overlay { align-items: center; padding: 16px; }
+    .ai-analyze-card { border-radius: 16px; padding-bottom: 16px; max-height: 90vh; }
 }
 
 .ai-analyze-preview {
