@@ -519,46 +519,153 @@ router.post('/plants/:id/assess-latest', authenticate, async (req, res) => {
       }
     }
 
-    // Run AI assessment
-    const GROQ_API_KEY = process.env.GROQ_API_KEY;
-    if (!GROQ_API_KEY) return res.status(503).json({ error: 'AI service not configured' });
+    // Run AI assessment via Claude
+    const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+    const GROQ_KEY = process.env.GROQ_API_KEY;
+    if (!ANTHROPIC_KEY && !GROQ_KEY) return res.status(503).json({ error: 'AI service not configured' });
 
     const filePath = path.join('/home/ashcroft/www/public', photo.photo_url);
     if (!fs.existsSync(filePath)) return res.status(400).json({ error: 'Photo file not found' });
 
     const imageBase64 = fs.readFileSync(filePath).toString('base64');
-    const prompt = `You are a plant health expert. Assess this plant's health.
-This is "${plant.name}" (${plant.species || 'unknown species'}). Previous health score: ${plant.overall_health_score || 'none'}.
-Return ONLY valid JSON: {"overall_score":0-100,"dimensions":{"leaf_health":0-100,"hydration_level":0-100,"pest_damage":0-100,"disease_signs":0-100,"growth_vigor":0-100,"fruit_status":0-100,"root_health":0-100,"bark_condition":0-100},"summary":"2-3 sentence assessment","recommendations":[{"priority":"high|medium|low","action":"short action","details":"explanation"}]}`;
+    const mimeType = photo.photo_url.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{ role: 'user', content: [
-          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-          { type: 'text', text: prompt }
-        ]}],
-        temperature: 0.3, max_tokens: 1500,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    // Fetch last 10 assessments for context
+    const historyRes = await pool.query(
+      `SELECT overall_score, leaf_health, hydration_level, pest_damage, disease_signs, 
+              growth_vigor, fruit_status, root_health, bark_condition, 
+              ai_summary, assessed_at
+       FROM garden_health_assessments 
+       WHERE plant_id = $1 ORDER BY assessed_at DESC LIMIT 10`,
+      [req.params.id]
+    );
+    
+    // Fetch recent care logs
+    const logsRes = await pool.query(
+      `SELECT type, notes, logged_at FROM garden_logs 
+       WHERE plant_id = $1 ORDER BY logged_at DESC LIMIT 10`,
+      [req.params.id]
+    );
 
-    if (!aiRes.ok) {
-      console.error('Groq error:', aiRes.status);
-      return res.status(503).json({ error: 'AI analysis failed' });
+    let historyContext = '';
+    if (historyRes.rows.length > 0) {
+      historyContext = '\n\nPREVIOUS ASSESSMENTS (most recent first):\n' + 
+        historyRes.rows.map((r, i) => {
+          const date = new Date(r.assessed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return `${i+1}. ${date}: Score ${r.overall_score}/100 — ${r.ai_summary || 'No summary'}`;
+        }).join('\n');
     }
 
-    const aiData = await aiRes.json();
-    const content = aiData.choices?.[0]?.message?.content || '';
-    let jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-    const fb = jsonStr.indexOf('{'), lb = jsonStr.lastIndexOf('}');
-    if (fb === -1) return res.status(503).json({ error: 'AI returned invalid response' });
-    const parsed = JSON.parse(jsonStr.slice(fb, lb + 1));
+    let careContext = '';
+    if (logsRes.rows.length > 0) {
+      careContext = '\n\nRECENT CARE ACTIONS:\n' + 
+        logsRes.rows.map(r => {
+          const date = new Date(r.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return `- ${date}: ${r.type}${r.notes ? ' — ' + r.notes : ''}`;
+        }).join('\n');
+    }
+
+    const prompt = `You are Bittu, a friendly plant health expert with a warm, knowledgeable personality. Assess this plant's health from the photo.
+
+PLANT: "${plant.name}" (${plant.species || 'unknown species'})
+Type: ${plant.type || 'unknown'} | Sunlight: ${plant.sunlight || 'unknown'} | Location: ${plant.location || 'unknown'}
+${historyContext}${careContext}
+
+Analyze the photo carefully. Consider leaf color, texture, signs of pests/disease, hydration, growth vigor, and overall vitality.
+
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "overall_score": 0-100,
+  "dimensions": {
+    "leaf_health": 0-100,
+    "hydration_level": 0-100, 
+    "pest_damage": 0-100,
+    "disease_signs": 0-100,
+    "growth_vigor": 0-100,
+    "fruit_status": 0-100,
+    "root_health": 0-100,
+    "bark_condition": 0-100
+  },
+  "summary": "2-4 sentence personalized assessment. Be specific about what you see. Reference trends from history if available. Use warm but expert tone.",
+  "recommendations": [
+    {"priority": "high|medium|low", "action": "concise action", "details": "why and how"}
+  ]
+}
+
+Be specific — mention actual visual observations. If history shows trends, comment on improvement or decline. Scores should reflect what's actually visible.`;
+
+    let parsed;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      if (ANTHROPIC_KEY) {
+        try {
+          const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': ANTHROPIC_KEY,
+              'anthropic-version': '2023-06-01',
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 1500,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+                  { type: 'text', text: prompt }
+                ]
+              }],
+            }),
+          });
+
+          if (!aiRes.ok) {
+            const errBody = await aiRes.text();
+            console.error('Claude API error:', aiRes.status, errBody);
+            throw new Error(`Claude returned ${aiRes.status}`);
+          }
+
+          const aiData = await aiRes.json();
+          const content = aiData.content?.[0]?.text || '';
+          let jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+          const fb = jsonStr.indexOf('{'), lb = jsonStr.lastIndexOf('}');
+          if (fb === -1) throw new Error('Claude returned no JSON');
+          parsed = JSON.parse(jsonStr.slice(fb, lb + 1));
+          console.log(`[Garden AI] Claude assessment for "${plant.name}": score ${parsed.overall_score}`);
+        } catch (claudeErr) {
+          console.warn('[Garden AI] Claude failed, trying Groq fallback:', claudeErr.message);
+        }
+      }
+      if (!parsed && GROQ_KEY) {
+        // Fallback to Groq
+        const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{ role: 'user', content: [
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+              { type: 'text', text: prompt }
+            ]}],
+            temperature: 0.3, max_tokens: 1500,
+          }),
+        });
+        if (!aiRes.ok) throw new Error(`Groq returned ${aiRes.status}`);
+        const aiData = await aiRes.json();
+        const content = aiData.choices?.[0]?.message?.content || '';
+        let jsonStr = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+        const fb = jsonStr.indexOf('{'), lb = jsonStr.lastIndexOf('}');
+        if (fb === -1) throw new Error('Groq returned no JSON');
+        parsed = JSON.parse(jsonStr.slice(fb, lb + 1));
+        console.log(`[Garden AI] Groq fallback for "${plant.name}": score ${parsed.overall_score}`);
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const h = parsed;
     const d = h.dimensions || {};
