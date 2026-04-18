@@ -171,8 +171,6 @@ if [[ -n "$AUTH" ]]; then
   echo -e "\n${CYAN}▸ Notes${NC}"
   check_api GET /api/notes 200
 
-  echo -e "\n${CYAN}▸ Kanban${NC}"
-  check_api GET /api/kanban/boards 200 'type == "array"'
 
   echo -e "\n${CYAN}▸ Garden${NC}"
   check_api GET /api/garden/plants 200
@@ -182,8 +180,6 @@ if [[ -n "$AUTH" ]]; then
   echo -e "\n${CYAN}▸ Captures${NC}"
   check_api GET /api/captures 200
 
-  echo -e "\n${CYAN}▸ Travel${NC}"
-  check_api GET /api/travel/trips 200
 
   echo -e "\n${CYAN}▸ Sports${NC}"
   check_api GET /api/sports/football/live 200
@@ -192,7 +188,7 @@ if [[ -n "$AUTH" ]]; then
   check_api GET /api/sports/f1/calendar 200
 
   echo -e "\n${CYAN}▸ App pages${NC}"
-  for page in dashboard tasks events grocery notes kanban garden captures sports travel settings; do
+  for page in dashboard tasks events grocery notes garden captures sports settings; do
     check_page "/app/${page}.html"
   done
 fi
@@ -360,16 +356,6 @@ if [[ -n "$AUTH" ]]; then
     log_pass "Garden plants shape: empty (no data)"
   else
     log_warn "Plants shape unexpected — $(echo "$PLANTS" | jq '.[0] | keys' 2>/dev/null)"
-  fi
-
-  # Check travel trips response
-  TRIPS=$(curl -s "${AUTH_CURL[@]}" "$API_BASE/api/travel/trips")
-  if echo "$TRIPS" | jq -e '.[0] | has("id", "title", "destination")' > /dev/null 2>&1; then
-    log_pass "Travel trips shape: id, title, destination ✓"
-  elif echo "$TRIPS" | jq -e 'length == 0' > /dev/null 2>&1; then
-    log_pass "Travel trips shape: empty (no data)"
-  else
-    log_warn "Trips shape unexpected — $(echo "$TRIPS" | jq '.[0] | keys' 2>/dev/null)"
   fi
 fi
 
